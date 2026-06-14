@@ -29,12 +29,12 @@ const AppSidebar = () => {
         <div className="pointer-events-none absolute -top-24 -left-16 h-64 w-64 rounded-full bg-foreground/10 blur-3xl animate-aurora" />
         <div className="pointer-events-none absolute -bottom-24 -right-10 h-56 w-56 rounded-full bg-foreground/5 blur-3xl animate-aurora" style={{ animationDelay: '4s' }} />
 
-        {/* Brand — logo only, full width when expanded */}
-        <div className="relative flex items-center justify-center px-4 pt-4 pb-3">
+        {/* Brand — wordmark when expanded, icon when collapsed */}
+        <div className="relative flex items-center px-4 pt-5 pb-4">
           {collapsed ? (
-            <BrandMark size={32} className="shrink-0" />
+            <BrandMark size={36} className="mx-auto shrink-0" />
           ) : (
-            <BrandMark fullWidth className="px-1" />
+            <BrandMark variant="wordmark" fullWidth className="max-h-12" />
           )}
         </div>
 

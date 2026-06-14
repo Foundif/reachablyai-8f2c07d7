@@ -26,11 +26,11 @@ export const BrandMark = ({
     <img
       src={src}
       alt={profile?.store_name || 'Chatarly'}
-      style={fullWidth ? undefined : { height: size, width: size }}
+      style={fullWidth ? undefined : { height: size, width: variant === 'wordmark' ? 'auto' : size }}
       className={cn(
         fullWidth
           ? 'w-full h-auto object-contain select-none'
-          : 'object-contain select-none rounded-lg',
+          : 'object-contain select-none',
         className,
       )}
       draggable={false}

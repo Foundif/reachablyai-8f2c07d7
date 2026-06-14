@@ -1,7 +1,11 @@
-const AppFooter = () => (
-  <footer className="py-4 px-6 text-center text-xs text-muted-foreground border-t border-border mt-auto">
-    Copyright © 2026 Chatarly. All rights reserved.
-  </footer>
-);
+import { useLocation } from 'react-router-dom';
+
+const HIDDEN_ON = ['/inbox'];
+
+const AppFooter = () => {
+  const { pathname } = useLocation();
+  if (HIDDEN_ON.includes(pathname)) return null;
+  return null; // Footer removed per design — keep component for future use
+};
 
 export default AppFooter;

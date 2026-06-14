@@ -206,10 +206,33 @@ Deno.serve(async (req) => {
     const userId = settings.user_id
     const token = Deno.env.get('META_ACCESS_TOKEN')!
     const messages = value?.messages || []
+    const contacts = value?.contacts || []
     console.log(`processing ${messages.length} message(s) for user ${userId}`)
 
     for (const msg of messages) {
       const waId = msg.from
+      const contact = contacts.find((c: any) => c.wa_id === waId)
+      const profileName = contact?.profile?.name || null
+
+      // Upsert WhatsApp customer (tn_customers for inbox panel)
+      await supabase.from('tn_customers').upsert(
+        { user_id: userId, wa_id: waId, name: profileName, last_seen_at: new Date().toISOString() },
+        { onConflict: 'user_id,wa_id' }
+      )
+
+      // Also mirror into the general customers table so the Customers page shows them
+      try {
+        const phoneFormatted = waId.startsWith('+') ? waId : `+${waId}`
+        const { data: existing } = await supabase
+          .from('customers').select('id,name').eq('user_id', userId).eq('phone', phoneFormatted).maybeSingle()
+        if (!existing) {
+          await supabase.from('customers').insert({
+            user_id: userId, name: profileName || waId, phone: phoneFormatted,
+          })
+        } else if (profileName && existing.name !== profileName) {
+          await supabase.from('customers').update({ name: profileName }).eq('id', existing.id)
+        }
+      } catch (e) { console.warn('customers mirror failed', e) }
 
       await supabase.from('tn_messages').insert({
         user_id: userId, wa_id: waId, direction: 'in', type: msg.type, payload: msg, wa_message_id: msg.id,
