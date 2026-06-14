@@ -162,8 +162,8 @@ const Inbox = () => {
 
   return (
     <AppLayout>
-      <div className="px-3 md:px-4 pt-4 md:pt-6 pb-4">
-        <div className="md:h-[calc(100vh-12rem)] h-[calc(100vh-13rem)] grid xl:grid-cols-[300px_1fr_300px] md:grid-cols-[280px_1fr] grid-cols-1 gap-3">
+      <div className="px-3 md:px-4 pt-4 md:pt-6 pb-3">
+        <div className="md:h-[calc(100vh-7.5rem)] h-[calc(100vh-10rem)] grid xl:grid-cols-[300px_1fr_300px] md:grid-cols-[280px_1fr] grid-cols-1 gap-3">
           {/* LIST */}
           <aside className={cn('glass-elevated glass-sheen flex-col overflow-hidden', active && 'hidden md:flex', !active && 'flex')}>
             <div className="p-3 border-b border-white/5">
