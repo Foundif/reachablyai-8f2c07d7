@@ -20,10 +20,10 @@ export default defineConfig(({ mode }) => ({
       devOptions: {
         enabled: false,
       },
-      includeAssets: ["favicon.ico", "icon-192.png", "icon-512.png", "glamsup-icon.png"],
+      includeAssets: ["favicon.ico", "icon-192.png", "icon-512.png", "chatarly-icon.png"],
       manifest: {
-        name: "Glamsup - Salon & Spa Management",
-        short_name: "Glamsup",
+        name: "Chatarly - Salon & Spa Management",
+        short_name: "Chatarly",
         description: "Complete salon management with billing, appointments, team tracking, and analytics.",
         theme_color: "#7c3aed",
         background_color: "#ffffff",

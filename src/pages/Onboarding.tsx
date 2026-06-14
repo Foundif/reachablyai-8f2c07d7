@@ -160,9 +160,9 @@ const Onboarding = () => {
         return (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="text-center">
             <div className="w-24 h-24 mx-auto mb-6 rounded-2xl flex items-center justify-center shadow-glow animate-pulse-ring">
-              <img src={logoAsset.url} alt="Foundif" className="h-16 w-auto object-contain" />
+              <img src={logoAsset.url} alt="Chatarly" className="h-16 w-auto object-contain" />
             </div>
-            <h2 className="text-3xl font-bold text-foreground mb-4">Welcome to Foundif</h2>
+            <h2 className="text-3xl font-bold text-foreground mb-4">Welcome to Chatarly</h2>
             <p className="text-lg text-muted-foreground max-w-md mx-auto mb-6">
               Let's set up your business in under 3 minutes. We'll guide you step by step.
             </p>
@@ -352,7 +352,7 @@ const Onboarding = () => {
         return (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="text-center">
             <h2 className="text-2xl font-bold text-foreground mb-2">You're All Set!</h2>
-            <p className="text-muted-foreground mb-8">Here's what you can do with Foundif</p>
+            <p className="text-muted-foreground mb-8">Here's what you can do with Chatarly</p>
             <div className="glass-card p-6 text-left space-y-4 mb-6">
               <div className="flex items-start gap-3">
                 <Sparkles className="w-5 h-5 text-foreground mt-0.5" />
@@ -399,7 +399,7 @@ const Onboarding = () => {
 
       <div className="flex items-center justify-between p-4 md:p-6">
         <div className="flex items-center gap-2">
-          <img src={logoAsset.url} alt="Foundif" className="h-7 w-auto object-contain" />
+          <img src={logoAsset.url} alt="Chatarly" className="h-7 w-auto object-contain" />
         </div>
         <div className="text-sm text-muted-foreground">{stepLabels[step]} · {step + 1}/{totalSteps}</div>
       </div>

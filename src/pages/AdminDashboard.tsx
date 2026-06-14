@@ -183,7 +183,7 @@ const AdminDashboard = () => {
     const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'glamsup-users.csv'; a.click();
+    const a = document.createElement('a'); a.href = url; a.download = 'chatarly-users.csv'; a.click();
     toast.success('Users exported!');
   };
 
@@ -241,7 +241,7 @@ const AdminDashboard = () => {
           <div className="flex items-center gap-3">
             <Shield className="w-6 h-6 text-primary" />
             <div>
-              <h1 className="text-lg font-bold text-foreground">Glamsup Admin</h1>
+              <h1 className="text-lg font-bold text-foreground">Chatarly Admin</h1>
               <p className="text-xs text-muted-foreground">Logged in as {adminUser}</p>
             </div>
           </div>

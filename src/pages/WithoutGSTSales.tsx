@@ -74,7 +74,7 @@ const WithoutGSTSales = () => {
       discount: inv.discount, total_amount: inv.total_amount,
       items: (inv.items || []).map(i => ({ service_name: i.service_name, price: i.price, quantity: i.quantity, employee_name: i.employee_name })),
       notes: inv.notes || undefined,
-    }, currency, profile?.store_name || 'Glamsup Salon', getLogoUrl());
+    }, currency, profile?.store_name || 'Chatarly Salon', getLogoUrl());
   };
 
   const handleDelete = async (id: string) => {

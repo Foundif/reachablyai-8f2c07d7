@@ -21,7 +21,7 @@ const WhiteLabel = () => {
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
             <Building2 className="w-6 h-6 text-primary" /> White Label
           </h1>
-          <p className="text-sm text-muted-foreground">Run Foundif under your own brand and domain.</p>
+          <p className="text-sm text-muted-foreground">Run Chatarly under your own brand and domain.</p>
         </div>
 
         <div className="glass-elevated p-5 space-y-4">
@@ -37,7 +37,7 @@ const WhiteLabel = () => {
           </div>
           <div className="flex items-center justify-between pt-2 border-t border-border/50">
             <div>
-              <p className="font-semibold text-sm">Hide "Powered by Foundif"</p>
+              <p className="font-semibold text-sm">Hide "Powered by Chatarly"</p>
               <p className="text-xs text-muted-foreground">Requires Agency plan</p>
             </div>
             <Switch checked={s.hideBadge} onCheckedChange={(v) => setS({ ...s, hideBadge: v })} />

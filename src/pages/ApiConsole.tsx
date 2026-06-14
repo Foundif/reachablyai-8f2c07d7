@@ -32,7 +32,7 @@ const ApiConsole = () => {
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
             <Code2 className="w-6 h-6 text-primary" /> API Console
           </h1>
-          <p className="text-sm text-muted-foreground">Programmatic access to your Foundif workspace.</p>
+          <p className="text-sm text-muted-foreground">Programmatic access to your Chatarly workspace.</p>
         </div>
 
         <div className="glass-elevated p-4">

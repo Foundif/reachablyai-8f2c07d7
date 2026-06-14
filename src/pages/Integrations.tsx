@@ -41,7 +41,7 @@ const Integrations = () => {
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
             <Plug className="w-6 h-6 text-primary" /> Integrations Hub
           </h1>
-          <p className="text-sm text-muted-foreground">Connect Foundif with your favorite tools.</p>
+          <p className="text-sm text-muted-foreground">Connect Chatarly with your favorite tools.</p>
         </div>
 
         <div className="relative max-w-md">

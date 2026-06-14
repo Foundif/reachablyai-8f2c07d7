@@ -13,7 +13,7 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const { profile, updateProfile } = useAuth();
   const [language, setLanguageState] = useState<Language>(() => {
-    const saved = localStorage.getItem('glamsup_language');
+    const saved = localStorage.getItem('chatarly_language');
     return (saved as Language) || 'en';
   });
 
@@ -25,7 +25,7 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
 
   const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang);
-    localStorage.setItem('glamsup_language', lang);
+    localStorage.setItem('chatarly_language', lang);
     updateProfile({ language: lang } as any);
   }, [updateProfile]);
 

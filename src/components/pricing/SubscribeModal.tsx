@@ -174,7 +174,7 @@ const SubscribeModal = ({
               Your subscription is now active. You now have access to all {plan.name} features.
             </p>
             <Button variant="trust" onClick={handleClose}>
-              Start Using Glamsup
+              Start Using Chatarly
             </Button>
           </motion.div>
         )}

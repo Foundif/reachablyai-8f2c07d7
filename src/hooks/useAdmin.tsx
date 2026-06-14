@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
-const ADMIN_TOKEN_KEY = 'glamsup_admin_token';
-const ADMIN_USER_KEY = 'glamsup_admin_user';
+const ADMIN_TOKEN_KEY = 'chatarly_admin_token';
+const ADMIN_USER_KEY = 'chatarly_admin_user';
 
 const getBaseUrl = () => {
   const url = import.meta.env.VITE_SUPABASE_URL;

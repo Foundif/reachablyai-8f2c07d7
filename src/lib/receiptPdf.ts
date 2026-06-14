@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import { Sale } from '@/types/store';
 
-export const generateReceiptPdf = (sale: Sale, currency: string, storeName: string = 'Glamsup Store') => {
+export const generateReceiptPdf = (sale: Sale, currency: string, storeName: string = 'Chatarly Store') => {
   const doc = new jsPDF({ unit: 'mm', format: [80, 200] });
   const w = 80;
   let y = 10;
@@ -78,7 +78,7 @@ export const generateReceiptPdf = (sale: Sale, currency: string, storeName: stri
   doc.setFont('helvetica', 'normal');
   doc.text('Thank you for your purchase!', w / 2, y, { align: 'center' });
   y += 4;
-  doc.text('Powered by Glamsup', w / 2, y, { align: 'center' });
+  doc.text('Powered by Chatarly', w / 2, y, { align: 'center' });
 
   return doc;
 };

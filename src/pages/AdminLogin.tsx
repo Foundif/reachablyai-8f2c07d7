@@ -39,7 +39,7 @@ const AdminLogin = () => {
           <div className="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-8">
             <Shield className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-4xl font-bold text-white mb-4">Glamsup Admin</h1>
+          <h1 className="text-4xl font-bold text-white mb-4">Chatarly Admin</h1>
           <p className="text-white/80 text-lg">Super Admin Control Panel</p>
           <p className="text-white/60 text-sm mt-4">Manage users, subscriptions, and monitor platform analytics. Login with your admin email.</p>
         </div>
@@ -51,7 +51,7 @@ const AdminLogin = () => {
           <div className="text-center lg:text-left">
             <div className="lg:hidden flex items-center justify-center gap-2 mb-6">
               <Shield className="w-8 h-8 text-primary" />
-              <span className="text-2xl font-bold text-foreground">Glamsup Admin</span>
+              <span className="text-2xl font-bold text-foreground">Chatarly Admin</span>
             </div>
             <h2 className="text-2xl font-bold text-foreground">Admin Login</h2>
             <p className="text-muted-foreground mt-1">Enter your super admin credentials</p>

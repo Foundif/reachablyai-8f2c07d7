@@ -42,7 +42,7 @@ const loadImageAsDataUrl = async (url: string): Promise<string | null> => {
 export const generateSalonReceipt = async (
   data: ReceiptData,
   currency: string,
-  storeName: string = 'Glamsup Salon',
+  storeName: string = 'Chatarly Salon',
   options?: ReceiptOptions
 ) => {
   const doc = new jsPDF({ unit: 'mm', format: [80, 280] });
@@ -159,7 +159,7 @@ export const generateSalonReceipt = async (
   doc.text('Thank you for visiting!', w / 2, y, { align: 'center' });
   y += 4;
   doc.setFontSize(6);
-  doc.text('Powered by Glamsup', w / 2, y, { align: 'center' });
+  doc.text('Powered by Chatarly', w / 2, y, { align: 'center' });
 
   return doc;
 };

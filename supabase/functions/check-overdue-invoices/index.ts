@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
               "Authorization": `Bearer ${resendApiKey}`,
             },
             body: JSON.stringify({
-              from: "Glamsup <onboarding@resend.dev>",
+              from: "Chatarly <onboarding@resend.dev>",
               to: [client.email],
               subject: `⚠️ OVERDUE: Invoice ${invoice.invoice_number} - $${invoice.amount}`,
               html: `
@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
                       <p>If you have already made this payment, please disregard this notice.</p>
                     </div>
                     <div class="footer">
-                      <p>Sent via Glamsup - Salon & Spa Management</p>
+                      <p>Sent via Chatarly - Salon & Spa Management</p>
                     </div>
                   </div>
                 </body>
@@ -190,7 +190,7 @@ Deno.serve(async (req) => {
                 "Authorization": `Bearer ${resendApiKey}`,
               },
               body: JSON.stringify({
-                from: "Glamsup <onboarding@resend.dev>",
+                from: "Chatarly <onboarding@resend.dev>",
                 to: [client.email],
                 subject: `Payment Reminder: Invoice ${invoice.invoice_number} due in 3 days`,
                 html: `
@@ -234,7 +234,7 @@ Deno.serve(async (req) => {
                         <p>Please ensure payment is made by the due date to avoid any late fees.</p>
                       </div>
                       <div class="footer">
-                        <p>Sent via Glamsup - Salon & Spa Management</p>
+                        <p>Sent via Chatarly - Salon & Spa Management</p>
                       </div>
                     </div>
                   </body>

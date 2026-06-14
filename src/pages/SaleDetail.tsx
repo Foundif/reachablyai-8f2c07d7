@@ -69,7 +69,7 @@ const SaleDetail = () => {
 
   const handleWhatsAppShare = () => {
     if (!sale) return;
-    const storeName = (profile as any)?.store_name || 'Glamsup Salon';
+    const storeName = (profile as any)?.store_name || 'Chatarly Salon';
     const items = (sale.items || []).map(i => `• ${i.product_name} (Size ${i.size}) × ${i.quantity} = ${formatCurrency(i.selling_price * i.quantity, currency)}`).join('\n');
     const msg = `🧾 *${storeName}*\nInvoice: ${sale.invoice_number}\nDate: ${new Date(sale.created_at).toLocaleString()}\n\n${items}\n\n*Total: ${formatCurrency(sale.total_amount, currency)}*\nPayment: ${sale.payment_method.toUpperCase()}\n\nThank you for your purchase!`;
     const url = `https://wa.me/${sale.customer_phone?.replace(/\D/g, '') || ''}?text=${encodeURIComponent(msg)}`;
@@ -79,7 +79,7 @@ const SaleDetail = () => {
   if (loading) return <AppLayout><div className="p-8"><Skeleton className="h-64" /></div></AppLayout>;
   if (!sale) return <AppLayout><div className="p-8 text-center"><p className="text-muted-foreground">Sale not found</p><Link to="/sales" className="text-primary hover:underline mt-2 inline-block">Back to sales</Link></div></AppLayout>;
 
-  const storeName = (profile as any)?.store_name || 'Glamsup Salon';
+  const storeName = (profile as any)?.store_name || 'Chatarly Salon';
 
   return (
     <AppLayout>
