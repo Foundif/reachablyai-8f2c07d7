@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import logoAsset from '@/assets/chatarly-logo.png.asset.json';
+import logoAsset from '@/assets/chatarly-icon.png.asset.json';
 
 const BUSINESS_TYPES = [
   { id: 'salon', label: 'Salon & Spa', icon: Scissors, desc: 'Hair, beauty & wellness' },

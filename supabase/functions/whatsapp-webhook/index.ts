@@ -178,27 +178,35 @@ Deno.serve(async (req) => {
     const appSecret = Deno.env.get('META_APP_SECRET')
     if (appSecret) {
       const ok = await verifyHmac(rawBody, sig, appSecret)
-      if (!ok) return new Response('invalid signature', { status: 401 })
+      if (!ok) {
+        console.error('HMAC verification FAILED - META_APP_SECRET does not match Facebook App secret. Received sig:', sig)
+        return new Response('invalid signature', { status: 401 })
+      }
+    } else {
+      console.warn('META_APP_SECRET not configured - skipping HMAC verification')
     }
     const body = JSON.parse(rawBody)
+    console.log('webhook payload:', JSON.stringify(body).slice(0, 800))
 
     const entry = body.entry?.[0]
     const change = entry?.changes?.[0]
     const value = change?.value
     const phoneNumberId = value?.metadata?.phone_number_id
+    console.log('field:', change?.field, 'phone_number_id:', phoneNumberId)
     if (!phoneNumberId) {
-      return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ ok: true, note: 'no phone_number_id, likely a status/account event' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     const { data: settings } = await supabase
       .from('tn_settings').select('*').eq('meta_phone_number_id', phoneNumberId).maybeSingle()
     if (!settings) {
-      console.log('no owner for phone_number_id', phoneNumberId)
-      return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      console.error(`NO OWNER FOUND for phone_number_id="${phoneNumberId}". Update tn_settings.meta_phone_number_id to this value in WhatsApp Settings.`)
+      return new Response(JSON.stringify({ ok: true, error: `no owner for phone_number_id ${phoneNumberId}` }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
     const userId = settings.user_id
     const token = Deno.env.get('META_ACCESS_TOKEN')!
     const messages = value?.messages || []
+    console.log(`processing ${messages.length} message(s) for user ${userId}`)
 
     for (const msg of messages) {
       const waId = msg.from

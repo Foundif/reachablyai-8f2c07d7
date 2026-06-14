@@ -1,20 +1,36 @@
-import logoAsset from '@/assets/chatarly-logo.png.asset.json';
+import iconAsset from '@/assets/chatarly-icon.png.asset.json';
+import wordmarkAsset from '@/assets/chatarly-wordmark.png.asset.json';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
-export const BRAND_LOGO_URL = logoAsset.url;
+export const BRAND_ICON_URL = iconAsset.url;
+export const BRAND_WORDMARK_URL = wordmarkAsset.url;
+export const BRAND_LOGO_URL = iconAsset.url;
 
-/** Renders the tenant's uploaded logo if present, otherwise the Chatarly wordmark. */
-export const BrandMark = ({ className, size = 36, fullWidth = false }: { className?: string; size?: number; fullWidth?: boolean }) => {
+/** Renders the tenant's uploaded logo if present, otherwise the Chatarly icon. */
+export const BrandMark = ({
+  className,
+  size = 36,
+  fullWidth = false,
+  variant = 'icon',
+}: {
+  className?: string;
+  size?: number;
+  fullWidth?: boolean;
+  variant?: 'icon' | 'wordmark';
+}) => {
   const { profile } = useAuth();
-  const url = (profile as any)?.logo_url || logoAsset.url;
+  const tenantLogo = (profile as any)?.logo_url;
+  const src = tenantLogo || (variant === 'wordmark' ? wordmarkAsset.url : iconAsset.url);
   return (
     <img
-      src={url}
+      src={src}
       alt={profile?.store_name || 'Chatarly'}
-      style={fullWidth ? undefined : { height: size }}
+      style={fullWidth ? undefined : { height: size, width: size }}
       className={cn(
-        fullWidth ? 'w-full h-auto object-contain select-none' : 'w-auto max-w-[200px] object-contain select-none',
+        fullWidth
+          ? 'w-full h-auto object-contain select-none'
+          : 'object-contain select-none rounded-lg',
         className,
       )}
       draggable={false}
@@ -22,15 +38,15 @@ export const BrandMark = ({ className, size = 36, fullWidth = false }: { classNa
   );
 };
 
-/** Compact lockup: logo + business name + optional caption. */
+/** Compact lockup: icon + business name + optional caption. */
 export const BrandLockup = ({
   caption,
-  size = 28,
+  size = 32,
   className,
   showName = true,
 }: { caption?: string; size?: number; className?: string; showName?: boolean }) => {
   const { profile } = useAuth();
-  const name = profile?.store_name?.trim() || 'My Workspace';
+  const name = profile?.store_name?.trim() || 'Chatarly';
   const tagline = (profile as any)?.tagline || caption;
   return (
     <div className={cn('flex items-center gap-2.5', className)}>
