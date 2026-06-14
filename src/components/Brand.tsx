@@ -1,4 +1,4 @@
-import logoAsset from '@/assets/foundif-logo.png.asset.json';
+import logoAsset from '@/assets/chatarly-logo.png.asset.json';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
