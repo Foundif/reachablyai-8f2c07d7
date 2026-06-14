@@ -109,9 +109,9 @@ const Pricing = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl overflow-hidden shadow-glow">
-                <img src="/__l5e/assets-v1/daea58ad-d455-468f-989f-c8daa3e96b0e/foundif-logo.png" alt="Foundif" className="w-full h-full object-contain" />
+                <img src="/__l5e/assets-v1/28fc78aa-8351-4b67-a60e-e6bf0a7894c8/chatarly-logo.png" alt="Chatarly" className="w-full h-full object-contain" />
               </div>
-              <span className="font-bold text-foreground text-sm sm:text-base">Glamsup</span>
+              <span className="font-bold text-foreground text-sm sm:text-base">Chatarly</span>
             </div>
             <Button variant="ghost" size="sm" onClick={() => navigate(user ? '/' : '/auth')}>
               <ArrowLeft className="w-4 h-4" />
@@ -194,7 +194,7 @@ const Pricing = () => {
                     if (user) toast.success('You are on the Starter plan!');
                     else navigate('/auth');
                   } else if (plan.id === 'premium') {
-                    window.location.href = 'mailto:sales@glamsup.com?subject=Premium%20Plan%20Inquiry';
+                    window.location.href = 'mailto:sales@chatarly.com?subject=Premium%20Plan%20Inquiry';
                     toast.info('Opening email to contact sales...');
                   } else {
                     if (!user) { toast.info('Please create an account first'); navigate('/auth'); return; }
@@ -233,7 +233,7 @@ const Pricing = () => {
         plan={selectedPlan ? { id: selectedPlan.id, name: selectedPlan.name, price: getPrice(selectedPlan.monthlyPrice) } : null}
         formattedPrice={selectedPlan ? formatPrice(selectedPlan.monthlyPrice) : ''}
         billingPeriod={billingPeriod}
-        upiId="glamsup@ybl"
+        upiId="chatarly@ybl"
         qrCodeUrl=""
       />
     </div>

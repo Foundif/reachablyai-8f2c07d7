@@ -153,7 +153,7 @@ const POSBilling = () => {
 
       toast.success(`Sale completed! Invoice: ${invoiceNumber}`);
       
-      const storeName = (profile as any)?.store_name || 'Glamsup Salon';
+      const storeName = (profile as any)?.store_name || 'Chatarly Salon';
       const completedSale = {
         id: sale.id, user_id: user.id, invoice_number: invoiceNumber,
         customer_id: null, customer_phone: customerPhone || null,

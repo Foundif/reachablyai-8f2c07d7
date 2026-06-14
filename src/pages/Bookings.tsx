@@ -107,7 +107,7 @@ const Bookings = () => {
   };
 
   const sendWhatsAppReminder = (apt: any) => {
-    const salonName = profile?.store_name || 'Glamsup Salon';
+    const salonName = profile?.store_name || 'Chatarly Salon';
     const message = `Hi ${apt.customer_name},\n\nReminder: Your appointment at ${salonName}\n📅 ${apt.appointment_date}\n⏰ ${apt.appointment_time}\n💇 ${apt.service_name || 'Service'}\n\nSee you soon! ✨`;
     const customer = customers.find(c => c.id === apt.customer_id);
     const phone = customer?.phone?.replace(/[^0-9]/g, '') || '';

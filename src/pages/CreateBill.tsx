@@ -166,7 +166,7 @@ const CreateBill = () => {
     await downloadSalonReceipt({
       ...lastBill,
       items: lastBill.items.map(i => ({ service_name: i.service_name, price: i.price, quantity: i.quantity, employee_name: i.employee_name })),
-    }, currency, profile?.store_name || 'Glamsup Salon', getLogoUrl());
+    }, currency, profile?.store_name || 'Chatarly Salon', getLogoUrl());
   };
 
   const handlePrintReceipt = async () => {
@@ -174,7 +174,7 @@ const CreateBill = () => {
     await printSalonReceipt({
       ...lastBill,
       items: lastBill.items.map(i => ({ service_name: i.service_name, price: i.price, quantity: i.quantity, employee_name: i.employee_name })),
-    }, currency, profile?.store_name || 'Glamsup Salon', getLogoUrl());
+    }, currency, profile?.store_name || 'Chatarly Salon', getLogoUrl());
   };
 
   if (loading) return <AppLayout><DashboardSkeleton /></AppLayout>;

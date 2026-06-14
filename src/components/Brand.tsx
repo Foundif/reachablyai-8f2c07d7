@@ -1,17 +1,17 @@
-import logoAsset from '@/assets/foundif-logo.png.asset.json';
+import logoAsset from '@/assets/chatarly-logo.png.asset.json';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
 export const BRAND_LOGO_URL = logoAsset.url;
 
-/** Renders the tenant's uploaded logo if present, otherwise the Foundif wordmark. */
+/** Renders the tenant's uploaded logo if present, otherwise the Chatarly wordmark. */
 export const BrandMark = ({ className, size = 36, fullWidth = false }: { className?: string; size?: number; fullWidth?: boolean }) => {
   const { profile } = useAuth();
   const url = (profile as any)?.logo_url || logoAsset.url;
   return (
     <img
       src={url}
-      alt={profile?.store_name || 'Foundif'}
+      alt={profile?.store_name || 'Chatarly'}
       style={fullWidth ? undefined : { height: size }}
       className={cn(
         fullWidth ? 'w-full h-auto object-contain select-none' : 'w-auto max-w-[200px] object-contain select-none',

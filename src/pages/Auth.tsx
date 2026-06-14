@@ -85,7 +85,7 @@ const Auth = () => {
         <div className="relative z-10 flex flex-col justify-center px-16">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-12">
             <div className="mb-8">
-              <img src="/__l5e/assets-v1/daea58ad-d455-468f-989f-c8daa3e96b0e/foundif-logo.png" alt="Foundif" className="h-14 w-auto object-contain" />
+              <img src="/__l5e/assets-v1/28fc78aa-8351-4b67-a60e-e6bf0a7894c8/chatarly-logo.png" alt="Chatarly" className="h-14 w-auto object-contain" />
               <p className="text-sm text-muted-foreground uppercase tracking-wider mt-3">Business Messaging Platform</p>
             </div>
 
@@ -118,7 +118,7 @@ const Auth = () => {
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-            <img src="/__l5e/assets-v1/daea58ad-d455-468f-989f-c8daa3e96b0e/foundif-logo.png" alt="Foundif" className="h-10 w-auto object-contain" />
+            <img src="/__l5e/assets-v1/28fc78aa-8351-4b67-a60e-e6bf0a7894c8/chatarly-logo.png" alt="Chatarly" className="h-10 w-auto object-contain" />
           </div>
 
           {isResettingPassword ? (

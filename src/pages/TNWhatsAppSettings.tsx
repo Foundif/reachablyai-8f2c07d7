@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Copy, RefreshCw, Radio } from 'lucide-react';
 
 const WEBHOOK_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-webhook`;
 
@@ -17,11 +17,27 @@ const TNWhatsAppSettings = () => {
     upi_id: '', payee_name: '', qr_image_url: '', advance_amount: 50,
     meta_phone_number_id: '', meta_waba_id: '', verify_token_hint: '',
   });
+  const [events, setEvents] = useState<any[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(false);
+
+  const loadEvents = async () => {
+    if (!user) return;
+    setLoadingEvents(true);
+    const { data } = await supabase
+      .from('tn_messages')
+      .select('id, created_at, direction, type, wa_id, payload')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(10);
+    setEvents(data || []);
+    setLoadingEvents(false);
+  };
 
   useEffect(() => { (async () => {
     if (!user) return;
     const { data } = await supabase.from('tn_settings').select('*').eq('user_id', user.id).maybeSingle();
     if (data) setS(data);
+    loadEvents();
   })(); }, [user]);
 
   const save = async () => {
@@ -40,27 +56,95 @@ const TNWhatsAppSettings = () => {
     toast.success('QR uploaded — click Save');
   };
 
+  const copyUrl = () => { navigator.clipboard.writeText(WEBHOOK_URL); toast.success('Webhook URL copied'); };
+
+  const inbound = events.filter(e => e.direction === 'in');
+  const lastInbound = inbound[0];
+  const minutesAgo = lastInbound
+    ? Math.floor((Date.now() - new Date(lastInbound.created_at).getTime()) / 60000)
+    : null;
+
   return (
     <AppLayout>
       <div className="p-4 md:p-8 space-y-6 max-w-3xl">
         <h1 className="text-2xl md:text-3xl font-bold">WhatsApp Settings</h1>
 
+        {/* Webhook setup */}
         <Card className="p-5 bg-orange-500/10 border-orange-500/30">
           <div className="flex gap-3">
             <AlertCircle className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
-            <div className="text-sm space-y-2">
+            <div className="text-sm space-y-2 flex-1">
               <p className="font-semibold">Meta Webhook URL</p>
-              <code className="block text-xs bg-background p-2 rounded break-all">{WEBHOOK_URL}</code>
-              <p className="text-muted-foreground">Paste this in Meta → WhatsApp → Configuration → Webhook. Use your Verify Token below.</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 text-xs bg-background p-2 rounded break-all">{WEBHOOK_URL}</code>
+                <Button size="sm" variant="ghost" onClick={copyUrl}><Copy className="w-4 h-4" /></Button>
+              </div>
+              <p className="text-muted-foreground text-xs">
+                Paste in <b>Meta → WhatsApp → Configuration → Webhook</b>. After verifying,
+                click <b>Manage</b> next to the webhook and <b>subscribe to the <code>messages</code> field</b> on your WABA —
+                without that subscription, inbound Hi/Help from customers will never reach this app.
+              </p>
             </div>
           </div>
         </Card>
 
+        {/* Live diagnostics */}
+        <Card className="p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Radio className={`w-4 h-4 ${lastInbound ? 'text-emerald-500 animate-pulse' : 'text-muted-foreground'}`} />
+              <h2 className="font-semibold text-lg">Webhook Diagnostics</h2>
+            </div>
+            <Button size="sm" variant="ghost" onClick={loadEvents} disabled={loadingEvents}>
+              <RefreshCw className={`w-4 h-4 ${loadingEvents ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
+
+          {lastInbound ? (
+            <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="w-4 h-4" />
+              Last inbound message received {minutesAgo === 0 ? 'just now' : `${minutesAgo}m ago`} from {lastInbound.wa_id}
+            </div>
+          ) : (
+            <div className="flex items-start gap-2 text-sm text-orange-600 dark:text-orange-400">
+              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+              <div>
+                <p className="font-medium">No inbound messages received yet.</p>
+                <p className="text-muted-foreground text-xs mt-1">
+                  If a customer texts your business number and nothing appears here, the cause is almost always:
+                  (1) the webhook isn't subscribed to the <code>messages</code> field in Meta,
+                  (2) the Phone Number ID below doesn't match the live number, or
+                  (3) <code>META_APP_SECRET</code> doesn't match your Facebook App's secret.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-1.5 max-h-64 overflow-y-auto">
+            {events.length === 0 && <p className="text-xs text-muted-foreground">No events logged yet.</p>}
+            {events.map(e => (
+              <div key={e.id} className="text-xs flex items-center gap-2 p-2 rounded bg-muted/40">
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${e.direction === 'in' ? 'bg-emerald-500/20 text-emerald-600' : 'bg-blue-500/20 text-blue-600'}`}>
+                  {e.direction}
+                </span>
+                <span className="text-muted-foreground">{new Date(e.created_at).toLocaleTimeString()}</span>
+                <span className="font-mono">{e.wa_id}</span>
+                <span className="text-muted-foreground">· {e.type}</span>
+                <span className="truncate flex-1 text-muted-foreground">
+                  {e.payload?.text?.body || e.payload?.interactive?.body?.text || ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* Meta credentials */}
         <Card className="p-5 space-y-4">
           <h2 className="font-semibold text-lg">Meta WhatsApp Cloud API</h2>
           <div>
             <Label>Phone Number ID</Label>
             <Input value={s.meta_phone_number_id || ''} onChange={e => setS({ ...s, meta_phone_number_id: e.target.value })} placeholder="e.g. 109876543210987" />
+            <p className="text-xs text-muted-foreground mt-1">Must exactly match the ID Meta sends in webhook payloads.</p>
           </div>
           <div>
             <Label>WhatsApp Business Account ID (WABA)</Label>
@@ -71,13 +155,12 @@ const TNWhatsAppSettings = () => {
             <Input value={s.verify_token_hint || ''} onChange={e => setS({ ...s, verify_token_hint: e.target.value })} placeholder="Pick any string and paste in both places" />
           </div>
           <p className="text-xs text-muted-foreground">
-            🔒 <b>Access Token</b> and <b>App Secret</b> are sensitive — add them as project secrets named
-            <code className="bg-muted px-1 mx-1 rounded">META_ACCESS_TOKEN</code>,
-            <code className="bg-muted px-1 mx-1 rounded">META_APP_SECRET</code>, and
-            <code className="bg-muted px-1 mx-1 rounded">META_VERIFY_TOKEN</code> via Lovable Cloud → Secrets. The Verify Token above is just a hint label.
+            🔒 <b>Access Token</b>, <b>App Secret</b> and <b>Verify Token</b> are stored as project secrets
+            (<code>META_ACCESS_TOKEN</code>, <code>META_APP_SECRET</code>, <code>META_VERIFY_TOKEN</code>). Update them in Cloud → Secrets.
           </p>
         </Card>
 
+        {/* UPI */}
         <Card className="p-5 space-y-4">
           <h2 className="font-semibold text-lg">UPI Payment</h2>
           <div>
@@ -86,7 +169,7 @@ const TNWhatsAppSettings = () => {
           </div>
           <div>
             <Label>Payee Name</Label>
-            <Input value={s.payee_name || ''} onChange={e => setS({ ...s, payee_name: e.target.value })} placeholder="TN45 Travel Aid" />
+            <Input value={s.payee_name || ''} onChange={e => setS({ ...s, payee_name: e.target.value })} />
           </div>
           <div>
             <Label>Advance Amount (₹)</Label>

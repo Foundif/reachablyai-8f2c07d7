@@ -29,7 +29,7 @@ const TrialExpiredModal = () => {
             Free Trial Expired
           </DialogTitle>
           <DialogDescription>
-            Your free trial has ended. Upgrade to a paid plan to continue using Glamsup with all features.
+            Your free trial has ended. Upgrade to a paid plan to continue using Chatarly with all features.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 mt-2">

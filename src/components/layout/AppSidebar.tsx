@@ -58,22 +58,24 @@ const AppSidebar = () => {
                     <NavLink
                       key={item.to}
                       to={item.to}
+                      title={collapsed ? item.label : undefined}
                       className={cn(
-                        'group relative flex items-center gap-3 px-2.5 py-2 rounded-xl transition-all duration-300',
-                        'hover:bg-white/[0.04]',
-                        isActive && 'bg-white/[0.06]',
-                        collapsed && 'justify-center',
+                        'group relative flex items-center gap-3 rounded-xl transition-all duration-300',
+                        collapsed ? 'justify-center p-2 mx-1' : 'px-2.5 py-2',
+                        !isActive && 'hover:bg-white/[0.04]',
                       )}
                     >
-                      {isActive && (
-                        <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/20 via-secondary/15 to-transparent ring-1 ring-primary/30" />
-                      )}
-                      {isActive && (
-                        <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-r-full bg-gradient-to-b from-primary to-secondary shadow-[0_0_12px_hsl(211_100%_52%)]" />
+                      {isActive && !collapsed && (
+                        <>
+                          <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/20 via-secondary/15 to-transparent ring-1 ring-primary/30" />
+                          <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-r-full bg-gradient-to-b from-primary to-secondary shadow-[0_0_12px_hsl(211_100%_52%)]" />
+                        </>
                       )}
                       <div className={cn(
-                        'relative w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 shrink-0',
-                        isActive ? 'bg-gradient-to-br from-primary/30 to-secondary/20 text-white' : 'text-muted-foreground group-hover:text-foreground',
+                        'relative w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-300 shrink-0',
+                        isActive
+                          ? 'bg-gradient-to-br from-primary to-secondary text-white shadow-[0_4px_16px_-4px_hsl(var(--primary)/0.6)]'
+                          : 'text-muted-foreground group-hover:text-foreground',
                       )}>
                         <Icon className="w-[18px] h-[18px]" />
                       </div>

@@ -232,7 +232,7 @@ Deno.serve(async (req) => {
 
       // Trigger: send the WhatsApp Flow
       const text = (msg?.text?.body || '').trim()
-      const triggers = /^(hi|hello|hai|start|book|வணக்கம்|தொடங்கு|hey)/i
+      const triggers = /^(hi|hello|hai|help|menu|start|book|வணக்கம்|தொடங்கு|hey)\b/i
       if (msg.type === 'text' && triggers.test(text)) {
         if (!settings.meta_flow_id) {
           await sendWhatsApp(phoneNumberId, token, textMsg(waId,

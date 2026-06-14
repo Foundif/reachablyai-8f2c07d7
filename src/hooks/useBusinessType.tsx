@@ -40,7 +40,7 @@ export const BusinessTypeProvider = ({ children }: { children: ReactNode }) => {
     if (stored.includes('hospital')) return 'hospital';
     if (stored.includes('spa')) return 'spa';
     if (stored.includes('gym') || stored.includes('fitness')) return 'gym';
-    // Default to salon for Glamsup
+    // Default to salon for Chatarly
     return 'salon';
   }, [profile?.store_name]);
 

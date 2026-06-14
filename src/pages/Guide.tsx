@@ -70,7 +70,7 @@ const Guide = () => {
           </div>
           <div className="flex-1">
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-              How to use Glamsup messaging
+              How to use Chatarly messaging
             </h1>
             <p className="text-muted-foreground mt-2 max-w-2xl">
               Four real scenarios, end-to-end. Follow any of these to start sending templates,

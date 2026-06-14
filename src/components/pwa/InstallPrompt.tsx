@@ -28,7 +28,7 @@ const InstallPrompt = () => {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
     if (isIOS && !isStandalone && !dismissed) {
       setTimeout(() => {
-        toast('Install Glamsup', {
+        toast('Install Chatarly', {
           description: 'Tap the Share button, then "Add to Home Screen" to install.',
           duration: 8000,
           icon: <Download className="w-4 h-4" />,
@@ -44,7 +44,7 @@ const InstallPrompt = () => {
     await deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
-      toast.success('Glamsup installed successfully!');
+      toast.success('Chatarly installed successfully!');
     }
     setDeferredPrompt(null);
     setShowBanner(false);
@@ -65,7 +65,7 @@ const InstallPrompt = () => {
             <Download className="w-5 h-5 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-foreground text-sm">Install Glamsup</h4>
+            <h4 className="font-semibold text-foreground text-sm">Install Chatarly</h4>
             <p className="text-xs text-muted-foreground mt-0.5">Add to your home screen for quick access and offline support.</p>
             <div className="flex gap-2 mt-3">
               <Button size="sm" variant="trust" onClick={handleInstall}>Install</Button>

@@ -74,7 +74,7 @@ const getEmailContent = (data: EmailRequest) => {
                 </div>
               </div>
               <div class="footer">
-                <p>Sent via Glamsup</p>
+                <p>Sent via Chatarly</p>
               </div>
             </div>
           </body>
@@ -131,7 +131,7 @@ const getEmailContent = (data: EmailRequest) => {
                 </div>
               </div>
               <div class="footer">
-                <p>Sent via Glamsup</p>
+                <p>Sent via Chatarly</p>
               </div>
             </div>
           </body>
@@ -184,7 +184,7 @@ const getEmailContent = (data: EmailRequest) => {
                 </div>
               </div>
               <div class="footer">
-                <p>Sent via Glamsup</p>
+                <p>Sent via Chatarly</p>
               </div>
             </div>
           </body>
@@ -225,7 +225,7 @@ app.post('/*', async (c) => {
         "Authorization": `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "Glamsup <onboarding@resend.dev>",
+        from: "Chatarly <onboarding@resend.dev>",
         to: [data.recipientEmail],
         subject: emailContent.subject,
         html: emailContent.html,

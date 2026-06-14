@@ -53,7 +53,7 @@ const PaymentModal = ({ open, onOpenChange, plan, formattedPrice, billingPeriod,
 
   const handleUpiOpen = (scheme: string) => {
     const amount = plan?.price || 0;
-    const upiLink = `upi://pay?pa=${upiId}&pn=Glamsup&am=${amount}&cu=INR&tn=${plan?.name}%20Plan`;
+    const upiLink = `upi://pay?pa=${upiId}&pn=Chatarly&am=${amount}&cu=INR&tn=${plan?.name}%20Plan`;
     window.open(upiLink, '_blank');
     setStep('waiting');
   };

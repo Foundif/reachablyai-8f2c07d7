@@ -17,7 +17,7 @@ serve(async (req) => {
 
     const langName = language === "hi" ? "Hindi" : language === "ta" ? "Tamil" : "English";
 
-    const systemPrompt = `You are a voice assistant for Glamsup, a salon and spa management app. Parse the user's voice command and respond with a JSON object.
+    const systemPrompt = `You are a voice assistant for Chatarly, a salon and spa management app. Parse the user's voice command and respond with a JSON object.
 
 The app has these pages/features:
 - Dashboard (home) - overview of sales and inventory
