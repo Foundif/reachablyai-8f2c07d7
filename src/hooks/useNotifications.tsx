@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import alertSoundAsset from '@/assets/chatarly-message-alert.wav.asset.json';
 
 export interface AppNotification {
   id: string;
@@ -13,7 +14,7 @@ export interface AppNotification {
   created_at: string;
 }
 
-const NOTIFICATION_SOUND_URL = 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3';
+const NOTIFICATION_SOUND_URL = alertSoundAsset.url;
 
 let audioInstance: HTMLAudioElement | null = null;
 
@@ -32,7 +33,6 @@ export const useNotifications = () => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
-  const prevCountRef = useRef(0);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
