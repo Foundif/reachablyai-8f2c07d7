@@ -131,6 +131,7 @@ export type Database = {
       }
       customers: {
         Row: {
+          avatar_url: string | null
           created_at: string
           id: string
           last_purchase_date: string | null
@@ -142,6 +143,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
           id?: string
           last_purchase_date?: string | null
@@ -153,6 +155,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
           id?: string
           last_purchase_date?: string | null
@@ -1272,6 +1275,7 @@ export type Database = {
       }
       tn_customers: {
         Row: {
+          avatar_url: string | null
           created_at: string
           id: string
           language: string | null
@@ -1282,6 +1286,7 @@ export type Database = {
           wa_id: string
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
           id?: string
           language?: string | null
@@ -1292,6 +1297,7 @@ export type Database = {
           wa_id: string
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
           id?: string
           language?: string | null
@@ -1459,6 +1465,7 @@ export type Database = {
           direction: string
           id: string
           payload: Json | null
+          read_at: string | null
           type: string | null
           user_id: string
           wa_id: string
@@ -1469,6 +1476,7 @@ export type Database = {
           direction: string
           id?: string
           payload?: Json | null
+          read_at?: string | null
           type?: string | null
           user_id: string
           wa_id: string
@@ -1479,6 +1487,7 @@ export type Database = {
           direction?: string
           id?: string
           payload?: Json | null
+          read_at?: string | null
           type?: string | null
           user_id?: string
           wa_id?: string
@@ -1617,6 +1626,8 @@ export type Database = {
           meta_flow_cta: string | null
           meta_flow_id: string | null
           meta_phone_number_id: string | null
+          meta_template_language: string | null
+          meta_template_name: string | null
           meta_waba_id: string | null
           payee_name: string | null
           qr_image_url: string | null
@@ -1638,6 +1649,8 @@ export type Database = {
           meta_flow_cta?: string | null
           meta_flow_id?: string | null
           meta_phone_number_id?: string | null
+          meta_template_language?: string | null
+          meta_template_name?: string | null
           meta_waba_id?: string | null
           payee_name?: string | null
           qr_image_url?: string | null
@@ -1659,6 +1672,8 @@ export type Database = {
           meta_flow_cta?: string | null
           meta_flow_id?: string | null
           meta_phone_number_id?: string | null
+          meta_template_language?: string | null
+          meta_template_name?: string | null
           meta_waba_id?: string | null
           payee_name?: string | null
           qr_image_url?: string | null

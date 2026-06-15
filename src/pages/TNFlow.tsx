@@ -16,8 +16,10 @@ const TNFlow = () => {
   const [s, setS] = useState<any>({
     meta_flow_id: '', meta_flow_cta: 'Book Now',
     flow_header: '🚖 TN45 Travel Aid',
-    flow_body: 'வணக்கம்! Tap below to book your travel assistance.',
+    flow_body: 'Tap below to book your travel assistance.',
     flow_footer: 'Powered by TN45',
+    meta_template_name: '',
+    meta_template_language: 'en_US',
   });
   const [testNumber, setTestNumber] = useState('');
   const [sending, setSending] = useState(false);
@@ -53,6 +55,8 @@ const TNFlow = () => {
           header: s.flow_header,
           body: s.flow_body,
           footer: s.flow_footer,
+          template_name: s.meta_template_name,
+          template_language: s.meta_template_language,
           starting_screen: 'SERVICE_MENU',
         },
       });
@@ -65,7 +69,7 @@ const TNFlow = () => {
     }
   };
 
-  const ready = !!s.meta_flow_id && !!s.meta_phone_number_id;
+  const ready = !!s.meta_flow_id && !!s.meta_phone_number_id && !!s.meta_template_name;
 
   return (
     <AppLayout>
@@ -79,7 +83,7 @@ const TNFlow = () => {
           {ready ? <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0 mt-0.5" /> : <AlertCircle className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />}
           <div className="text-sm">
             <p className="font-semibold">{ready ? 'Flow is live' : 'Flow setup pending'}</p>
-            <p className="text-muted-foreground">{ready ? 'When customers message "hi" to your WhatsApp number, the booking flow opens automatically.' : 'Complete the 3 steps below to activate the flow.'}</p>
+            <p className="text-muted-foreground">{ready ? 'When customers ask for help, your approved Meta template with the Flow button is sent automatically.' : 'Save the phone number ID, Flow ID, and approved Meta template name to activate production replies.'}</p>
           </div>
         </Card>
 
@@ -129,6 +133,16 @@ const TNFlow = () => {
               <div>
                 <Label>Flow ID</Label>
                 <Input value={s.meta_flow_id || ''} onChange={e => setS({ ...s, meta_flow_id: e.target.value })} placeholder="e.g. 1234567890123456" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <Label>Approved Template Name</Label>
+                  <Input value={s.meta_template_name || ''} onChange={e => setS({ ...s, meta_template_name: e.target.value })} placeholder="e.g. booking_flow_help" />
+                </div>
+                <div>
+                  <Label>Template Language</Label>
+                  <Input value={s.meta_template_language || ''} onChange={e => setS({ ...s, meta_template_language: e.target.value })} placeholder="en_US" />
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>

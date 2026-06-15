@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,12 +12,15 @@ type Msg = {
   direction: 'in' | 'out';
   payload: any;
   created_at: string;
+  read_at?: string | null;
+  wa_message_id?: string | null;
 };
 
 type Customer = {
   id: string;
   wa_id: string;
   name: string | null;
+  avatar_url?: string | null;
   last_seen_at: string;
 };
 
@@ -27,6 +30,7 @@ type Thread = {
   lastMsg: string;
   lastAt: string;
   unread: number;
+  avatar_url?: string | null;
 };
 
 const extractText = (p: any): string => {
@@ -64,7 +68,21 @@ const Inbox = () => {
   const [paneCustomerOpen, setPaneCustomerOpen] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Load
+  const mergeMessage = useCallback((next: Msg) => {
+    setMessages((prev) => {
+      const withoutSame = prev.filter((m) => m.id !== next.id && m.wa_message_id !== (next as any).wa_message_id);
+      return [next, ...withoutSame].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    });
+  }, []);
+
+  const mergeCustomer = useCallback((next: Customer) => {
+    setCustomers((prev) => {
+      const withoutSame = prev.filter((c) => c.id !== next.id && c.wa_id !== next.wa_id);
+      return [next, ...withoutSame].sort((a, b) => new Date(b.last_seen_at || 0).getTime() - new Date(a.last_seen_at || 0).getTime());
+    });
+  }, []);
+
+  // Load + realtime
   useEffect(() => {
     if (!user) return;
     (async () => {
@@ -76,14 +94,19 @@ const Inbox = () => {
       setMessages((m.data || []) as Msg[]);
     })();
 
-    // Realtime
     const ch = supabase
-      .channel('inbox-msgs')
+      .channel(`inbox-live-${user.id}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tn_messages', filter: `user_id=eq.${user.id}` },
-        (payload) => setMessages((prev) => [payload.new as Msg, ...prev]))
+        (payload) => mergeMessage(payload.new as Msg))
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tn_messages', filter: `user_id=eq.${user.id}` },
+        (payload) => mergeMessage(payload.new as Msg))
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tn_customers', filter: `user_id=eq.${user.id}` },
+        (payload) => mergeCustomer(payload.new as Customer))
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tn_customers', filter: `user_id=eq.${user.id}` },
+        (payload) => mergeCustomer(payload.new as Customer))
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [user]);
+  }, [user, mergeMessage, mergeCustomer]);
 
   // Threads
   const threads = useMemo<Thread[]>(() => {
@@ -97,13 +120,14 @@ const Inbox = () => {
         name: customer?.name || m.wa_id,
         lastMsg: text || existing?.lastMsg || '',
         lastAt: m.created_at,
-        unread: 0,
+        unread: messages.filter((x) => x.wa_id === m.wa_id && x.direction === 'in' && !x.read_at).length,
+        avatar_url: customer?.avatar_url,
       });
     }
     // Include customers without messages
     for (const c of customers) {
       if (!map.has(c.wa_id)) {
-        map.set(c.wa_id, { wa_id: c.wa_id, name: c.name || c.wa_id, lastMsg: '', lastAt: c.last_seen_at, unread: 0 });
+        map.set(c.wa_id, { wa_id: c.wa_id, name: c.name || c.wa_id, lastMsg: '', lastAt: c.last_seen_at, unread: 0, avatar_url: c.avatar_url });
       }
     }
     return Array.from(map.values())
@@ -119,6 +143,15 @@ const Inbox = () => {
     () => messages.filter((m) => m.wa_id === active).slice().reverse(),
     [messages, active]
   );
+
+  useEffect(() => {
+    if (!user || !active) return;
+    const unread = messages.filter((m) => m.wa_id === active && m.direction === 'in' && !m.read_at).map((m) => m.id);
+    if (unread.length === 0) return;
+    const readAt = new Date().toISOString();
+    setMessages((prev) => prev.map((m) => unread.includes(m.id) ? { ...m, read_at: readAt } : m));
+    supabase.from('tn_messages').update({ read_at: readAt }).in('id', unread).eq('user_id', user.id);
+  }, [user, active, messages]);
 
   // Scroll to bottom on new
   useEffect(() => {
@@ -195,7 +228,7 @@ const Inbox = () => {
                       isActive ? 'bg-gradient-to-r from-primary/15 to-secondary/10 ring-1 ring-primary/25' : 'hover:bg-white/[0.04]',
                     )}
                   >
-                    <Avatar name={t.name} />
+                    <Avatar name={t.name} avatarUrl={t.avatar_url} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline gap-2">
                         <span className="font-semibold text-sm truncate flex-1">{t.name}</span>
@@ -203,6 +236,11 @@ const Inbox = () => {
                       </div>
                       <p className="text-xs text-muted-foreground truncate mt-0.5">{t.lastMsg || 'No messages yet'}</p>
                     </div>
+                    {t.unread > 0 && (
+                      <span className="self-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                        {t.unread > 99 ? '99+' : t.unread}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -218,7 +256,7 @@ const Inbox = () => {
                   <button onClick={() => setActive(null)} className="md:hidden p-1.5 rounded-lg hover:bg-white/[0.05] -ml-1">
                     <ArrowLeft className="w-5 h-5" />
                   </button>
-                  <Avatar name={activeCustomer?.name || active} />
+                  <Avatar name={activeCustomer?.name || active} avatarUrl={activeCustomer?.avatar_url} />
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm truncate">{activeCustomer?.name || active}</p>
                     <p className="text-[11px] text-muted-foreground truncate">{active}</p>
@@ -328,9 +366,19 @@ const Inbox = () => {
 
 /* ---------- subcomponents ---------- */
 
-const Avatar = ({ name }: { name: string }) => {
+const Avatar = ({ name, avatarUrl }: { name: string; avatarUrl?: string | null }) => {
   const initials = (name || '?').split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
   const hue = (name?.charCodeAt(0) || 0) * 37 % 360;
+  if (avatarUrl) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={name || 'Customer'}
+        className="w-10 h-10 rounded-full object-cover shrink-0 shadow-md border border-white/[0.08] bg-muted"
+        loading="lazy"
+      />
+    );
+  }
   return (
     <div
       className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-md"
@@ -385,7 +433,7 @@ const CustomerPanel = ({ waId, customer }: { waId: string; customer?: Customer }
       <div className="text-center">
         <div className="mx-auto mb-3">
           <div className="inline-block">
-            <Avatar name={customer?.name || waId} />
+            <Avatar name={customer?.name || waId} avatarUrl={customer?.avatar_url} />
           </div>
         </div>
         <h3 className="font-semibold tracking-tight">{customer?.name || 'Unnamed customer'}</h3>

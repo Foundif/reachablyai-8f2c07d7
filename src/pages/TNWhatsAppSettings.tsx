@@ -16,6 +16,7 @@ const TNWhatsAppSettings = () => {
   const [s, setS] = useState<any>({
     upi_id: '', payee_name: '', qr_image_url: '', advance_amount: 50,
     meta_phone_number_id: '', meta_waba_id: '', verify_token_hint: '',
+    meta_template_name: '', meta_template_language: 'en_US',
   });
   const [events, setEvents] = useState<any[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
@@ -149,6 +150,16 @@ const TNWhatsAppSettings = () => {
           <div>
             <Label>WhatsApp Business Account ID (WABA)</Label>
             <Input value={s.meta_waba_id || ''} onChange={e => setS({ ...s, meta_waba_id: e.target.value })} />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <Label>Approved Flow Template Name</Label>
+              <Input value={s.meta_template_name || ''} onChange={e => setS({ ...s, meta_template_name: e.target.value })} placeholder="e.g. booking_flow_help" />
+            </div>
+            <div>
+              <Label>Template Language</Label>
+              <Input value={s.meta_template_language || ''} onChange={e => setS({ ...s, meta_template_language: e.target.value })} placeholder="en_US" />
+            </div>
           </div>
           <div>
             <Label>Verify Token (must match Meta dashboard)</Label>

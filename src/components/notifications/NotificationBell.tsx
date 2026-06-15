@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, Check, CheckCheck, Trash2, X, Volume2 } from 'lucide-react';
+import { Bell, Check, CheckCheck, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNotifications, AppNotification } from '@/hooks/useNotifications';
 import { cn } from '@/lib/utils';
@@ -10,6 +10,7 @@ const TYPE_ICONS: Record<string, string> = {
   low_stock: '📦',
   daily_revenue: '💰',
   general: '🔔',
+  whatsapp_inbound: '💬',
 };
 
 const NotificationItem = ({

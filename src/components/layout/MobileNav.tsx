@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { LayoutDashboard, Inbox, Users, BarChart3, Sparkles } from 'lucide-react';
+import { useInboxUnreadCount } from '@/hooks/useInboxUnreadCount';
 
 const items = [
   { to: '/', icon: LayoutDashboard, label: 'Home' },
@@ -12,11 +13,13 @@ const items = [
 
 const MobileNav = () => {
   const { pathname } = useLocation();
+  const inboxUnread = useInboxUnreadCount();
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 safe-area-pb px-3 pb-3 pointer-events-none">
       <div className="glass-floating glass-sheen px-2 py-2 flex items-center justify-around pointer-events-auto">
         {items.map(({ to, icon: Icon, label, accent }) => {
           const isActive = pathname === to;
+          const badge = to === '/inbox' ? inboxUnread : 0;
           return (
             <NavLink
               key={to}
@@ -36,6 +39,11 @@ const MobileNav = () => {
                   isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground',
                 )}>
                   <Icon className="w-[20px] h-[20px]" />
+                  {badge > 0 && (
+                    <span className="absolute -right-1.5 -top-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center">
+                      {badge > 99 ? '99+' : badge}
+                    </span>
+                  )}
                   {isActive && (
                     <span className="absolute -top-2 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_hsl(211_100%_52%)]" />
                   )}

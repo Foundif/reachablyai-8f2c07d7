@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { MODULE_GROUPS } from '@/lib/modules';
 import { useAuth } from '@/hooks/useAuth';
 import { BrandMark } from '@/components/Brand';
+import { useInboxUnreadCount } from '@/hooks/useInboxUnreadCount';
 
 // Legacy export for any older imports
 export const MENU_GROUPS = MODULE_GROUPS;
@@ -14,6 +15,7 @@ const AppSidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const { pathname } = useLocation();
   const { profile } = useAuth();
+  const inboxUnread = useInboxUnreadCount();
   const storeName = profile?.store_name?.trim() || 'My Workspace';
   const tagline = (profile as any)?.tagline || 'WhatsApp Cloud';
 
@@ -54,6 +56,7 @@ const AppSidebar = () => {
                 {group.items.map((item) => {
                   const Icon = item.icon;
                   const isActive = pathname === item.to;
+                  const badge = item.to === '/inbox' ? inboxUnread : 0;
                   return (
                     <NavLink
                       key={item.to}
@@ -90,6 +93,14 @@ const AppSidebar = () => {
                       {!collapsed && item.status === 'soon' && (
                         <span className="relative ml-auto text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-accent/15 text-accent border border-accent/20">
                           Soon
+                        </span>
+                      )}
+                      {badge > 0 && (
+                        <span className={cn(
+                          'relative ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center',
+                          collapsed && 'absolute right-0.5 top-0.5 ml-0',
+                        )}>
+                          {badge > 99 ? '99+' : badge}
                         </span>
                       )}
                     </NavLink>
