@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
     const userId = claims.claims.sub
 
     const reqBody = await req.json()
-    const { to, text, booking_id, flow, flow_id, flow_cta, header, body: flowBody, footer, starting_screen } = reqBody
+    const { to, text, booking_id, flow, flow_id, flow_cta, header, body: flowBody, footer, starting_screen, template_name, template_language } = reqBody
     if (!to) {
       return new Response(JSON.stringify({ error: 'to required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
@@ -40,27 +40,20 @@ Deno.serve(async (req) => {
     }
 
     let payload: any
-    if (flow && flow_id) {
+    if (flow && template_name) {
       payload = {
-        messaging_product: 'whatsapp', to, type: 'interactive',
-        interactive: {
-          type: 'flow',
-          header: { type: 'text', text: header || '🚖 TN45 Travel Aid' },
-          body: { text: flowBody || 'Tap below to book your travel assistance.' },
-          footer: { text: footer || 'Powered by TN45' },
-          action: {
-            name: 'flow',
-            parameters: {
-              flow_message_version: '3',
-              flow_token: `tn45-${crypto.randomUUID()}`,
-              flow_id,
-              flow_cta: flow_cta || 'Book Now',
-              flow_action: 'navigate',
-              flow_action_payload: { screen: starting_screen || 'SERVICE_MENU', data: {} },
-            },
-          },
+        messaging_product: 'whatsapp', recipient_type: 'individual', to, type: 'template',
+        template: {
+          name: template_name,
+          language: { code: template_language || 'en_US' },
+          components: [{
+            type: 'button', sub_type: 'flow', index: '0',
+            parameters: [{ type: 'action', action: { flow_token: `tn45-${crypto.randomUUID()}`, flow_action_data: {} } }],
+          }],
         },
       }
+    } else if (flow && flow_id) {
+      return new Response(JSON.stringify({ error: 'Approved Meta template name required for production flow send' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     } else if (text) {
       payload = { messaging_product: 'whatsapp', to, type: 'text', text: { body: text } }
     } else {
