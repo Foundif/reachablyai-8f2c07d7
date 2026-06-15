@@ -69,7 +69,7 @@ const TNFlow = () => {
     }
   };
 
-  const ready = !!s.meta_flow_id && !!s.meta_phone_number_id;
+  const ready = !!s.meta_flow_id && !!s.meta_phone_number_id && !!s.meta_template_name;
 
   return (
     <AppLayout>
@@ -83,7 +83,7 @@ const TNFlow = () => {
           {ready ? <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0 mt-0.5" /> : <AlertCircle className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />}
           <div className="text-sm">
             <p className="font-semibold">{ready ? 'Flow is live' : 'Flow setup pending'}</p>
-            <p className="text-muted-foreground">{ready ? 'When customers message "hi" to your WhatsApp number, the booking flow opens automatically.' : 'Complete the 3 steps below to activate the flow.'}</p>
+            <p className="text-muted-foreground">{ready ? 'When customers ask for help, your approved Meta template with the Flow button is sent automatically.' : 'Save the phone number ID, Flow ID, and approved Meta template name to activate production replies.'}</p>
           </div>
         </Card>
 
