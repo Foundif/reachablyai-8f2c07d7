@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,12 +12,14 @@ type Msg = {
   direction: 'in' | 'out';
   payload: any;
   created_at: string;
+  read_at?: string | null;
 };
 
 type Customer = {
   id: string;
   wa_id: string;
   name: string | null;
+  avatar_url?: string | null;
   last_seen_at: string;
 };
 
@@ -27,6 +29,7 @@ type Thread = {
   lastMsg: string;
   lastAt: string;
   unread: number;
+  avatar_url?: string | null;
 };
 
 const extractText = (p: any): string => {
@@ -63,6 +66,20 @@ const Inbox = () => {
   const [loadingAi, setLoadingAi] = useState(false);
   const [paneCustomerOpen, setPaneCustomerOpen] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const mergeMessage = useCallback((next: Msg) => {
+    setMessages((prev) => {
+      const withoutSame = prev.filter((m) => m.id !== next.id && m.wa_message_id !== (next as any).wa_message_id);
+      return [next, ...withoutSame].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    });
+  }, []);
+
+  const mergeCustomer = useCallback((next: Customer) => {
+    setCustomers((prev) => {
+      const withoutSame = prev.filter((c) => c.id !== next.id && c.wa_id !== next.wa_id);
+      return [next, ...withoutSame].sort((a, b) => new Date(b.last_seen_at || 0).getTime() - new Date(a.last_seen_at || 0).getTime());
+    });
+  }, []);
 
   // Load
   useEffect(() => {
