@@ -366,9 +366,19 @@ const Inbox = () => {
 
 /* ---------- subcomponents ---------- */
 
-const Avatar = ({ name }: { name: string }) => {
+const Avatar = ({ name, avatarUrl }: { name: string; avatarUrl?: string | null }) => {
   const initials = (name || '?').split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
   const hue = (name?.charCodeAt(0) || 0) * 37 % 360;
+  if (avatarUrl) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={name || 'Customer'}
+        className="w-10 h-10 rounded-full object-cover shrink-0 shadow-md border border-white/[0.08] bg-muted"
+        loading="lazy"
+      />
+    );
+  }
   return (
     <div
       className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-md"
@@ -423,7 +433,7 @@ const CustomerPanel = ({ waId, customer }: { waId: string; customer?: Customer }
       <div className="text-center">
         <div className="mx-auto mb-3">
           <div className="inline-block">
-            <Avatar name={customer?.name || waId} />
+            <Avatar name={customer?.name || waId} avatarUrl={customer?.avatar_url} />
           </div>
         </div>
         <h3 className="font-semibold tracking-tight">{customer?.name || 'Unnamed customer'}</h3>
