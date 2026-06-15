@@ -131,6 +131,7 @@ export type Database = {
       }
       customers: {
         Row: {
+          avatar_url: string | null
           created_at: string
           id: string
           last_purchase_date: string | null
@@ -142,6 +143,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
           id?: string
           last_purchase_date?: string | null
@@ -153,6 +155,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
           id?: string
           last_purchase_date?: string | null
@@ -1272,6 +1275,7 @@ export type Database = {
       }
       tn_customers: {
         Row: {
+          avatar_url: string | null
           created_at: string
           id: string
           language: string | null
@@ -1282,6 +1286,7 @@ export type Database = {
           wa_id: string
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
           id?: string
           language?: string | null
@@ -1292,6 +1297,7 @@ export type Database = {
           wa_id: string
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
           id?: string
           language?: string | null
