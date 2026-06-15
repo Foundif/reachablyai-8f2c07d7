@@ -35,11 +35,28 @@ const textMsg = (to: string, body: string) => ({
 
 const templateMsg = (to: string, settings: any) => ({
   messaging_product: 'whatsapp',
+  recipient_type: 'individual',
   to,
   type: 'template',
   template: {
     name: settings.meta_template_name,
     language: { code: settings.meta_template_language || 'en_US' },
+    components: [
+      {
+        type: 'button',
+        sub_type: 'flow',
+        index: '0',
+        parameters: [
+          {
+            type: 'action',
+            action: {
+              flow_token: `tn45-${crypto.randomUUID()}`,
+              flow_action_data: {},
+            },
+          },
+        ],
+      },
+    ],
   },
 })
 
@@ -280,26 +297,41 @@ Deno.serve(async (req) => {
         continue
       }
 
-      // Trigger: send the WhatsApp Flow
+      // Trigger: send the approved Meta template that contains the Flow button
       const text = (msg?.text?.body || '').trim()
-      const triggers = /^(hi|hello|hai|help|menu|start|book|வணக்கம்|தொடங்கு|hey)\b/i
+      const triggers = /\b(hi|hello|hai|help|assist|assistance|old\s*age|senior|elder|menu|start|book|booking|hey)\b/i
       if (msg.type === 'text' && triggers.test(text)) {
-        if (!settings.meta_flow_id) {
-          await sendWhatsApp(phoneNumberId, token, textMsg(waId,
-            '⚠️ Booking flow is being set up. Please try again later.'))
+        if (!settings.meta_template_name) {
+          console.error('Flow template not configured: set tn_settings.meta_template_name')
+          await supabase.from('notifications').insert({
+            user_id: userId,
+            type: 'whatsapp_inbound',
+            title: 'Template not configured',
+            message: 'A customer asked for help, but no approved Meta template name is saved in Flow settings.',
+            data: { wa_id: waId, reason: 'missing_meta_template_name' },
+          })
           continue
         }
-        const flowToken = `tn45-${crypto.randomUUID()}`
-        const out = flowMsg(waId, settings, flowToken)
+        const out = templateMsg(waId, settings)
         const res = await sendWhatsApp(phoneNumberId, token, out)
+        if (res?.error) {
+          console.error('template send failed', JSON.stringify(res.error))
+          await supabase.from('notifications').insert({
+            user_id: userId,
+            type: 'whatsapp_inbound',
+            title: 'WhatsApp template failed',
+            message: res.error?.message || 'Meta rejected the configured template message.',
+            data: { wa_id: waId, error: res.error, template: settings.meta_template_name },
+          })
+          continue
+        }
         await supabase.from('tn_messages').insert({
-          user_id: userId, wa_id: waId, direction: 'out', type: 'interactive', payload: out, wa_message_id: res?.messages?.[0]?.id,
+          user_id: userId, wa_id: waId, direction: 'out', type: 'template', payload: out, wa_message_id: res?.messages?.[0]?.id,
         })
         continue
       }
 
-      // Fallback
-      await sendWhatsApp(phoneNumberId, token, textMsg(waId, 'Type *hi* to start a new booking.'))
+      // No fallback auto-reply in production mode; store inbound only.
     }
 
     return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
