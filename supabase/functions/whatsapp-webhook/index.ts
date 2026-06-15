@@ -33,6 +33,16 @@ const textMsg = (to: string, body: string) => ({
   messaging_product: 'whatsapp', to, type: 'text', text: { body }
 })
 
+const templateMsg = (to: string, settings: any) => ({
+  messaging_product: 'whatsapp',
+  to,
+  type: 'template',
+  template: {
+    name: settings.meta_template_name,
+    language: { code: settings.meta_template_language || 'en_US' },
+  },
+})
+
 // Real WhatsApp Flow message (CTA flow). Requires a published Flow ID in Meta Flow Manager.
 function flowMsg(to: string, settings: any, flowToken: string) {
   return {
@@ -213,12 +223,21 @@ Deno.serve(async (req) => {
       const waId = msg.from
       const contact = contacts.find((c: any) => c.wa_id === waId)
       const profileName = contact?.profile?.name || null
+      const avatarUrl = contact?.profile?.picture || contact?.profile?.profile_pic || null
 
       // Upsert WhatsApp customer (tn_customers for inbox panel)
       await supabase.from('tn_customers').upsert(
-        { user_id: userId, wa_id: waId, name: profileName, last_seen_at: new Date().toISOString() },
+        { user_id: userId, wa_id: waId, name: profileName, avatar_url: avatarUrl, last_seen_at: new Date().toISOString() },
         { onConflict: 'user_id,wa_id' }
       )
+
+      await supabase.from('notifications').insert({
+        user_id: userId,
+        type: 'whatsapp_inbound',
+        title: profileName || waId,
+        message: msg?.text?.body || msg?.interactive?.body?.text || `New ${msg.type || 'WhatsApp'} message`,
+        data: { wa_id: waId, message_id: msg.id, type: msg.type },
+      })
 
       // Also mirror into the general customers table so the Customers page shows them
       try {
@@ -227,10 +246,10 @@ Deno.serve(async (req) => {
           .from('customers').select('id,name').eq('user_id', userId).eq('phone', phoneFormatted).maybeSingle()
         if (!existing) {
           await supabase.from('customers').insert({
-            user_id: userId, name: profileName || waId, phone: phoneFormatted,
+            user_id: userId, name: profileName || waId, phone: phoneFormatted, avatar_url: avatarUrl,
           })
         } else if (profileName && existing.name !== profileName) {
-          await supabase.from('customers').update({ name: profileName }).eq('id', existing.id)
+          await supabase.from('customers').update({ name: profileName, avatar_url: avatarUrl }).eq('id', existing.id)
         }
       } catch (e) { console.warn('customers mirror failed', e) }
 
