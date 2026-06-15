@@ -13,6 +13,7 @@ type Msg = {
   payload: any;
   created_at: string;
   read_at?: string | null;
+  wa_message_id?: string | null;
 };
 
 type Customer = {
@@ -81,7 +82,7 @@ const Inbox = () => {
     });
   }, []);
 
-  // Load
+  // Load + realtime
   useEffect(() => {
     if (!user) return;
     (async () => {
@@ -93,14 +94,19 @@ const Inbox = () => {
       setMessages((m.data || []) as Msg[]);
     })();
 
-    // Realtime
     const ch = supabase
-      .channel('inbox-msgs')
+      .channel(`inbox-live-${user.id}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tn_messages', filter: `user_id=eq.${user.id}` },
-        (payload) => setMessages((prev) => [payload.new as Msg, ...prev]))
+        (payload) => mergeMessage(payload.new as Msg))
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tn_messages', filter: `user_id=eq.${user.id}` },
+        (payload) => mergeMessage(payload.new as Msg))
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tn_customers', filter: `user_id=eq.${user.id}` },
+        (payload) => mergeCustomer(payload.new as Customer))
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tn_customers', filter: `user_id=eq.${user.id}` },
+        (payload) => mergeCustomer(payload.new as Customer))
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [user]);
+  }, [user, mergeMessage, mergeCustomer]);
 
   // Threads
   const threads = useMemo<Thread[]>(() => {
@@ -114,13 +120,14 @@ const Inbox = () => {
         name: customer?.name || m.wa_id,
         lastMsg: text || existing?.lastMsg || '',
         lastAt: m.created_at,
-        unread: 0,
+        unread: messages.filter((x) => x.wa_id === m.wa_id && x.direction === 'in' && !x.read_at).length,
+        avatar_url: customer?.avatar_url,
       });
     }
     // Include customers without messages
     for (const c of customers) {
       if (!map.has(c.wa_id)) {
-        map.set(c.wa_id, { wa_id: c.wa_id, name: c.name || c.wa_id, lastMsg: '', lastAt: c.last_seen_at, unread: 0 });
+        map.set(c.wa_id, { wa_id: c.wa_id, name: c.name || c.wa_id, lastMsg: '', lastAt: c.last_seen_at, unread: 0, avatar_url: c.avatar_url });
       }
     }
     return Array.from(map.values())
