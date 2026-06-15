@@ -144,6 +144,15 @@ const Inbox = () => {
     [messages, active]
   );
 
+  useEffect(() => {
+    if (!user || !active) return;
+    const unread = messages.filter((m) => m.wa_id === active && m.direction === 'in' && !m.read_at).map((m) => m.id);
+    if (unread.length === 0) return;
+    const readAt = new Date().toISOString();
+    setMessages((prev) => prev.map((m) => unread.includes(m.id) ? { ...m, read_at: readAt } : m));
+    supabase.from('tn_messages').update({ read_at: readAt }).in('id', unread).eq('user_id', user.id);
+  }, [user, active, messages]);
+
   // Scroll to bottom on new
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -219,7 +228,7 @@ const Inbox = () => {
                       isActive ? 'bg-gradient-to-r from-primary/15 to-secondary/10 ring-1 ring-primary/25' : 'hover:bg-white/[0.04]',
                     )}
                   >
-                    <Avatar name={t.name} />
+                    <Avatar name={t.name} avatarUrl={t.avatar_url} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline gap-2">
                         <span className="font-semibold text-sm truncate flex-1">{t.name}</span>
@@ -227,6 +236,11 @@ const Inbox = () => {
                       </div>
                       <p className="text-xs text-muted-foreground truncate mt-0.5">{t.lastMsg || 'No messages yet'}</p>
                     </div>
+                    {t.unread > 0 && (
+                      <span className="self-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+                        {t.unread > 99 ? '99+' : t.unread}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -242,7 +256,7 @@ const Inbox = () => {
                   <button onClick={() => setActive(null)} className="md:hidden p-1.5 rounded-lg hover:bg-white/[0.05] -ml-1">
                     <ArrowLeft className="w-5 h-5" />
                   </button>
-                  <Avatar name={activeCustomer?.name || active} />
+                  <Avatar name={activeCustomer?.name || active} avatarUrl={activeCustomer?.avatar_url} />
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm truncate">{activeCustomer?.name || active}</p>
                     <p className="text-[11px] text-muted-foreground truncate">{active}</p>
