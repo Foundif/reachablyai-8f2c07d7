@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Bell, Check, CheckCheck, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useNotifications, AppNotification } from '@/hooks/useNotifications';
+import { enableNotificationSound, playNotificationSound, useNotifications, AppNotification } from '@/hooks/useNotifications';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -64,7 +64,11 @@ const NotificationBell = () => {
   return (
     <div className="relative">
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          enableNotificationSound();
+          if (!open) playNotificationSound();
+          setOpen(!open);
+        }}
         className="relative p-2 rounded-lg hover:bg-muted transition-colors"
         title="Notifications"
       >
@@ -105,7 +109,7 @@ const NotificationBell = () => {
                   <Bell className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
                   <p className="text-sm text-muted-foreground">No notifications yet</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    You'll get alerts for appointments, low stock & revenue
+                    New WhatsApp messages will appear here instantly
                   </p>
                 </div>
               ) : (

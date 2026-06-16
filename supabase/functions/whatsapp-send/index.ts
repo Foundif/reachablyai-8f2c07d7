@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
     }
 
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-    const { data: settings } = await admin.from('tn_settings').select('meta_phone_number_id').eq('user_id', userId).maybeSingle()
+    const { data: settings } = await admin.from('tn_settings').select('meta_phone_number_id, meta_template_name, meta_template_language').eq('user_id', userId).maybeSingle()
     const phoneNumberId = settings?.meta_phone_number_id
     const token = Deno.env.get('META_ACCESS_TOKEN')
     if (!phoneNumberId || !token) {
@@ -40,12 +40,14 @@ Deno.serve(async (req) => {
     }
 
     let payload: any
-    if (flow && template_name) {
+    const finalTemplateName = template_name || settings?.meta_template_name
+    const finalTemplateLanguage = template_language || settings?.meta_template_language || 'en'
+    if (flow && finalTemplateName) {
       payload = {
         messaging_product: 'whatsapp', recipient_type: 'individual', to, type: 'template',
         template: {
-          name: template_name,
-          language: { code: template_language || 'en_US' },
+          name: finalTemplateName,
+          language: { code: finalTemplateLanguage },
           components: [{
             type: 'button', sub_type: 'flow', index: '0',
             parameters: [{ type: 'action', action: { flow_token: `tn45-${crypto.randomUUID()}`, flow_action_data: {} } }],
