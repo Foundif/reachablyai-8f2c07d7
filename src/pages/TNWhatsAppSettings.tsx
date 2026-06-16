@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { enableNotificationSound, playNotificationSound } from '@/hooks/useNotifications';
 import { toast } from 'sonner';
 import { AlertCircle, CheckCircle2, Copy, RefreshCw, Radio, Send, GitBranch } from 'lucide-react';
 
@@ -77,16 +78,23 @@ const TNWhatsAppSettings = () => {
   const syncMeta = async () => {
     setSyncing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('meta-sync', { body: {} });
+      const { data, error } = await supabase.functions.invoke('meta-sync', { body: { preferred_flow_id: '1668931244342394' } });
       if (error) throw error;
       await loadMetaLibrary();
+      if (data?.settings) setS((prev: any) => ({ ...prev, ...data.settings }));
       const msg = `${data?.templates || 0} templates, ${data?.flows || 0} flows synced`;
       data?.errors?.length ? toast.warning(msg, { description: data.errors[0]?.error?.message || 'Some Meta items could not be synced.' }) : toast.success(msg);
     } catch (e: any) {
-      toast.error(e.message || 'Meta sync failed');
+      toast.error(e.message || 'Meta sync failed', { description: 'Check that the WABA ID is saved and the backend Meta token has template and flow permissions.' });
     } finally {
       setSyncing(false);
     }
+  };
+
+  const testSound = () => {
+    enableNotificationSound();
+    playNotificationSound();
+    toast.success('Message alert sound tested');
   };
 
   const useTemplate = async (template: any) => {
@@ -230,6 +238,7 @@ const TNWhatsAppSettings = () => {
             <Button onClick={syncMeta} disabled={syncing || !s.meta_waba_id} variant="outline">
               <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} /> Sync from Meta
             </Button>
+            <Button type="button" onClick={testSound} variant="secondary">Test Sound</Button>
           </div>
 
           <div className="grid md:grid-cols-2 gap-3">

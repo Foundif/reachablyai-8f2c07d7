@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import alertSoundAsset from '@/assets/chatarly-message-alert.wav.asset.json';
+import alertSoundAsset from '@/assets/chatarly-message-alert.mp3.asset.json';
 import { toast } from 'sonner';
 
 export interface AppNotification {
@@ -47,14 +47,19 @@ const unlockNotificationSound = () => {
   } catch {}
 };
 
-const playNotificationSound = () => {
+export const playNotificationSound = () => {
   try {
     const audioInstance = ensureAudio();
     audioInstance.muted = false;
+    audioInstance.volume = 0.9;
     audioInstance.currentTime = 0;
-    audioInstance.play().catch(() => {});
+    audioInstance.play().catch(() => {
+      toast.info('Click once anywhere to enable message alert sound');
+    });
   } catch {}
 };
+
+export const enableNotificationSound = () => unlockNotificationSound();
 
 export const useNotifications = () => {
   const { user } = useAuth();

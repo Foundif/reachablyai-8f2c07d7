@@ -43,14 +43,17 @@ const extractStatusError = (status: any) => {
   return `${error.title || error.message || 'WhatsApp delivery failed'}${error.error_data?.details ? ` — ${error.error_data.details}` : ''}`
 }
 
+const configuredTemplateName = (settings: any) => settings.meta_template_name || 'tn45_whatsapp_automation'
+const configuredTemplateLanguage = (settings: any) => settings.meta_template_language || 'en'
+
 const templateMsg = (to: string, settings: any) => ({
   messaging_product: 'whatsapp',
   recipient_type: 'individual',
   to,
   type: 'template',
   template: {
-    name: settings.meta_template_name,
-    language: { code: settings.meta_template_language || 'en_US' },
+    name: configuredTemplateName(settings),
+    language: { code: configuredTemplateLanguage(settings) },
     components: [
       {
         type: 'button',
@@ -311,17 +314,6 @@ Deno.serve(async (req) => {
       const text = (msg?.text?.body || '').trim()
       const triggers = /\b(hi|hello|hai|help|assist|assistance|old\s*age|senior|elder|menu|start|book|booking|hey)\b/i
       if (msg.type === 'text' && triggers.test(text)) {
-        if (!settings.meta_template_name) {
-          console.error('Flow template not configured: set tn_settings.meta_template_name')
-          await supabase.from('notifications').insert({
-            user_id: userId,
-            type: 'whatsapp_inbound',
-            title: 'Template not configured',
-            message: 'A customer asked for help, but no approved Meta template name is saved in Flow settings.',
-            data: { wa_id: waId, reason: 'missing_meta_template_name' },
-          })
-          continue
-        }
         const out = templateMsg(waId, settings)
         const { ok: sendOk, status: sendStatus, result: res } = await sendWhatsApp(phoneNumberId, token, out)
         if (!sendOk || res?.error) {
@@ -331,11 +323,11 @@ Deno.serve(async (req) => {
             type: 'whatsapp_inbound',
             title: 'WhatsApp template failed',
             message: res?.error?.message || `Meta rejected the configured template message (${sendStatus}).`,
-            data: { wa_id: waId, error: res?.error || res, template: settings.meta_template_name },
+            data: { wa_id: waId, error: res?.error || res, template: configuredTemplateName(settings) },
           })
           await supabase.from('tn_messages').insert({
             user_id: userId, wa_id: waId, direction: 'out', type: 'webhook_error',
-            payload: { text: { body: res?.error?.message || 'Meta rejected the configured template message.' }, error: res?.error || res, template: settings.meta_template_name },
+            payload: { text: { body: res?.error?.message || 'Meta rejected the configured template message.' }, error: res?.error || res, template: configuredTemplateName(settings) },
           })
           continue
         }
