@@ -5,6 +5,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { MessageCircle } from 'lucide-react';
 
+const formatWhatsAppPhone = (waId: string) => {
+  const digits = String(waId || '').replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('91')) return `+91 ${digits.slice(2, 7)} ${digits.slice(7)}`;
+  if (digits.length === 10) return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+  return waId?.startsWith('+') ? waId : `+${waId}`;
+};
+
 const TNCustomers = () => {
   const { user } = useAuth();
   const [rows, setRows] = useState<any[]>([]);
@@ -36,7 +43,7 @@ const TNCustomers = () => {
                 ) : (
                   <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0"><MessageCircle className="w-5 h-5" /></div>
                 )}
-                <div className="min-w-0"><p className="font-semibold truncate">{c.name || 'Unnamed'}</p><p className="text-sm text-muted-foreground truncate">{c.wa_id}</p></div>
+                <div className="min-w-0"><p className="font-semibold truncate">{c.name || 'Unnamed'}</p><p className="text-sm text-muted-foreground truncate">{formatWhatsAppPhone(c.wa_id)}</p></div>
               </div>
               <p className="text-xs text-muted-foreground">{new Date(c.last_seen_at).toLocaleString()}</p>
             </Card>

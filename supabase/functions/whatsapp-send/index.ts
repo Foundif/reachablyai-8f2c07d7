@@ -66,6 +66,23 @@ Deno.serve(async (req) => {
       body: JSON.stringify(payload),
     })
     const result = await res.json()
+    if (!res.ok || result?.error) {
+      await admin.from('tn_messages').insert({
+        user_id: userId,
+        wa_id: to,
+        direction: 'out',
+        type: 'webhook_error',
+        payload: { text: { body: result?.error?.message || 'WhatsApp send failed' }, error: result?.error || result, attempted_payload: payload },
+      })
+      await admin.from('notifications').insert({
+        user_id: userId,
+        type: 'whatsapp_inbound',
+        title: 'WhatsApp send failed',
+        message: result?.error?.message || 'Meta rejected the message.',
+        data: { wa_id: to, error: result?.error || result },
+      })
+      return new Response(JSON.stringify({ error: result?.error?.message || 'WhatsApp send failed', result }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
     await admin.from('tn_messages').insert({
       user_id: userId, wa_id: to, direction: 'out', type: payload.type, payload, wa_message_id: result?.messages?.[0]?.id,
     })

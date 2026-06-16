@@ -4,10 +4,11 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { AlertCircle, CheckCircle2, Copy, RefreshCw, Radio } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Copy, RefreshCw, Radio, Send, GitBranch } from 'lucide-react';
 
 const WEBHOOK_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-webhook`;
 
@@ -20,6 +21,9 @@ const TNWhatsAppSettings = () => {
   });
   const [events, setEvents] = useState<any[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [flows, setFlows] = useState<any[]>([]);
+  const [syncing, setSyncing] = useState(false);
 
   const loadEvents = async () => {
     if (!user) return;
@@ -34,11 +38,22 @@ const TNWhatsAppSettings = () => {
     setLoadingEvents(false);
   };
 
+  const loadMetaLibrary = async () => {
+    if (!user) return;
+    const [t, f] = await Promise.all([
+      supabase.from('tn_meta_templates').select('*').eq('user_id', user.id).order('synced_at', { ascending: false }),
+      supabase.from('tn_meta_flows').select('*').eq('user_id', user.id).order('synced_at', { ascending: false }),
+    ]);
+    setTemplates(t.data || []);
+    setFlows(f.data || []);
+  };
+
   useEffect(() => { (async () => {
     if (!user) return;
     const { data } = await supabase.from('tn_settings').select('*').eq('user_id', user.id).maybeSingle();
     if (data) setS(data);
     loadEvents();
+    loadMetaLibrary();
   })(); }, [user]);
 
   const save = async () => {
@@ -58,6 +73,41 @@ const TNWhatsAppSettings = () => {
   };
 
   const copyUrl = () => { navigator.clipboard.writeText(WEBHOOK_URL); toast.success('Webhook URL copied'); };
+
+  const syncMeta = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('meta-sync', { body: {} });
+      if (error) throw error;
+      await loadMetaLibrary();
+      const msg = `${data?.templates || 0} templates, ${data?.flows || 0} flows synced`;
+      data?.errors?.length ? toast.warning(msg, { description: data.errors[0]?.error?.message || 'Some Meta items could not be synced.' }) : toast.success(msg);
+    } catch (e: any) {
+      toast.error(e.message || 'Meta sync failed');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const useTemplate = async (template: any) => {
+    const next = {
+      ...s,
+      meta_template_name: template.name,
+      meta_template_language: template.language || s.meta_template_language || 'en_US',
+    };
+    setS(next);
+    if (!user) return;
+    const { error } = await supabase.from('tn_settings').upsert({ ...next, user_id: user.id }, { onConflict: 'user_id' });
+    if (error) toast.error(error.message); else toast.success(`${template.name} will send for HELP/Hi keywords`);
+  };
+
+  const useFlow = async (flow: any) => {
+    const next = { ...s, meta_flow_id: flow.meta_id };
+    setS(next);
+    if (!user) return;
+    const { error } = await supabase.from('tn_settings').upsert({ ...next, user_id: user.id }, { onConflict: 'user_id' });
+    if (error) toast.error(error.message); else toast.success(`${flow.name} saved as the published Flow`);
+  };
 
   const inbound = events.filter(e => e.direction === 'in');
   const lastInbound = inbound[0];
@@ -168,6 +218,59 @@ const TNWhatsAppSettings = () => {
           <p className="text-xs text-muted-foreground">
             🔒 <b>Access Token</b>, <b>App Secret</b> and <b>Verify Token</b> are stored as project secrets
             (<code>META_ACCESS_TOKEN</code>, <code>META_APP_SECRET</code>, <code>META_VERIFY_TOKEN</code>). Update them in Cloud → Secrets.
+          </p>
+        </Card>
+
+        <Card className="p-5 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 className="font-semibold text-lg">Meta Templates & Flows</h2>
+              <p className="text-xs text-muted-foreground">Sync approved templates and published Flows, then choose the template Chatarly sends for HELP/Hi keywords.</p>
+            </div>
+            <Button onClick={syncMeta} disabled={syncing || !s.meta_waba_id} variant="outline">
+              <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} /> Sync from Meta
+            </Button>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium"><Send className="w-4 h-4 text-primary" />Approved templates</div>
+              {templates.length === 0 ? <p className="text-xs text-muted-foreground p-3 rounded-lg bg-muted/40">No templates synced yet.</p> : templates.map((t) => (
+                <div key={`${t.meta_id}-${t.language}`} className="p-3 rounded-lg border border-border bg-muted/30 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold truncate">{t.name}</p>
+                      <p className="text-[11px] text-muted-foreground">{t.language || 'language'} · {t.category || 'category'}</p>
+                    </div>
+                    <Badge variant={t.status === 'APPROVED' ? 'default' : 'outline'} className="text-[10px]">{t.status || 'unknown'}</Badge>
+                  </div>
+                  <Button size="sm" variant={s.meta_template_name === t.name ? 'default' : 'outline'} className="w-full" onClick={() => useTemplate(t)} disabled={t.status !== 'APPROVED'}>
+                    {s.meta_template_name === t.name ? 'Active for HELP' : 'Use for HELP auto-reply'}
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium"><GitBranch className="w-4 h-4 text-primary" />Published Flows</div>
+              {flows.length === 0 ? <p className="text-xs text-muted-foreground p-3 rounded-lg bg-muted/40">No flows synced yet.</p> : flows.map((f) => (
+                <div key={f.meta_id} className="p-3 rounded-lg border border-border bg-muted/30 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold truncate">{f.name}</p>
+                      <p className="text-[11px] text-muted-foreground font-mono truncate">{f.meta_id}</p>
+                    </div>
+                    <Badge variant={f.status === 'PUBLISHED' ? 'default' : 'outline'} className="text-[10px]">{f.status || 'unknown'}</Badge>
+                  </div>
+                  <Button size="sm" variant={s.meta_flow_id === f.meta_id ? 'default' : 'outline'} className="w-full" onClick={() => useFlow(f)} disabled={f.status !== 'PUBLISHED'}>
+                    {s.meta_flow_id === f.meta_id ? 'Active Flow' : 'Use this Flow ID'}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Meta profile photos are not included in normal WhatsApp webhook payloads, so Chatarly shows initials unless a public profile image URL is provided by Meta.
           </p>
         </Card>
 

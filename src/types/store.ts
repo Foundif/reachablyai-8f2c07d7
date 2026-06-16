@@ -32,6 +32,7 @@ export interface Customer {
   user_id: string;
   name: string;
   phone: string | null;
+  avatar_url?: string | null;
   total_purchases: number;
   last_purchase_date: string | null;
   created_at: string;

@@ -19,6 +19,7 @@ export const useCustomers = () => {
       if (error) throw error;
       setCustomers((data || []).map((c: any) => ({
         id: c.id, user_id: c.user_id, name: c.name, phone: c.phone,
+        avatar_url: c.avatar_url,
         total_purchases: Number(c.total_purchases) || 0,
         last_purchase_date: c.last_purchase_date,
         created_at: c.created_at, updated_at: c.updated_at,

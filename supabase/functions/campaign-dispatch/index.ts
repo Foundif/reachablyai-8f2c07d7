@@ -26,13 +26,19 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Audience: simple "all" for now — fetch tn_customers
-    let customersQ = supabase.from('tn_customers').select('id, phone').eq('user_id', campaign.user_id);
+    const { data: settings } = await supabase.from('tn_settings').select('meta_phone_number_id, meta_template_language').eq('user_id', campaign.user_id).maybeSingle();
+    const templateName = (campaign.audience_snapshot as any)?.template_name;
+    const phoneNumberId = settings?.meta_phone_number_id;
+    const metaToken = Deno.env.get('META_ACCESS_TOKEN');
+    if (!templateName) return new Response(JSON.stringify({ error: 'Select an approved Meta template before publishing this campaign.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    if (!phoneNumberId || !metaToken) return new Response(JSON.stringify({ error: 'WhatsApp sending is not configured.' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
+    let customersQ = supabase.from('tn_customers').select('id, wa_id').eq('user_id', campaign.user_id);
     const aud = (campaign.audience_snapshot as any)?.type;
     if (aud === 'recent') customersQ = customersQ.gte('last_seen_at', new Date(Date.now() - 30 * 86400000).toISOString());
     if (aud === 'inactive') customersQ = customersQ.lt('last_seen_at', new Date(Date.now() - 45 * 86400000).toISOString());
     const { data: customers } = await customersQ;
-    const recipients = (customers || []).filter((c: any) => c.phone);
+    const recipients = (customers || []).filter((c: any) => c.wa_id);
 
     // Insert one flow_event per recipient ("entered") + mark sent for first message node
     let firstMessageNode: any = null;
@@ -42,18 +48,35 @@ Deno.serve(async (req) => {
     }
 
     const events: any[] = [];
+    let sent = 0;
+    let failed = 0;
     for (const r of recipients) {
       events.push({ user_id: campaign.user_id, campaign_id, node_id: firstMessageNode?.id || null, event_type: 'entered', customer_id: r.id });
-      if (firstMessageNode) events.push({ user_id: campaign.user_id, campaign_id, node_id: firstMessageNode.id, event_type: 'sent', customer_id: r.id });
+      const payload = {
+        messaging_product: 'whatsapp', recipient_type: 'individual', to: r.wa_id, type: 'template',
+        template: { name: templateName, language: { code: settings?.meta_template_language || 'en_US' } },
+      };
+      const res = await fetch(`https://graph.facebook.com/v21.0/${phoneNumberId}/messages`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${metaToken}` }, body: JSON.stringify(payload),
+      });
+      const result = await res.json();
+      if (res.ok && !result?.error) {
+        sent += 1;
+        events.push({ user_id: campaign.user_id, campaign_id, node_id: firstMessageNode?.id || null, event_type: 'sent', customer_id: r.id });
+        await supabase.from('tn_messages').insert({ user_id: campaign.user_id, wa_id: r.wa_id, direction: 'out', type: 'template', payload, wa_message_id: result?.messages?.[0]?.id });
+      } else {
+        failed += 1;
+        await supabase.from('tn_messages').insert({ user_id: campaign.user_id, wa_id: r.wa_id, direction: 'out', type: 'webhook_error', payload: { text: { body: result?.error?.message || 'Campaign template send failed' }, error: result?.error || result } });
+      }
     }
     if (events.length) await supabase.from('tn_flow_events').insert(events);
 
     await supabase.from('tn_campaigns').update({
       status: 'running',
-      stats: { sent: recipients.length, entered: recipients.length, replied: 0 },
+      stats: { sent, failed, entered: recipients.length, replied: 0 },
     }).eq('id', campaign_id);
 
-    return new Response(JSON.stringify({ ok: true, recipients: recipients.length }), {
+    return new Response(JSON.stringify({ ok: true, recipients: recipients.length, sent, failed }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {
