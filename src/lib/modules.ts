@@ -61,7 +61,6 @@ export const MODULE_GROUPS: ModuleGroup[] = [
       { to: '/webhooks', icon: Webhook, label: 'Webhooks', status: 'live' },
       { to: '/audit', icon: FileText, label: 'Audit Logs', status: 'live' },
       { to: '/billing', icon: Receipt, label: 'Billing & Plans', status: 'live' },
-      { to: '/white-label', icon: Building2, label: 'White Label', status: 'live' },
     ],
   },
 ];

@@ -41,7 +41,7 @@ import ApiConsole from "./pages/ApiConsole";
 import Webhooks from "./pages/Webhooks";
 import AuditLogs from "./pages/AuditLogs";
 import Billing from "./pages/Billing";
-import WhiteLabel from "./pages/WhiteLabel";
+
 import KnowledgeBase from "./pages/KnowledgeBase";
 import Catalog from "./pages/Catalog";
 import Orders from "./pages/Orders";
@@ -109,7 +109,7 @@ const App = () => (
                 <Route path="/webhooks" element={<ProtectedRoute><Webhooks /></ProtectedRoute>} />
                 <Route path="/audit" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
                 <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
-                <Route path="/white-label" element={<ProtectedRoute><WhiteLabel /></ProtectedRoute>} />
+                <Route path="/white-label" element={<Navigate to="/profile" replace />} />
                 <Route path="/knowledge" element={<ProtectedRoute><KnowledgeBase /></ProtectedRoute>} />
                 <Route path="/catalog" element={<ProtectedRoute><Catalog /></ProtectedRoute>} />
                 <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
