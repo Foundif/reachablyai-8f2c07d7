@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import alertSoundAsset from '@/assets/chatarly-message-alert.wav.asset.json';
+import { toast } from 'sonner';
 
 export interface AppNotification {
   id: string;
@@ -17,13 +18,39 @@ export interface AppNotification {
 const NOTIFICATION_SOUND_URL = alertSoundAsset.url;
 
 let audioInstance: HTMLAudioElement | null = null;
+let audioUnlocked = false;
+
+const ensureAudio = () => {
+  if (!audioInstance) {
+    audioInstance = new Audio(NOTIFICATION_SOUND_URL);
+    audioInstance.volume = 0.65;
+    audioInstance.preload = 'auto';
+  }
+  return audioInstance;
+};
+
+const unlockNotificationSound = () => {
+  if (audioUnlocked) return;
+  try {
+    const audio = ensureAudio();
+    audio.muted = true;
+    audio.play()
+      .then(() => {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.muted = false;
+        audioUnlocked = true;
+      })
+      .catch(() => {
+        audio.muted = false;
+      });
+  } catch {}
+};
 
 const playNotificationSound = () => {
   try {
-    if (!audioInstance) {
-      audioInstance = new Audio(NOTIFICATION_SOUND_URL);
-      audioInstance.volume = 0.5;
-    }
+    const audioInstance = ensureAudio();
+    audioInstance.muted = false;
     audioInstance.currentTime = 0;
     audioInstance.play().catch(() => {});
   } catch {}
@@ -55,6 +82,9 @@ export const useNotifications = () => {
     if (!user) return;
     fetchNotifications();
 
+    window.addEventListener('pointerdown', unlockNotificationSound, { once: true });
+    window.addEventListener('keydown', unlockNotificationSound, { once: true });
+
     const channel = supabase
       .channel('notifications-realtime')
       .on('postgres_changes', {
@@ -66,6 +96,7 @@ export const useNotifications = () => {
         const newNotif = payload.new as AppNotification;
         setNotifications(prev => [newNotif, ...prev]);
         playNotificationSound();
+        toast.message(newNotif.title, { description: newNotif.message });
 
         // Browser notification
         if ('Notification' in window && Notification.permission === 'granted') {
@@ -78,7 +109,11 @@ export const useNotifications = () => {
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      window.removeEventListener('pointerdown', unlockNotificationSound);
+      window.removeEventListener('keydown', unlockNotificationSound);
+      supabase.removeChannel(channel);
+    };
   }, [user, fetchNotifications]);
 
   const markAsRead = useCallback(async (id: string) => {

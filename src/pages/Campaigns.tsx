@@ -8,13 +8,14 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Send, Plus, Sparkles, Loader2, BarChart3, Lock, Play, Pause, Trash2 } from 'lucide-react';
+import { Send, Plus, Sparkles, Loader2, BarChart3, Lock, Play, Pause, Trash2, CheckCircle2 } from 'lucide-react';
 import { can } from '@/lib/permissions';
 import { toast } from 'sonner';
 import { logAudit } from '@/lib/audit';
 
 type Campaign = { id: string; name: string; status: string; flow_id: string | null; stats: any; created_at: string; schedule_at: string | null };
 type Flow = { id: string; name: string };
+type MetaTemplate = { id: string; name: string; language: string | null; status: string | null };
 
 const STATUS_COLORS: Record<string, string> = {
   draft: 'bg-muted/40 text-muted-foreground',
@@ -34,21 +35,25 @@ const Campaigns = () => {
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [flows, setFlows] = useState<Flow[]>([]);
+  const [templates, setTemplates] = useState<MetaTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [flowId, setFlowId] = useState('');
+  const [templateName, setTemplateName] = useState('');
   const [audience, setAudience] = useState<'all' | 'recent' | 'inactive'>('all');
 
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const [c, f] = await Promise.all([
+      const [c, f, t] = await Promise.all([
         supabase.from('tn_campaigns').select('*').order('created_at', { ascending: false }),
         supabase.from('tn_flows').select('id,name').order('updated_at', { ascending: false }),
+        supabase.from('tn_meta_templates').select('id,name,language,status').eq('user_id', user.id).eq('status', 'APPROVED').order('name'),
       ]);
       setCampaigns((c.data as any) || []);
       setFlows((f.data as any) || []);
+      setTemplates((t.data as any) || []);
       setLoading(false);
     })();
   }, [user]);
@@ -56,14 +61,15 @@ const Campaigns = () => {
   const create = async () => {
     if (!user) return;
     if (!name.trim()) { toast.error('Campaign needs a name'); return; }
+    if (!templateName) { toast.error('Select an approved Meta template first'); return; }
     const { data, error } = await supabase.from('tn_campaigns').insert({
       user_id: user.id, name, flow_id: flowId || null,
-      audience_snapshot: { type: audience },
+      audience_snapshot: { type: audience, template_name: templateName },
       status: 'draft',
     }).select('*').single();
     if (error) { toast.error(error.message); return; }
     setCampaigns(prev => [data as any, ...prev]);
-    setOpen(false); setName(''); setFlowId('');
+    setOpen(false); setName(''); setFlowId(''); setTemplateName('');
     await logAudit({ user_id: user.id, entity_type: 'campaign', entity_id: (data as any).id, action: 'campaign.created', after: data });
     toast.success('Campaign created');
   };
@@ -102,7 +108,7 @@ const Campaigns = () => {
                 that actually convert.
               </h1>
               <p className="text-muted-foreground mt-2 text-sm max-w-2xl">
-                Pair a flow with an audience, schedule it, and watch every step's performance in real-time.
+                Pair an approved Meta template with an audience. Campaigns stay draft until you publish.
               </p>
             </div>
             {canCreate ? (
@@ -175,6 +181,16 @@ const Campaigns = () => {
             <div>
               <label className="text-xs text-muted-foreground">Name</label>
               <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Summer Sale Blast" className="mt-1 glass-panel border-white/10" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Meta template</label>
+              <Select value={templateName} onValueChange={setTemplateName}>
+                <SelectTrigger className="mt-1 glass-panel border-white/10"><SelectValue placeholder="Select approved template" /></SelectTrigger>
+                <SelectContent>
+                  {templates.length === 0 && <div className="p-3 text-xs text-muted-foreground">No approved Meta templates synced yet.</div>}
+                  {templates.map(t => <SelectItem key={`${t.id}-${t.language}`} value={t.name}><span className="inline-flex items-center gap-2"><CheckCircle2 className="w-3 h-3" />{t.name} · {t.language || 'default'}</span></SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="text-xs text-muted-foreground">Flow</label>

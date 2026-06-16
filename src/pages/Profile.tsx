@@ -19,6 +19,9 @@ import {
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import ChangePasswordModal from '@/components/profile/ChangePasswordModal';
+import { BRAND_ICON_URL } from '@/components/Brand';
+
+const WHITELABEL_STORAGE = 'foundif_whitelabel';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'INR', 'AUD', 'CAD'];
 const COUNTRIES = [
@@ -40,6 +43,10 @@ const Profile = () => {
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [pushAlerts, setPushAlerts] = useState(true);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [whiteLabel, setWhiteLabel] = useState(() => {
+    const raw = localStorage.getItem(WHITELABEL_STORAGE);
+    return raw ? JSON.parse(raw) : { brand: 'Chatarly', domain: '', primary: '#111111', hideBadge: false, supportEmail: '' };
+  });
 
   const handleSaveProfile = async () => {
     setLoading(true);
@@ -64,6 +71,11 @@ const Profile = () => {
     navigate('/auth');
   };
 
+  const saveWhiteLabel = () => {
+    localStorage.setItem(WHITELABEL_STORAGE, JSON.stringify(whiteLabel));
+    toast.success('White-label settings saved');
+  };
+
   return (
     <AppLayout>
       <div className="p-3 sm:p-4 md:p-6 lg:p-8 space-y-4 sm:space-y-6">
@@ -85,8 +97,8 @@ const Profile = () => {
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row gap-4">
                   <div className="flex items-center sm:items-start gap-4 sm:flex-col">
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center">
-                      <User className="w-8 h-8 sm:w-10 sm:h-10 text-primary" />
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center overflow-hidden">
+                      {(profile as any)?.logo_url ? <img src={(profile as any).logo_url} alt={storeName} className="w-full h-full object-contain" /> : <img src={BRAND_ICON_URL} alt="Chatarly" className="w-10 h-10 object-contain" />}
                     </div>
                   </div>
                   <div className="flex-1 space-y-4">
@@ -202,6 +214,25 @@ const Profile = () => {
                 </div>
                 <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
               </button>
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="glass-card p-4 sm:p-6">
+              <div className="flex items-center gap-2 mb-4 sm:mb-6">
+                <Store className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                <h2 className="font-semibold text-foreground text-sm sm:text-base">White label</h2>
+              </div>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div><Label className="text-xs sm:text-sm">Brand name</Label><Input value={whiteLabel.brand} onChange={(e) => setWhiteLabel({ ...whiteLabel, brand: e.target.value })} className="mt-1.5" /></div>
+                  <div><Label className="text-xs sm:text-sm">Support email</Label><Input type="email" value={whiteLabel.supportEmail} onChange={(e) => setWhiteLabel({ ...whiteLabel, supportEmail: e.target.value })} className="mt-1.5" /></div>
+                </div>
+                <div><Label className="text-xs sm:text-sm">Custom domain</Label><Input value={whiteLabel.domain} onChange={(e) => setWhiteLabel({ ...whiteLabel, domain: e.target.value })} placeholder="app.yourbrand.com" className="mt-1.5" /></div>
+                <div className="flex items-center justify-between">
+                  <div><p className="font-medium text-foreground text-sm sm:text-base">Hide Powered by Chatarly</p><p className="text-xs sm:text-sm text-muted-foreground">Available on Growth plan</p></div>
+                  <Switch checked={whiteLabel.hideBadge} onCheckedChange={(v) => setWhiteLabel({ ...whiteLabel, hideBadge: v })} />
+                </div>
+                <Button variant="outline" onClick={saveWhiteLabel} className="w-full sm:w-auto"><Check className="w-4 h-4" />Save white label</Button>
+              </div>
             </motion.div>
           </div>
 

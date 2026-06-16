@@ -26,12 +26,22 @@ async function sendWhatsApp(phoneNumberId: string, token: string, payload: any) 
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
     body: JSON.stringify(payload),
   })
-  return await res.json()
+  const result = await res.json()
+  console.log('whatsapp send result', JSON.stringify({ ok: res.ok, status: res.status, result }).slice(0, 1200))
+  return { ok: res.ok, status: res.status, result }
 }
 
 const textMsg = (to: string, body: string) => ({
   messaging_product: 'whatsapp', to, type: 'text', text: { body }
 })
+
+const normalizeWaPhone = (waId: string) => waId?.startsWith('+') ? waId : `+${waId}`
+
+const extractStatusError = (status: any) => {
+  const error = status?.errors?.[0]
+  if (!error) return null
+  return `${error.title || error.message || 'WhatsApp delivery failed'}${error.error_data?.details ? ` — ${error.error_data.details}` : ''}`
+}
 
 const templateMsg = (to: string, settings: any) => ({
   messaging_product: 'whatsapp',
@@ -313,15 +323,19 @@ Deno.serve(async (req) => {
           continue
         }
         const out = templateMsg(waId, settings)
-        const res = await sendWhatsApp(phoneNumberId, token, out)
-        if (res?.error) {
-          console.error('template send failed', JSON.stringify(res.error))
+        const { ok: sendOk, status: sendStatus, result: res } = await sendWhatsApp(phoneNumberId, token, out)
+        if (!sendOk || res?.error) {
+          console.error('template send failed', JSON.stringify(res?.error || res))
           await supabase.from('notifications').insert({
             user_id: userId,
             type: 'whatsapp_inbound',
             title: 'WhatsApp template failed',
-            message: res.error?.message || 'Meta rejected the configured template message.',
-            data: { wa_id: waId, error: res.error, template: settings.meta_template_name },
+            message: res?.error?.message || `Meta rejected the configured template message (${sendStatus}).`,
+            data: { wa_id: waId, error: res?.error || res, template: settings.meta_template_name },
+          })
+          await supabase.from('tn_messages').insert({
+            user_id: userId, wa_id: waId, direction: 'out', type: 'webhook_error',
+            payload: { text: { body: res?.error?.message || 'Meta rejected the configured template message.' }, error: res?.error || res, template: settings.meta_template_name },
           })
           continue
         }
@@ -332,6 +346,27 @@ Deno.serve(async (req) => {
       }
 
       // No fallback auto-reply in production mode; store inbound only.
+    }
+
+    for (const status of value?.statuses || []) {
+      const waId = status.recipient_id
+      const errText = extractStatusError(status)
+      if (!waId || !errText) continue
+      await supabase.from('tn_messages').insert({
+        user_id: userId,
+        wa_id: waId,
+        direction: 'out',
+        type: 'webhook_error',
+        payload: { text: { body: errText }, status },
+        wa_message_id: status.id,
+      })
+      await supabase.from('notifications').insert({
+        user_id: userId,
+        type: 'whatsapp_inbound',
+        title: 'WhatsApp delivery failed',
+        message: errText,
+        data: { wa_id: waId, status },
+      })
     }
 
     return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })

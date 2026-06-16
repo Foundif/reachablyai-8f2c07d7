@@ -1,16 +1,22 @@
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
-import { Receipt, CreditCard, Download, CheckCircle2, Zap } from 'lucide-react';
+import { Receipt, CreditCard, Zap, AlertCircle } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
-const INVOICES = [
-  { id: 'INV-2026-0612', date: '2026-06-01', amount: '₹2,499', status: 'Paid' },
-  { id: 'INV-2026-0512', date: '2026-05-01', amount: '₹2,499', status: 'Paid' },
-  { id: 'INV-2026-0412', date: '2026-04-01', amount: '₹2,499', status: 'Paid' },
-];
+const PLAN_DETAILS: Record<string, { name: string; price: string; limits: [string, number, number][] }> = {
+  free: { name: 'Free', price: '₹0 / month', limits: [['Messages', 0, 100], ['AI replies', 0, 25], ['Contacts', 0, 100]] },
+  pro: { name: 'Pro', price: '₹999 / month', limits: [['Messages', 0, 5000], ['AI replies', 0, 1000], ['Contacts', 0, 2500]] },
+  professional: { name: 'Pro', price: '₹999 / month', limits: [['Messages', 0, 5000], ['AI replies', 0, 1000], ['Contacts', 0, 2500]] },
+  growth: { name: 'Growth', price: '₹2,499 / month', limits: [['Messages', 0, 15000], ['AI replies', 0, 5000], ['Contacts', 0, 10000]] },
+  premium: { name: 'Growth', price: '₹2,499 / month', limits: [['Messages', 0, 15000], ['AI replies', 0, 5000], ['Contacts', 0, 10000]] },
+};
 
 const Billing = () => {
   const navigate = useNavigate();
+  const { profile } = useAuth();
+  const status = (profile?.subscription_status || 'free').toLowerCase();
+  const plan = PLAN_DETAILS[status] || PLAN_DETAILS.free;
   return (
     <AppLayout>
       <div className="p-4 md:p-6 lg:p-8 space-y-6">
@@ -25,18 +31,15 @@ const Billing = () => {
           <div className="lg:col-span-2 glass-elevated p-5">
             <p className="text-xs uppercase tracking-wider text-muted-foreground">Current plan</p>
             <div className="flex items-center gap-2 mt-1">
-              <h2 className="text-2xl font-bold">Growth</h2>
+              <h2 className="text-2xl font-bold">{plan.name}</h2>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600">Active</span>
             </div>
-            <p className="text-sm text-muted-foreground mt-1">₹2,499 / month · renews on July 1, 2026</p>
+            <p className="text-sm text-muted-foreground mt-1">{plan.price}{plan.name === 'Free' ? ' · upgrade anytime' : ' · manual UPI verified plan'}</p>
             <div className="grid grid-cols-3 gap-3 mt-5">
-              <Stat label="Messages" used={4203} total={10000} />
-              <Stat label="AI replies" used={812} total={2000} />
-              <Stat label="Contacts" used={2104} total={5000} />
+              {plan.limits.map(([label, used, total]) => <Stat key={label} label={label} used={used} total={total} />)}
             </div>
             <div className="flex gap-2 mt-5">
-              <Button onClick={() => navigate('/pricing')}><Zap className="w-4 h-4" /> Upgrade plan</Button>
-              <Button variant="outline">Cancel subscription</Button>
+              <Button onClick={() => navigate('/pricing')}><Zap className="w-4 h-4" /> {plan.name === 'Free' ? 'Upgrade plan' : 'Change plan'}</Button>
             </div>
           </div>
 
@@ -45,28 +48,20 @@ const Billing = () => {
             <div className="flex items-center gap-3 mt-3">
               <CreditCard className="w-8 h-8 text-primary" />
               <div>
-                <p className="font-semibold">•••• 4242</p>
-                <p className="text-xs text-muted-foreground">Expires 12/28</p>
+                <p className="font-semibold">Manual UPI</p>
+                <p className="text-xs text-muted-foreground">No saved card on file</p>
               </div>
             </div>
-            <Button variant="outline" size="sm" className="w-full mt-4">Update method</Button>
+            <Button variant="outline" size="sm" className="w-full mt-4" onClick={() => navigate('/pricing')}>Open plans</Button>
           </div>
         </div>
 
         <div className="glass-elevated">
           <div className="p-4 border-b border-border/50"><h3 className="font-semibold">Invoices</h3></div>
-          <div className="divide-y divide-border/50">
-            {INVOICES.map((i) => (
-              <div key={i.id} className="p-4 flex items-center gap-3">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                <div className="flex-1">
-                  <p className="font-semibold text-sm">{i.id}</p>
-                  <p className="text-xs text-muted-foreground">{i.date}</p>
-                </div>
-                <span className="font-semibold text-sm">{i.amount}</span>
-                <Button variant="ghost" size="icon"><Download className="w-4 h-4" /></Button>
-              </div>
-            ))}
+          <div className="p-8 text-center text-muted-foreground">
+            <AlertCircle className="w-8 h-8 mx-auto mb-2" />
+            <p className="text-sm">No verified billing invoices yet.</p>
+            <p className="text-xs mt-1">After a manual payment is verified, the active plan appears here from your account status.</p>
           </div>
         </div>
       </div>

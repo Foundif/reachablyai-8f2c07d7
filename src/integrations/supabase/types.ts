@@ -1495,6 +1495,102 @@ export type Database = {
         }
         Relationships: []
       }
+      tn_meta_flows: {
+        Row: {
+          categories: string[] | null
+          created_at: string
+          endpoint_uri: string | null
+          id: string
+          meta_id: string
+          name: string
+          preview: Json
+          raw: Json
+          status: string | null
+          synced_at: string
+          updated_at: string
+          user_id: string
+          validation_errors: Json
+        }
+        Insert: {
+          categories?: string[] | null
+          created_at?: string
+          endpoint_uri?: string | null
+          id?: string
+          meta_id: string
+          name: string
+          preview?: Json
+          raw?: Json
+          status?: string | null
+          synced_at?: string
+          updated_at?: string
+          user_id: string
+          validation_errors?: Json
+        }
+        Update: {
+          categories?: string[] | null
+          created_at?: string
+          endpoint_uri?: string | null
+          id?: string
+          meta_id?: string
+          name?: string
+          preview?: Json
+          raw?: Json
+          status?: string | null
+          synced_at?: string
+          updated_at?: string
+          user_id?: string
+          validation_errors?: Json
+        }
+        Relationships: []
+      }
+      tn_meta_templates: {
+        Row: {
+          category: string | null
+          components: Json
+          created_at: string
+          id: string
+          language: string | null
+          meta_id: string
+          name: string
+          quality_rating: string | null
+          raw: Json
+          status: string | null
+          synced_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          components?: Json
+          created_at?: string
+          id?: string
+          language?: string | null
+          meta_id: string
+          name: string
+          quality_rating?: string | null
+          raw?: Json
+          status?: string | null
+          synced_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          components?: Json
+          created_at?: string
+          id?: string
+          language?: string | null
+          meta_id?: string
+          name?: string
+          quality_rating?: string | null
+          raw?: Json
+          status?: string | null
+          synced_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       tn_payments: {
         Row: {
           amount: number

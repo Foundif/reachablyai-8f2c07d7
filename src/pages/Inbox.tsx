@@ -3,13 +3,14 @@ import AppLayout from '@/components/layout/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
-import { Search, Send, Sparkles, Phone, Video, MoreHorizontal, ArrowLeft, Paperclip, Mic, Smile, CalendarDays, CreditCard, MessageSquare, ChevronRight } from 'lucide-react';
+import { Search, Send, Sparkles, Phone, Video, MoreHorizontal, ArrowLeft, Paperclip, Mic, Smile, CalendarDays, CreditCard, MessageSquare, ChevronRight, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
 type Msg = {
   id: string;
   wa_id: string;
   direction: 'in' | 'out';
+  type?: string | null;
   payload: any;
   created_at: string;
   read_at?: string | null;
@@ -53,6 +54,13 @@ const fmtTime = (iso: string) => {
   const diff = (now.getTime() - d.getTime()) / 86400000;
   if (diff < 7) return d.toLocaleDateString([], { weekday: 'short' });
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+};
+
+const formatWhatsAppPhone = (waId: string) => {
+  const digits = String(waId || '').replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('91')) return `+91 ${digits.slice(2, 7)} ${digits.slice(7)}`;
+  if (digits.length === 10) return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+  return waId?.startsWith('+') ? waId : `+${waId}`;
 };
 
 const Inbox = () => {
@@ -228,7 +236,7 @@ const Inbox = () => {
                       isActive ? 'bg-gradient-to-r from-primary/15 to-secondary/10 ring-1 ring-primary/25' : 'hover:bg-white/[0.04]',
                     )}
                   >
-                    <Avatar name={t.name} avatarUrl={t.avatar_url} />
+                    <Avatar name={t.name} waId={t.wa_id} avatarUrl={t.avatar_url} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline gap-2">
                         <span className="font-semibold text-sm truncate flex-1">{t.name}</span>
@@ -256,10 +264,10 @@ const Inbox = () => {
                   <button onClick={() => setActive(null)} className="md:hidden p-1.5 rounded-lg hover:bg-white/[0.05] -ml-1">
                     <ArrowLeft className="w-5 h-5" />
                   </button>
-                  <Avatar name={activeCustomer?.name || active} avatarUrl={activeCustomer?.avatar_url} />
+                  <Avatar name={activeCustomer?.name || active} waId={active} avatarUrl={activeCustomer?.avatar_url} />
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm truncate">{activeCustomer?.name || active}</p>
-                    <p className="text-[11px] text-muted-foreground truncate">{active}</p>
+                    <p className="text-[11px] text-muted-foreground truncate">{formatWhatsAppPhone(active)}</p>
                   </div>
                   <div className="flex items-center gap-1">
                     <IconBtn><Phone className="w-4 h-4" /></IconBtn>
@@ -290,7 +298,7 @@ const Inbox = () => {
                             grouped && (isOut ? 'rounded-tr-md' : 'rounded-tl-md'),
                           )}
                         >
-                          {text}
+                          <MessageBody message={m} text={text} />
                           <div className={cn('text-[10px] mt-1 opacity-70', isOut ? 'text-white/80' : 'text-muted-foreground')}>
                             {fmtTime(m.created_at)}
                           </div>
@@ -366,7 +374,23 @@ const Inbox = () => {
 
 /* ---------- subcomponents ---------- */
 
-const Avatar = ({ name, avatarUrl }: { name: string; avatarUrl?: string | null }) => {
+const MessageBody = ({ message, text }: { message: Msg; text: string }) => {
+  if (message.direction === 'out' && message.type === 'template') {
+    const templateName = message.payload?.template?.name || 'Meta template';
+    return (
+      <div className="space-y-1">
+        <div className="flex items-center gap-1.5 font-semibold"><CheckCircle2 className="w-3.5 h-3.5" />Flow template sent</div>
+        <div className="text-xs opacity-80 break-all">{templateName}</div>
+      </div>
+    );
+  }
+  if (message.type === 'webhook_error') {
+    return <div className="flex items-start gap-1.5"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />{text || 'Webhook error'}</div>;
+  }
+  return <>{text}</>;
+};
+
+const Avatar = ({ name, waId, avatarUrl }: { name: string; waId?: string; avatarUrl?: string | null }) => {
   const initials = (name || '?').split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
   const hue = (name?.charCodeAt(0) || 0) * 37 % 360;
   if (avatarUrl) {
@@ -383,8 +407,9 @@ const Avatar = ({ name, avatarUrl }: { name: string; avatarUrl?: string | null }
     <div
       className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-md"
       style={{ background: `linear-gradient(135deg, hsl(${hue} 80% 55%), hsl(${(hue + 60) % 360} 80% 45%))` }}
+      title="Meta does not include customer profile photos in normal webhook payloads"
     >
-      {initials}
+      {initials || (waId ? waId.slice(-2) : '?')}
     </div>
   );
 };
@@ -433,11 +458,11 @@ const CustomerPanel = ({ waId, customer }: { waId: string; customer?: Customer }
       <div className="text-center">
         <div className="mx-auto mb-3">
           <div className="inline-block">
-            <Avatar name={customer?.name || waId} avatarUrl={customer?.avatar_url} />
+            <Avatar name={customer?.name || waId} waId={waId} avatarUrl={customer?.avatar_url} />
           </div>
         </div>
         <h3 className="font-semibold tracking-tight">{customer?.name || 'Unnamed customer'}</h3>
-        <p className="text-xs text-muted-foreground">{waId}</p>
+        <p className="text-xs text-muted-foreground">{formatWhatsAppPhone(waId)}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
