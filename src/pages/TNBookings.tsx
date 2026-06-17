@@ -181,8 +181,9 @@ const TNBookings = () => {
                   </div>
                   <div className="flex flex-col gap-2">
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(b)}><Edit3 className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => remove(b)}><Trash2 className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" title="View" onClick={() => setViewing(b)}><Eye className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit" onClick={() => openEdit(b)}><Edit3 className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" title="Delete" onClick={() => remove(b)}><Trash2 className="w-4 h-4" /></Button>
                     </div>
                     {b.status !== 'confirmed' && b.status !== 'cancelled' && (
                       <Button size="sm" onClick={() => updateStatus(b, 'confirmed')}>Confirm</Button>
