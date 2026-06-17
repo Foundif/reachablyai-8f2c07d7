@@ -18,7 +18,7 @@ const MobileHeader = () => {
     <>
       <header className="md:hidden sticky top-0 z-50 safe-area-pt">
         <div className="mx-3 mt-3 mb-2 flex items-center gap-2 glass-elevated glass-sheen px-3 py-2.5 rounded-2xl">
-          <BrandMark size={32} />
+          <BrandMark variant="wordmark" size={28} className="max-w-[140px]" />
           <button onClick={() => setPaletteOpen(true)} className="ml-auto p-2 rounded-xl hover:bg-white/[0.06] text-muted-foreground">
             <Search className="w-5 h-5" />
           </button>
@@ -35,13 +35,13 @@ const MobileHeader = () => {
           <div className="absolute inset-0 bg-background/70 backdrop-blur-xl" onClick={() => setOpen(false)} />
           <div className="absolute top-0 left-0 bottom-0 w-[82vw] max-w-[340px] glass-floating m-3 overflow-y-auto custom-scrollbar animate-slide-in-left">
             <div className="p-4 flex items-center gap-3 border-b border-white/5">
-              <BrandMark size={36} />
+              <BrandMark variant="wordmark" size={32} className="max-w-[180px]" />
               <button onClick={() => setOpen(false)} className="ml-auto p-2 rounded-xl hover:bg-white/[0.06]">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <nav className="p-2">
+            <nav className="p-2 pb-32">
               {MODULE_GROUPS.map((group) => (
                 <div key={group.label} className="mb-2">
                   <div className="px-3 pt-3 pb-1">

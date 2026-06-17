@@ -1,6 +1,6 @@
 import {
   Inbox, Users, CalendarDays,
-  UserCog, Shield, FileText, Settings, UserCircle,
+  UserCog, Shield, FileText, Settings, UserCircle, CreditCard,
   LayoutDashboard, Briefcase, BarChart3, Wallet,
 } from 'lucide-react';
 
@@ -44,6 +44,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
     label: 'Settings',
     items: [
       { to: '/whatsapp-settings', icon: Settings, label: 'WhatsApp', status: 'live' },
+      { to: '/razorpay', icon: CreditCard, label: 'Razorpay', status: 'live' },
       { to: '/profile', icon: UserCircle, label: 'Profile', status: 'live' },
       { to: '/team', icon: UserCog, label: 'Team', status: 'live' },
       { to: '/roles', icon: Shield, label: 'Roles', status: 'live' },

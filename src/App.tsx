@@ -49,6 +49,7 @@ import AICopilot from "./pages/AICopilot";
 import Accounting from "./pages/Accounting";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
+import RazorpaySettings from "./pages/RazorpaySettings";
 
 const queryClient = new QueryClient();
 
@@ -120,6 +121,7 @@ const App = () => (
                 <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
                 <Route path="/copilot" element={<ProtectedRoute><AICopilot /></ProtectedRoute>} />
                 <Route path="/accounting" element={<ProtectedRoute><Accounting /></ProtectedRoute>} />
+                <Route path="/razorpay" element={<ProtectedRoute><RazorpaySettings /></ProtectedRoute>} />
 
                 {comingSoonRoutes.filter(r => r !== '/messages').map((r) => (
                   <Route key={r} path={r} element={<ProtectedRoute><ComingSoon /></ProtectedRoute>} />
