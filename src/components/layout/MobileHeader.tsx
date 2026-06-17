@@ -72,24 +72,6 @@ const MobileHeader = () => {
               ))}
             </nav>
 
-            <div className="p-3">
-              <div className="p-3 rounded-2xl glass-panel glass-sheen relative overflow-hidden">
-                <div className="absolute -inset-px rounded-2xl bg-gradient-to-br from-primary/30 to-secondary/20 opacity-30 blur-md" />
-                <div className="relative">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Sparkles className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-semibold">Upgrade to Pro</span>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground mb-2">AI agents, campaigns & analytics.</p>
-                  <button
-                    onClick={() => { setOpen(false); window.location.href = '/pricing'; }}
-                    className="w-full py-2 rounded-xl bg-gradient-to-r from-primary to-secondary text-white text-xs font-semibold shadow-glow"
-                  >
-                    Upgrade
-                  </button>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       )}
