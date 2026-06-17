@@ -114,6 +114,85 @@ const SERVICE_PRICES: Record<string, { name: string; price: number }> = {
   'outstation': { name: 'Outstation Medical Escort', price: 1200 },
 }
 
+// Best-effort parsing of free-text "Help" messages so the operator gets prefilled fields.
+function parseHelpText(text: string): Record<string, any> {
+  const out: Record<string, any> = {}
+  const t = text.replace(/\s+/g, ' ').trim()
+  const low = t.toLowerCase()
+
+  // Service code keyword map
+  const svcMap: Array<[RegExp, string]> = [
+    [/\b(railway|bus station|station assist|terminal)\b.*\b(assist|help)\b/, 'terminal-railbus'],
+    [/\bhome\s*(to|->|→)\s*(railway|bus|station)\b/, 'home-railbus'],
+    [/\bhome\s*(to|->|→)\s*terminal\b/, 'home-terminal'],
+    [/\b(railway|bus|station)\s*(to|->|→)\s*home\b/, 'railbus-home'],
+    [/\bterminal\s*(to|->|→)\s*home\b/, 'terminal-home'],
+    [/\bfestivity\b.*\b(full|12h|12 ?hour)\b/, 'festivity-full'],
+    [/\bfestivity\b.*\b(half|6h|6 ?hour)\b/, 'festivity-half'],
+    [/\bhospital\b/, 'hospital'],
+    [/\b(outstation|medical escort)\b/, 'outstation'],
+    [/\b(old\s*age|senior|elder)\b/, 'home-railbus'],
+    [/\btravel( assistance)?\b/, 'home-railbus'],
+  ]
+  for (const [re, code] of svcMap) { if (re.test(low)) { out.service = code; break } }
+
+  // Name: "I am X", "this is X", "my name is X", "name: X", or "Hi X here"
+  const nameMatch =
+    t.match(/\b(?:my name is|i am|i'm|this is|name[:\-])\s+([A-Z][a-zA-Z .'-]{1,40})/i) ||
+    t.match(/\bI need (?:help|assistance)[^.]*?for\s+([A-Z][a-zA-Z .'-]{1,40})/i)
+  if (nameMatch) out.name = nameMatch[1].trim().replace(/[.,;]$/, '')
+
+  // Date: dd/mm, dd-mm, "on 25 Dec", "tomorrow", "today"
+  if (/\btomorrow\b/i.test(t)) {
+    out.date = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
+  } else if (/\btoday\b/i.test(t)) {
+    out.date = new Date().toISOString().slice(0, 10)
+  } else {
+    const md = t.match(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/)
+    if (md) {
+      const y = md[3] ? (md[3].length === 2 ? `20${md[3]}` : md[3]) : String(new Date().getFullYear())
+      out.date = `${y}-${md[2].padStart(2,'0')}-${md[1].padStart(2,'0')}`
+    } else {
+      const months = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec']
+      const mm = low.match(/\b(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/)
+      if (mm) {
+        const y = new Date().getFullYear()
+        out.date = `${y}-${String(months.indexOf(mm[2])+1).padStart(2,'0')}-${mm[1].padStart(2,'0')}`
+      }
+    }
+  }
+
+  // Time: "at 6pm", "06:30", "5.30 am"
+  const tm = t.match(/\b(?:at\s+)?(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm)\b/i) || t.match(/\b(\d{1,2}):(\d{2})\b/)
+  if (tm) {
+    let h = parseInt(tm[1]); const min = tm[2] ? parseInt(tm[2]) : 0
+    const ap = (tm[3] || '').toLowerCase()
+    if (ap === 'pm' && h < 12) h += 12
+    if (ap === 'am' && h === 12) h = 0
+    out.time = `${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}`
+  }
+
+  // Address: "address: ...", "at <place>", "from <place> to <place>"
+  const addrMatch =
+    t.match(/\baddress[:\-]\s*(.+?)(?:[.;]|$)/i) ||
+    t.match(/\b(?:pickup|pick up|from)[:\-]?\s+([A-Z][\w ,.\-]{4,80})/i)
+  if (addrMatch) out.address = addrMatch[1].trim()
+
+  // Transport mode
+  const trMode = low.match(/\b(train|bus|flight|cab|car|taxi)\b/)
+  if (trMode) out.transport_mode = trMode[1]
+  const trDet = t.match(/\b(?:train|bus|flight)\s*(?:no\.?|number|#)?\s*([A-Z0-9\-]{3,15})/i) ||
+                t.match(/\bPNR[:\-\s]*([A-Z0-9]{6,12})/i)
+  if (trDet) out.transport_details = trDet[1]
+
+  // Advance amount: "₹500", "Rs 500", "500 rupees", "advance 500"
+  const am = t.match(/(?:₹|rs\.?|inr|advance)\s*(\d{2,5})/i)
+  if (am) out.advance = Number(am[1])
+
+  return out
+}
+
+
 async function handleFlowSubmission(supabase: any, userId: string, waId: string, payload: any, settings: any, phoneNumberId: string, token: string) {
   const d = payload || {}
   const svcCode = String(d.service || '').trim()
