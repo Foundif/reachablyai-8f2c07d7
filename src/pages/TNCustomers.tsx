@@ -10,8 +10,9 @@ import {
 } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { MessageCircle, Plus, Edit3, Trash2, Loader2, Check } from 'lucide-react';
+import { MessageCircle, Plus, Edit3, Trash2, Loader2, Check, Eye } from 'lucide-react';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 
 const formatWhatsAppPhone = (waId: string) => {
   const digits = String(waId || '').replace(/\D/g, '');
