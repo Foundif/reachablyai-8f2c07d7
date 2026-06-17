@@ -157,44 +157,13 @@ const Profile = () => {
         />
 
         <SectionCard
-          title="Connections & Security"
+          title="Security"
           rows={[
-            { icon: Plug, label: 'Integrations', sub: 'Meta, Zapier, Webhooks', onClick: () => navigate('/integrations') },
             { icon: FileText, label: 'Audit Logs', sub: 'See every account action', onClick: () => navigate('/audit') },
             { icon: Shield, label: 'Change password', sub: 'Update your login password', onClick: () => setPasswordModalOpen(true) },
           ]}
         />
 
-        {/* White label */}
-        <div className="space-y-2">
-          <p className="text-[11px] tracking-[0.12em] uppercase text-muted-foreground px-1">White label</p>
-          <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">Brand name</Label>
-                <Input value={whiteLabel.brand} onChange={(e) => setWhiteLabel({ ...whiteLabel, brand: e.target.value })} className="mt-1.5" />
-              </div>
-              <div>
-                <Label className="text-xs">Support email</Label>
-                <Input type="email" value={whiteLabel.supportEmail} onChange={(e) => setWhiteLabel({ ...whiteLabel, supportEmail: e.target.value })} className="mt-1.5" />
-              </div>
-            </div>
-            <div>
-              <Label className="text-xs">Custom domain</Label>
-              <Input value={whiteLabel.domain} onChange={(e) => setWhiteLabel({ ...whiteLabel, domain: e.target.value })} placeholder="app.yourbrand.com" className="mt-1.5" />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">Hide "Powered by Chatarly"</p>
-                <p className="text-xs text-muted-foreground">Available on Growth plan</p>
-              </div>
-              <Switch checked={whiteLabel.hideBadge} onCheckedChange={(v) => setWhiteLabel({ ...whiteLabel, hideBadge: v })} />
-            </div>
-            <Button variant="outline" onClick={saveWhiteLabel} disabled={savingWL} className="w-full sm:w-auto">
-              {savingWL ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4" />Save white label</>}
-            </Button>
-          </div>
-        </div>
 
         <Button
           onClick={handleSignOut}
