@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,12 +9,16 @@ import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { CreditCard, Loader2, ExternalLink, ShieldCheck, Webhook, KeyRound } from 'lucide-react';
+import { CreditCard, Loader2, ExternalLink, ShieldCheck, Webhook, KeyRound, Lock, Crown } from 'lucide-react';
 
 const WEBHOOK_URL = 'https://fpgdzyzmejhagkszrphl.supabase.co/functions/v1/razorpay-webhook';
+const ALLOWED_PLANS = ['trial', 'growth', 'professional', 'enterprise', 'active', 'pro'];
 
 const RazorpaySettings = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const navigate = useNavigate();
+  const status = ((profile as any)?.subscription_status || 'trial').toLowerCase();
+  const planAllowed = ALLOWED_PLANS.includes(status);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [keyId, setKeyId] = useState('');
