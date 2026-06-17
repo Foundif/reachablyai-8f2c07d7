@@ -288,10 +288,11 @@ const PricingContent = () => {
 
                 <Button
                   onClick={() => handleSelect(plan)}
+                  disabled={payingId === plan.id}
                   variant={plan.popular ? 'default' : 'outline'}
                   className={cn('w-full rounded-full', plan.popular && 'bg-primary hover:bg-primary/90')}
                 >
-                  {plan.cta}<ArrowRight className="w-4 h-4" />
+                  {payingId === plan.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{plan.cta}<ArrowRight className="w-4 h-4" /></>}
                 </Button>
               </motion.div>
             );
