@@ -22,9 +22,9 @@ const StatsCard = ({ title, value, change, icon: Icon, variant = 'default' }: St
 
   const iconStyles = {
     default: 'bg-muted text-foreground',
-    primary: 'bg-primary/25 text-primary',
-    warning: 'bg-risk-medium/25 text-risk-medium',
-    danger: 'bg-risk-high/25 text-risk-high',
+    primary: 'bg-foreground text-background',
+    warning: 'bg-muted text-foreground',
+    danger: 'bg-foreground text-background',
   };
 
   return (

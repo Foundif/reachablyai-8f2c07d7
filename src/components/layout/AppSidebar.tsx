@@ -77,7 +77,7 @@ const AppSidebar = () => {
                       <div className={cn(
                         'relative w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-300 shrink-0',
                         isActive
-                          ? 'bg-gradient-to-br from-primary to-secondary text-white shadow-[0_4px_16px_-4px_hsl(var(--primary)/0.6)]'
+                          ? 'bg-foreground text-background shadow-[0_4px_16px_-4px_hsl(var(--foreground)/0.4)]'
                           : 'text-muted-foreground group-hover:text-foreground',
                       )}>
                         <Icon className="w-[18px] h-[18px]" />

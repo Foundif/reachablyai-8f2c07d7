@@ -28,10 +28,10 @@ const MobileNav = () => {
             >
               {accent ? (
                 <div className={cn(
-                  'relative w-10 h-10 -mt-3 rounded-full flex items-center justify-center transition-all duration-300 bg-gradient-to-br from-primary via-secondary to-accent shadow-[0_8px_24px_-4px_hsl(211_100%_52%/0.6)]',
+                  'relative w-10 h-10 -mt-3 rounded-full flex items-center justify-center transition-all duration-300 bg-foreground text-background shadow-[0_8px_24px_-4px_hsl(var(--foreground)/0.4)]',
                   isActive && 'scale-110',
                 )}>
-                  <Icon className="w-5 h-5 text-white" />
+                  <Icon className="w-5 h-5" />
                 </div>
               ) : (
                 <div className={cn(
