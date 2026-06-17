@@ -27,21 +27,36 @@ const TNDashboard = () => {
     if (!user) return;
     (async () => {
       const today = new Date().toISOString().slice(0, 10);
-      const [b, p, c, m, conf] = await Promise.all([
+      const [b, c, m, allBookings, payVerified, payPending] = await Promise.all([
         supabase.from('tn_bookings').select('id', { count: 'exact', head: true }).eq('user_id', user.id).gte('created_at', today),
-        supabase.from('tn_payments').select('amount', { count: 'exact' }).eq('user_id', user.id).eq('status', 'pending'),
         supabase.from('tn_customers').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
         supabase.from('tn_messages').select('id', { count: 'exact', head: true }).eq('user_id', user.id).gte('created_at', today),
+        supabase.from('tn_bookings').select('status, price, advance_amount, balance_amount').eq('user_id', user.id),
         supabase.from('tn_payments').select('amount').eq('user_id', user.id).eq('status', 'verified'),
+        supabase.from('tn_payments').select('amount').eq('user_id', user.id).eq('status', 'pending'),
       ]);
-      const revenue = (conf.data || []).reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
+
+      // Revenue = verified payments + advance from paid/completed bookings (whichever wired)
+      const paidStatuses = new Set(['paid', 'completed', 'confirmed']);
+      const awaitingStatuses = new Set(['awaiting_payment', 'pending']);
+      let bookingRevenue = 0;
+      let bookingAwaiting = 0;
+      (allBookings.data || []).forEach((row: any) => {
+        const adv = Number(row.advance_amount || 0);
+        const price = Number(row.price || 0);
+        if (paidStatuses.has(row.status)) bookingRevenue += adv || price;
+        else if (awaitingStatuses.has(row.status)) bookingAwaiting += adv || price;
+      });
+      const verifiedSum = (payVerified.data || []).reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
+      const pendingSum = (payPending.data || []).reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
+
       setStats({
         todayBookings: b.count || 0,
-        pendingPayments: p.count || 0,
+        pendingPayments: (payPending.data || []).length,
         customers: c.count || 0,
         msgsToday: m.count || 0,
-        revenue,
-        awaiting: (p.data || []).reduce((s: number, r: any) => s + Number(r.amount || 0), 0),
+        revenue: verifiedSum + bookingRevenue,
+        awaiting: pendingSum + bookingAwaiting,
       });
     })();
   }, [user]);
@@ -79,10 +94,15 @@ const TNDashboard = () => {
             <TrendingUp className="w-5 h-5 text-primary" />
             <h2 className="text-lg font-semibold">Quick Setup Checklist</h2>
           </div>
-          <ol className="space-y-2 text-sm">
+          <ol className="space-y-3 text-sm">
             <li>1. Open <b>WhatsApp Settings</b> → paste your Meta Access Token, Phone Number ID, WABA ID, App Secret & Verify Token.</li>
             <li>2. Upload your UPI QR code + enter UPI ID and payee name.</li>
-            <li>3. Set webhook URL in Meta dashboard to <code className="text-xs bg-muted px-2 py-1 rounded">https://fpgdzyzmejhagkszrphl.supabase.co/functions/v1/whatsapp-webhook</code></li>
+            <li>
+              3. Set webhook URL in Meta dashboard to:
+              <code className="block mt-1.5 text-[11px] bg-muted px-2 py-1.5 rounded break-all whitespace-pre-wrap">
+                https://fpgdzyzmejhagkszrphl.supabase.co/functions/v1/whatsapp-webhook
+              </code>
+            </li>
             <li>4. Send "hi" from a test WhatsApp number — booking flow starts.</li>
           </ol>
         </Card>

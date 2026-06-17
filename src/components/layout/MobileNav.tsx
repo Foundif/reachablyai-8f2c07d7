@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, Inbox, Users, BarChart3, Sparkles } from 'lucide-react';
+import { LayoutDashboard, Inbox, Users, UserCircle, Sparkles } from 'lucide-react';
 import { useInboxUnreadCount } from '@/hooks/useInboxUnreadCount';
 
 const items = [
@@ -8,7 +8,7 @@ const items = [
   { to: '/inbox', icon: Inbox, label: 'Inbox' },
   { to: '/copilot', icon: Sparkles, label: 'AI', accent: true },
   { to: '/customers', icon: Users, label: 'CRM' },
-  { to: '/analytics', icon: BarChart3, label: 'Stats' },
+  { to: '/profile', icon: UserCircle, label: 'Profile' },
 ];
 
 const MobileNav = () => {
