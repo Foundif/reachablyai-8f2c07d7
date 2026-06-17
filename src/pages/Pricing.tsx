@@ -1,242 +1,378 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import AppLayout from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
-import { 
-  Shield, Check, Zap, Users, BarChart3, Globe,
-  ArrowRight, Sparkles, Crown, Building2, ArrowLeft,
+import {
+  Check, Crown, Sparkles, ArrowRight, Shield, Users, MessageCircle,
+  Headphones, Building2, Zap, Star, ArrowLeft, Phone,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import PaymentModal from '@/components/pricing/PaymentModal';
 
-const CURRENCIES = [
-  { code: 'USD', symbol: '$', rate: 1 },
-  { code: 'EUR', symbol: '€', rate: 0.92 },
-  { code: 'GBP', symbol: '£', rate: 0.79 },
-  { code: 'INR', symbol: '₹', rate: 83.12 },
-  { code: 'AUD', symbol: 'A$', rate: 1.53 },
-  { code: 'CAD', symbol: 'C$', rate: 1.36 },
-];
+type PlanId = 'starter' | 'growth' | 'professional' | 'enterprise';
 
-const PLANS = [
+const PLANS: {
+  id: PlanId;
+  name: string;
+  tagline: string;
+  monthly: number | null;
+  yearly: number | null;
+  icon: any;
+  popular?: boolean;
+  highlight?: string;
+  features: string[];
+  cta: string;
+}[] = [
   {
     id: 'starter',
     name: 'Starter',
-    description: 'Perfect for solo stylists',
-    monthlyPrice: 0,
-    icon: Shield,
-    popular: false,
+    tagline: 'For new travel desks getting started on WhatsApp',
+    monthly: 2100,
+    yearly: 21000,
+    icon: Zap,
     features: [
-      'Up to 50 clients',
-      'Basic billing & receipts',
-      'Expense tracking',
-      'Single employee',
+      '1 WhatsApp Business number',
+      'Basic automation flows',
+      'Lead capture forms',
+      'Auto replies (business hours)',
+      'Customer database',
+      'Booking enquiry tracking',
+      'Basic analytics',
       'Email support',
     ],
-    cta: 'Get Started Free',
-    ctaVariant: 'outline' as const,
+    cta: 'Start 14-day free trial',
+  },
+  {
+    id: 'growth',
+    name: 'Growth',
+    tagline: 'Most loved by tour operators & taxi services',
+    monthly: 4500,
+    yearly: 45000,
+    icon: Star,
+    popular: true,
+    highlight: 'Most Popular',
+    features: [
+      'Everything in Starter',
+      'Unlimited automation flows',
+      'Lead pipeline CRM',
+      'Follow-up automation',
+      'Team access (3 users)',
+      'Broadcast campaigns',
+      'Advanced analytics',
+      'Priority support',
+    ],
+    cta: 'Start 14-day free trial',
   },
   {
     id: 'professional',
     name: 'Professional',
-    description: 'For growing salons & spas',
-    monthlyPrice: 29,
-    icon: Zap,
-    popular: true,
+    tagline: 'For multi-branch agencies & DMC operators',
+    monthly: 8500,
+    yearly: 85000,
+    icon: Crown,
     features: [
-      'Unlimited clients',
-      'Advanced analytics & reports',
-      'Team management',
-      'GST/Non-GST billing',
-      'WhatsApp reminders',
-      'Appointment booking',
-      'Priority support',
+      'Everything in Growth',
+      'AI-powered responses',
+      'Multi-agent shared inbox',
+      'Custom workflow builder',
+      'API integrations',
+      'Unlimited contacts',
+      'White-label support',
+      'Dedicated success manager',
     ],
     cta: 'Start 14-day free trial',
-    ctaVariant: 'trust' as const,
   },
   {
-    id: 'premium',
-    name: 'Premium',
-    description: 'Multi-location salon chains',
-    monthlyPrice: 99,
+    id: 'enterprise',
+    name: 'Enterprise',
+    tagline: 'Custom infrastructure for OTAs & travel chains',
+    monthly: null,
+    yearly: null,
     icon: Building2,
-    popular: false,
     features: [
-      'Everything in Professional',
-      'Multi-location support',
-      'Advanced analytics dashboard',
-      'API access',
-      'Custom branding',
-      'Exportable reports',
-      'Dedicated account manager',
-      'SSO authentication',
+      'Custom development',
+      'Custom integrations',
+      'Dedicated infrastructure',
+      'SLA-backed uptime',
+      'Account manager',
+      'Onboarding & training',
     ],
-    cta: 'Contact Sales',
-    ctaVariant: 'outline' as const,
+    cta: 'Book a demo',
   },
 ];
 
-const Pricing = () => {
+const COMPARE_ROWS: { label: string; values: (string | boolean)[] }[] = [
+  { label: 'WhatsApp Business numbers', values: ['1', '2', '5', 'Unlimited'] },
+  { label: 'Automation flows', values: ['Basic', 'Unlimited', 'Unlimited', 'Unlimited'] },
+  { label: 'Team members', values: ['1', '3', '10', 'Unlimited'] },
+  { label: 'Contacts', values: ['2,000', '10,000', 'Unlimited', 'Unlimited'] },
+  { label: 'Lead pipeline CRM', values: [false, true, true, true] },
+  { label: 'Broadcast campaigns', values: [false, true, true, true] },
+  { label: 'AI-powered responses', values: [false, false, true, true] },
+  { label: 'Custom workflow builder', values: [false, false, true, true] },
+  { label: 'API access', values: [false, false, true, true] },
+  { label: 'White-label', values: [false, false, true, true] },
+  { label: 'Priority support', values: [false, true, true, true] },
+  { label: 'Dedicated manager', values: [false, false, true, true] },
+  { label: 'SLA & uptime guarantee', values: [false, false, false, true] },
+];
+
+const formatINR = (n: number) => `₹${n.toLocaleString('en-IN')}`;
+
+const PricingContent = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [currency, setCurrency] = useState(CURRENCIES[3]); // Default INR
-  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
-  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<typeof PLANS[number] | null>(null);
+  const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [selected, setSelected] = useState<typeof PLANS[number] | null>(null);
 
-  const getPrice = (monthlyUsd: number) => {
-    if (monthlyUsd === 0) return 0;
-    const monthlyLocal = monthlyUsd * currency.rate;
-    if (billingPeriod === 'yearly') {
-      return Math.round(monthlyLocal * 12 * 0.8); // 20% off yearly total
+  const handleSelect = (plan: typeof PLANS[number]) => {
+    if (plan.id === 'enterprise') {
+      window.location.href = 'mailto:sales@chatarly.com?subject=Enterprise%20Plan%20Enquiry';
+      return;
     }
-    return monthlyLocal;
+    if (!user) { navigate('/auth'); return; }
+    setSelected(plan);
+    setPaymentOpen(true);
   };
 
-  const formatPrice = (monthlyUsd: number) => {
-    const price = getPrice(monthlyUsd);
-    if (currency.code === 'INR') return `${currency.symbol}${Math.round(price).toLocaleString()}`;
-    return `${currency.symbol}${price.toFixed(price % 1 === 0 ? 0 : 2)}`;
+  const priceFor = (p: typeof PLANS[number]) => {
+    if (p.monthly === null) return null;
+    return billing === 'yearly' ? p.yearly! : p.monthly;
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl overflow-hidden shadow-glow">
-                <img src="/__l5e/assets-v1/28fc78aa-8351-4b67-a60e-e6bf0a7894c8/chatarly-logo.png" alt="Chatarly" className="w-full h-full object-contain" />
-              </div>
-              <span className="font-bold text-foreground text-sm sm:text-base">Chatarly</span>
+    <div className="relative overflow-hidden">
+      {/* Hero */}
+      <div className="relative">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/5 via-background to-background" />
+        <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 h-[600px] w-[600px] rounded-full bg-primary/10 blur-3xl" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-10 sm:pt-16 pb-8 text-center">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-border mb-5">
+              <Sparkles className="w-3.5 h-3.5 text-primary" />
+              <span className="text-xs font-medium">14-day free trial · No card required</span>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => navigate(user ? '/' : '/auth')}>
-              <ArrowLeft className="w-4 h-4" />
-              {user ? 'Back to Dashboard' : 'Back to Login'}
-            </Button>
-          </div>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
+              Simple Pricing for{' '}
+              <span className="bg-gradient-to-r from-primary via-primary to-secondary bg-clip-text text-transparent">
+                Growing Travel Businesses
+              </span>
+            </h1>
+            <p className="mt-4 text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto">
+              Automate WhatsApp enquiries, follow-ups, bookings, and customer communication
+              from one powerful platform built for travel agencies, tour operators, taxi services,
+              and tourism businesses.
+            </p>
+
+            {/* Billing toggle */}
+            <div className="mt-7 inline-flex items-center gap-1 p-1 rounded-full bg-muted border border-border">
+              <button
+                onClick={() => setBilling('monthly')}
+                className={cn(
+                  'px-4 py-1.5 rounded-full text-xs font-semibold transition-all',
+                  billing === 'monthly' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground',
+                )}
+              >Monthly</button>
+              <button
+                onClick={() => setBilling('yearly')}
+                className={cn(
+                  'px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5',
+                  billing === 'yearly' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground',
+                )}
+              >Yearly
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary font-bold">2 months free</span>
+              </button>
+            </div>
+          </motion.div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16 text-center">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-4 sm:mb-6">
-            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
-            <span className="text-xs sm:text-sm font-medium text-primary">20% off yearly plans</span>
-          </div>
-          
-          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-3 sm:mb-4 px-2">
-            Elevate Your Salon,<br className="hidden sm:block" />
-            <span className="text-primary">Choose Your Plan</span>
-          </h1>
-          <p className="text-sm sm:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto mb-2 px-4">
-            Start with a 14-day free trial on any paid plan. No card needed up-front — verify UPI payment when your trial ends to keep your workspace active.
-          </p>
-          <p className="text-xs text-muted-foreground mb-6 sm:mb-8 px-4">Trial includes every feature. After 14 days, access is paused until your manual UPI payment is verified.</p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 mb-8 sm:mb-12">
-            <div className="flex items-center gap-2 p-1 rounded-lg bg-muted">
-              <button onClick={() => setBillingPeriod('monthly')}
-                className={cn('px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all',
-                  billingPeriod === 'monthly' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}>
-                Monthly
-              </button>
-              <button onClick={() => setBillingPeriod('yearly')}
-                className={cn('px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5',
-                  billingPeriod === 'yearly' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}>
-                Yearly<span className="text-[10px] sm:text-xs text-primary font-bold">-20%</span>
-              </button>
-            </div>
-            <div className="flex items-center gap-2">
-              <Globe className="w-4 h-4 text-muted-foreground" />
-              <select value={currency.code} onChange={(e) => setCurrency(CURRENCIES.find(c => c.code === e.target.value) || CURRENCIES[3])}
-                className="bg-muted border-0 rounded-lg px-2 sm:px-3 py-2 text-xs sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
-                {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
-              </select>
-            </div>
-          </div>
-        </motion.div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 max-w-5xl mx-auto">
-          {PLANS.map((plan, index) => (
-            <motion.div key={plan.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: index * 0.1 }}
-              className={cn('relative rounded-2xl p-4 sm:p-6 text-left transition-all duration-300',
-                plan.popular ? 'bg-card border-2 border-primary shadow-glow' : 'glass-card border border-border hover:border-primary/30')}>
-              {plan.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center gap-1">
-                  <Crown className="w-3 h-3" />Most Popular
+      {/* Plans */}
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+          {PLANS.map((plan, i) => {
+            const price = priceFor(plan);
+            return (
+              <motion.div
+                key={plan.id}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: i * 0.05 }}
+                className={cn(
+                  'relative rounded-3xl p-6 flex flex-col transition-all',
+                  plan.popular
+                    ? 'bg-gradient-to-b from-primary/[0.08] via-card to-card border-2 border-primary shadow-[0_20px_60px_-20px_hsl(var(--primary)/0.45)]'
+                    : 'bg-card/80 backdrop-blur border border-border hover:border-primary/30',
+                )}
+              >
+                {plan.highlight && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-lg">
+                    <Crown className="w-3 h-3" />{plan.highlight}
+                  </div>
+                )}
+                <div className={cn(
+                  'w-11 h-11 rounded-2xl flex items-center justify-center mb-4',
+                  plan.popular ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground',
+                )}>
+                  <plan.icon className="w-5 h-5" />
                 </div>
-              )}
-              <div className={cn('w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center mb-4',
-                plan.popular ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}>
-                <plan.icon className="w-5 h-5 sm:w-6 sm:h-6" />
-              </div>
-              <h3 className="text-lg sm:text-xl font-bold text-foreground mb-1">{plan.name}</h3>
-              <p className="text-xs sm:text-sm text-muted-foreground mb-4">{plan.description}</p>
-              <div className="mb-6">
-                <span className="text-3xl sm:text-4xl font-bold text-foreground">
-                  {plan.monthlyPrice === 0 ? 'Free' : formatPrice(plan.monthlyPrice)}
-                </span>
-                {plan.monthlyPrice > 0 && <span className="text-muted-foreground text-sm">/{billingPeriod === 'yearly' ? 'year' : 'month'}</span>}
-              </div>
-              <ul className="space-y-2.5 sm:space-y-3 mb-6">
-                {plan.features.map((feature, i) => (
-                  <li key={i} className="flex items-start gap-2.5 text-xs sm:text-sm text-muted-foreground">
-                    <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />{feature}
-                  </li>
-                ))}
-              </ul>
-              <Button variant={plan.ctaVariant} className="w-full" size="lg"
-                onClick={() => {
-                  if (plan.id === 'starter') {
-                    if (user) toast.success('You are on the Starter plan!');
-                    else navigate('/auth');
-                  } else if (plan.id === 'premium') {
-                    window.location.href = 'mailto:sales@chatarly.com?subject=Premium%20Plan%20Inquiry';
-                    toast.info('Opening email to contact sales...');
-                  } else {
-                    if (!user) { toast.info('Please create an account first'); navigate('/auth'); return; }
-                    setSelectedPlan(plan);
-                    setPaymentModalOpen(true);
-                  }
-                }}>
-                {plan.cta}<ArrowRight className="w-4 h-4" />
-              </Button>
-            </motion.div>
-          ))}
+                <h3 className="text-lg font-bold">{plan.name}</h3>
+                <p className="text-xs text-muted-foreground mt-1 mb-5 min-h-[32px]">{plan.tagline}</p>
+
+                <div className="mb-5">
+                  {price === null ? (
+                    <div className="text-3xl font-bold">Custom</div>
+                  ) : (
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl font-bold">{formatINR(price)}</span>
+                      <span className="text-xs text-muted-foreground">/{billing === 'yearly' ? 'year' : 'month'}</span>
+                    </div>
+                  )}
+                  {billing === 'yearly' && plan.monthly && (
+                    <p className="text-[11px] text-primary font-medium mt-1">
+                      Save {formatINR(plan.monthly * 12 - plan.yearly!)} vs monthly
+                    </p>
+                  )}
+                </div>
+
+                <ul className="space-y-2.5 mb-6 flex-1">
+                  {plan.features.map((f, idx) => (
+                    <li key={idx} className="flex items-start gap-2.5 text-xs text-muted-foreground">
+                      <Check className={cn('w-4 h-4 mt-0.5 shrink-0', plan.popular ? 'text-primary' : 'text-foreground/70')} />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Button
+                  onClick={() => handleSelect(plan)}
+                  variant={plan.popular ? 'default' : 'outline'}
+                  className={cn('w-full rounded-full', plan.popular && 'bg-primary hover:bg-primary/90')}
+                >
+                  {plan.cta}<ArrowRight className="w-4 h-4" />
+                </Button>
+              </motion.div>
+            );
+          })}
         </div>
 
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
-          className="mt-12 sm:mt-16 pt-8 sm:pt-12 border-t border-border">
-          <p className="text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-6">Trusted by 10,000+ salons worldwide</p>
-          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 lg:gap-12">
-            {[
-              { icon: Shield, label: 'Secure Payments' },
-              { icon: Users, label: '50K+ Salons' },
-              { icon: BarChart3, label: 'Real-time Analytics' },
-              { icon: Globe, label: 'Multi-currency' },
-            ].map((badge, i) => (
-              <div key={i} className="flex items-center gap-2 text-muted-foreground">
-                <badge.icon className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="text-xs sm:text-sm font-medium">{badge.label}</span>
+        {/* Secondary CTA */}
+        <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Button size="lg" className="rounded-full px-6" onClick={() => handleSelect(PLANS[1])}>
+            Start free trial<ArrowRight className="w-4 h-4" />
+          </Button>
+          <Button size="lg" variant="outline" className="rounded-full px-6"
+            onClick={() => { window.location.href = 'mailto:sales@chatarly.com?subject=Book%20a%20demo'; }}>
+            <Phone className="w-4 h-4" />Book a demo
+          </Button>
+        </div>
+
+        {/* Trust badges */}
+        <div className="mt-12 grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {[
+            { icon: MessageCircle, label: 'Official WhatsApp Business API' },
+            { icon: Shield, label: 'Secure Cloud Infrastructure' },
+            { icon: Users, label: 'Dedicated Onboarding' },
+            { icon: Headphones, label: 'Local Support' },
+          ].map((t, i) => (
+            <div key={i} className="rounded-2xl border border-border bg-card/50 p-4 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <t.icon className="w-4 h-4" />
               </div>
-            ))}
+              <span className="text-xs font-medium">{t.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Comparison Table */}
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pb-16">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl sm:text-3xl font-bold">Compare every feature</h2>
+          <p className="text-sm text-muted-foreground mt-2">A complete breakdown across all plans.</p>
+        </div>
+        <div className="rounded-3xl border border-border bg-card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40 border-b border-border">
+                <tr>
+                  <th className="text-left p-4 font-semibold w-[34%]">Feature</th>
+                  {PLANS.map((p) => (
+                    <th key={p.id} className={cn(
+                      'p-4 font-semibold text-center',
+                      p.popular && 'text-primary',
+                    )}>{p.name}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {COMPARE_ROWS.map((row, idx) => (
+                  <tr key={idx} className="border-b border-border last:border-0">
+                    <td className="p-4 text-muted-foreground">{row.label}</td>
+                    {row.values.map((v, i) => (
+                      <td key={i} className="p-4 text-center">
+                        {typeof v === 'boolean' ? (
+                          v ? <Check className="w-4 h-4 text-primary mx-auto" /> : <span className="text-muted-foreground/40">—</span>
+                        ) : (
+                          <span className="text-foreground font-medium">{v}</span>
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </motion.div>
+        </div>
+
+        {/* Legal footer links */}
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground">
+          <button onClick={() => navigate('/privacy')} className="hover:text-foreground underline-offset-2 hover:underline">Privacy Policy</button>
+          <span>·</span>
+          <button onClick={() => navigate('/terms')} className="hover:text-foreground underline-offset-2 hover:underline">Terms & Conditions</button>
+          <span>·</span>
+          <a href="mailto:support@chatarly.com" className="hover:text-foreground underline-offset-2 hover:underline">support@chatarly.com</a>
+        </div>
       </div>
 
       <PaymentModal
-        open={paymentModalOpen}
-        onOpenChange={setPaymentModalOpen}
-        plan={selectedPlan ? { id: selectedPlan.id, name: selectedPlan.name, price: getPrice(selectedPlan.monthlyPrice) } : null}
-        formattedPrice={selectedPlan ? formatPrice(selectedPlan.monthlyPrice) : ''}
-        billingPeriod={billingPeriod}
+        open={paymentOpen}
+        onOpenChange={setPaymentOpen}
+        plan={selected && selected.monthly !== null ? {
+          id: selected.id,
+          name: selected.name,
+          price: billing === 'yearly' ? selected.yearly! : selected.monthly,
+        } : null}
+        formattedPrice={selected && selected.monthly !== null
+          ? formatINR(billing === 'yearly' ? selected.yearly! : selected.monthly)
+          : ''}
+        billingPeriod={billing}
         upiId="chatarly@ybl"
         qrCodeUrl=""
       />
+    </div>
+  );
+};
+
+const Pricing = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  if (user) return <AppLayout><PricingContent /></AppLayout>;
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+          <button onClick={() => navigate('/auth')} className="font-bold text-foreground">Chatarly</button>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/auth')}>
+            <ArrowLeft className="w-4 h-4" />Back to Login
+          </Button>
+        </div>
+      </div>
+      <PricingContent />
     </div>
   );
 };
