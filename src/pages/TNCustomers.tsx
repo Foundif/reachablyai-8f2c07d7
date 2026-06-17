@@ -114,8 +114,9 @@ const TNCustomers = () => {
             </div>
             <div className="flex items-center gap-1">
               <p className="text-xs text-muted-foreground mr-2 hidden sm:block">{new Date(c.last_seen_at).toLocaleDateString()}</p>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(c)}><Edit3 className="w-4 h-4" /></Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => remove(c)}><Trash2 className="w-4 h-4" /></Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8" title="View" onClick={() => setViewing(c)}><Eye className="w-4 h-4" /></Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit" onClick={() => openEdit(c)}><Edit3 className="w-4 h-4" /></Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" title="Delete" onClick={() => remove(c)}><Trash2 className="w-4 h-4" /></Button>
             </div>
           </Card>
         ))}
