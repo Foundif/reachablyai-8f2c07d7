@@ -377,21 +377,6 @@ const PricingContent = () => {
         </div>
       </div>
 
-      <PaymentModal
-        open={paymentOpen}
-        onOpenChange={setPaymentOpen}
-        plan={selected && selected.monthly !== null ? {
-          id: selected.id,
-          name: selected.name,
-          price: billing === 'yearly' ? selected.yearly! : selected.monthly,
-        } : null}
-        formattedPrice={selected && selected.monthly !== null
-          ? formatINR(billing === 'yearly' ? selected.yearly! : selected.monthly)
-          : ''}
-        billingPeriod={billing}
-        upiId="chatarly@ybl"
-        qrCodeUrl=""
-      />
     </div>
   );
 };
