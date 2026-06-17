@@ -115,7 +115,7 @@ const AppSidebar = () => {
         {!collapsed && (() => {
           const status = (profile as any)?.subscription_status || 'trial';
           if (status === 'pro' || status === 'growth' || status === 'active') return null;
-          const start = (profile as any)?.trial_start_date ? new Date((profile as any).trial_start_date) : (profile?.created_at ? new Date(profile.created_at) : new Date());
+          const start = (profile as any)?.trial_start_date ? new Date((profile as any).trial_start_date) : ((profile as any)?.created_at ? new Date((profile as any).created_at) : new Date());
           const end = (profile as any)?.trial_end_date ? new Date((profile as any).trial_end_date) : new Date(start.getTime() + 14 * 86400000);
           const total = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000));
           const left = Math.max(0, Math.ceil((end.getTime() - Date.now()) / 86400000));
