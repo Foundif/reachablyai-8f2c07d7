@@ -11,14 +11,12 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import {
   Building2, Plane, BarChart3, Crown, Gift, Bell, Moon, Sun,
-  Globe, Shield, LogOut, ChevronRight, Plug, Receipt, FileText, Check, Loader2,
+  Globe, Shield, LogOut, ChevronRight, Receipt, FileText, Check, Loader2,
   Volume2, VolumeX, Play,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ChangePasswordModal from '@/components/profile/ChangePasswordModal';
 import { isNotificationMuted, setNotificationMuted, playNotificationSound, enableNotificationSound } from '@/hooks/useNotifications';
-
-const WHITELABEL_STORAGE = 'foundif_whitelabel';
 
 type Row = { icon: any; label: string; sub?: string; right?: React.ReactNode; onClick?: () => void };
 
