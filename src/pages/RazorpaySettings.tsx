@@ -70,6 +70,30 @@ const RazorpaySettings = () => {
           </div>
         </div>
 
+        {!planAllowed && (
+          <Card className="p-6 border-primary/30 bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-foreground text-background flex items-center justify-center shrink-0">
+                <Lock className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <Crown className="w-4 h-4 text-primary" />
+                  <p className="font-semibold">Razorpay is a Growth plan feature</p>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Accept UPI, cards, netbanking & wallets directly inside Chatarly. Available on Growth, Professional and Enterprise plans.
+                </p>
+                <Button onClick={() => navigate('/pricing')}>
+                  <Crown className="w-4 h-4" /> View plans & upgrade
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        <div className={planAllowed ? '' : 'opacity-50 pointer-events-none select-none'}>
+
         <Card className="p-5 space-y-4">
           <div className="flex items-center justify-between">
             <div>
