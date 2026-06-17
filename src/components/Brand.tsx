@@ -1,6 +1,5 @@
 import logoLight from '@/assets/chatarly-logo-light.png.asset.json';
 import logoDark from '@/assets/chatarly-logo-dark.png.asset.json';
-import iconAsset from '@/assets/chatarly-icon.png.asset.json';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
 import { cn } from '@/lib/utils';
