@@ -46,6 +46,7 @@ const TNBookings = () => {
   const [rows, setRows] = useState<any[]>([]);
   const [filter, setFilter] = useState<string>('all');
   const [open, setOpen] = useState(false);
+  const [viewing, setViewing] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(blankForm);
 
