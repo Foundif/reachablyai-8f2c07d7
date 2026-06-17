@@ -1109,6 +1109,42 @@ export type Database = {
         }
         Relationships: []
       }
+      tn_ai_credits: {
+        Row: {
+          created_at: string
+          free_limit: number
+          free_used: number
+          id: string
+          period_start: string
+          purchased_balance: number
+          total_used: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          free_limit?: number
+          free_used?: number
+          id?: string
+          period_start?: string
+          purchased_balance?: number
+          total_used?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          free_limit?: number
+          free_used?: number
+          id?: string
+          period_start?: string
+          purchased_balance?: number
+          total_used?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       tn_audit_log: {
         Row: {
           action: string
@@ -1833,7 +1869,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      tn_consume_ai_credit: { Args: { _user_id: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never
