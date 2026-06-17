@@ -4,8 +4,21 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Loader2, Check, QrCode, Smartphone, Timer, Copy } from 'lucide-react';
+import { Loader2, Check, QrCode, Smartphone, Timer, Copy, CreditCard } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+
+declare global { interface Window { Razorpay?: any } }
+
+const loadRazorpay = () => new Promise<boolean>((resolve) => {
+  if (window.Razorpay) return resolve(true);
+  const s = document.createElement('script');
+  s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+  s.onload = () => resolve(true);
+  s.onerror = () => resolve(false);
+  document.body.appendChild(s);
+});
 
 interface PaymentModalProps {
   open: boolean;
@@ -25,9 +38,11 @@ const UPI_APPS = [
 ];
 
 const PaymentModal = ({ open, onOpenChange, plan, formattedPrice, billingPeriod, upiId = '', qrCodeUrl = '' }: PaymentModalProps) => {
+  const { user, profile } = useAuth();
   const [step, setStep] = useState<'pay' | 'waiting' | 'success'>('pay');
   const [timeLeft, setTimeLeft] = useState(60);
   const [canSubmit, setCanSubmit] = useState(false);
+  const [rzpLoading, setRzpLoading] = useState(false);
 
   useEffect(() => {
     if (step !== 'waiting') return;
@@ -66,6 +81,40 @@ const PaymentModal = ({ open, onOpenChange, plan, formattedPrice, billingPeriod,
   const handlePaymentDone = () => {
     setStep('success');
     toast.success('Payment submitted! Our team will verify and activate your plan.');
+  };
+
+  const handleRazorpay = async () => {
+    if (!plan) return;
+    setRzpLoading(true);
+    try {
+      const ok = await loadRazorpay();
+      if (!ok) throw new Error('Failed to load Razorpay checkout');
+      const { data, error } = await supabase.functions.invoke('razorpay-create-order', {
+        body: { amount: plan.price, currency: 'INR', plan_id: plan.id, billing_period: billingPeriod, user_id: user?.id },
+      });
+      if (error || data?.error) throw new Error(data?.error || error?.message || 'Order failed');
+      const { order, key_id } = data;
+      const rzp = new window.Razorpay({
+        key: key_id,
+        amount: order.amount,
+        currency: order.currency,
+        order_id: order.id,
+        name: 'Chatarly',
+        description: `${plan.name} plan (${billingPeriod})`,
+        prefill: { email: user?.email || '', name: (profile as any)?.full_name || '' },
+        theme: { color: '#6366f1' },
+        handler: () => {
+          setStep('success');
+          toast.success('Payment successful! Your plan will activate shortly.');
+        },
+        modal: { ondismiss: () => setRzpLoading(false) },
+      });
+      rzp.open();
+    } catch (e: any) {
+      toast.error(e.message || 'Razorpay error');
+    } finally {
+      setRzpLoading(false);
+    }
   };
 
   if (!plan) return null;
@@ -126,6 +175,15 @@ const PaymentModal = ({ open, onOpenChange, plan, formattedPrice, billingPeriod,
                     <span className="text-[10px] font-medium text-muted-foreground">{app.name}</span>
                   </button>
                 ))}
+              </div>
+
+              <Button className="w-full" onClick={handleRazorpay} disabled={rzpLoading}>
+                {rzpLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CreditCard className="w-4 h-4" /> Pay with Razorpay (Cards / UPI / Netbanking)</>}
+              </Button>
+
+              <div className="relative my-1">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
+                <div className="relative flex justify-center text-[10px] uppercase tracking-wider"><span className="bg-background px-2 text-muted-foreground">or pay manually</span></div>
               </div>
 
               <Button variant="trust" className="w-full" onClick={() => setStep('waiting')}>

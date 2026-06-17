@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,12 +9,16 @@ import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { CreditCard, Loader2, ExternalLink, ShieldCheck, Webhook, KeyRound } from 'lucide-react';
+import { CreditCard, Loader2, ExternalLink, ShieldCheck, Webhook, KeyRound, Lock, Crown } from 'lucide-react';
 
 const WEBHOOK_URL = 'https://fpgdzyzmejhagkszrphl.supabase.co/functions/v1/razorpay-webhook';
+const ALLOWED_PLANS = ['trial', 'growth', 'professional', 'enterprise', 'active', 'pro'];
 
 const RazorpaySettings = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const navigate = useNavigate();
+  const status = ((profile as any)?.subscription_status || 'trial').toLowerCase();
+  const planAllowed = ALLOWED_PLANS.includes(status);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [keyId, setKeyId] = useState('');
@@ -64,6 +69,30 @@ const RazorpaySettings = () => {
             <p className="text-sm text-muted-foreground">Collect UPI, cards, netbanking & wallet payments in INR.</p>
           </div>
         </div>
+
+        {!planAllowed && (
+          <Card className="p-6 border-primary/30 bg-gradient-to-br from-primary/10 via-secondary/5 to-transparent">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-foreground text-background flex items-center justify-center shrink-0">
+                <Lock className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <Crown className="w-4 h-4 text-primary" />
+                  <p className="font-semibold">Razorpay is a Growth plan feature</p>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Accept UPI, cards, netbanking & wallets directly inside Chatarly. Available on Growth, Professional and Enterprise plans.
+                </p>
+                <Button onClick={() => navigate('/pricing')}>
+                  <Crown className="w-4 h-4" /> View plans & upgrade
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        <div className={planAllowed ? '' : 'opacity-50 pointer-events-none select-none'}>
 
         <Card className="p-5 space-y-4">
           <div className="flex items-center justify-between">
@@ -119,6 +148,7 @@ const RazorpaySettings = () => {
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Pricing</p>
           <p className="text-sm">Razorpay charges <b>2% per transaction</b> (1.99% for UPI, capped). GST applies. Chatarly takes no cut on collections.</p>
         </Card>
+        </div>
       </div>
     </AppLayout>
   );
