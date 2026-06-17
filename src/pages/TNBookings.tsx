@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { Plus, Edit3, Trash2, Loader2, Check } from 'lucide-react';
+import { Plus, Edit3, Trash2, Loader2, Check, Eye } from 'lucide-react';
 
 const statusColor: Record<string, string> = {
   draft: 'bg-gray-500',
@@ -46,6 +46,7 @@ const TNBookings = () => {
   const [rows, setRows] = useState<any[]>([]);
   const [filter, setFilter] = useState<string>('all');
   const [open, setOpen] = useState(false);
+  const [viewing, setViewing] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(blankForm);
 
@@ -180,8 +181,9 @@ const TNBookings = () => {
                   </div>
                   <div className="flex flex-col gap-2">
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(b)}><Edit3 className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => remove(b)}><Trash2 className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" title="View" onClick={() => setViewing(b)}><Eye className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit" onClick={() => openEdit(b)}><Edit3 className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" title="Delete" onClick={() => remove(b)}><Trash2 className="w-4 h-4" /></Button>
                     </div>
                     {b.status !== 'confirmed' && b.status !== 'cancelled' && (
                       <Button size="sm" onClick={() => updateStatus(b, 'confirmed')}>Confirm</Button>
@@ -196,6 +198,8 @@ const TNBookings = () => {
           </div>
         )}
       </div>
+
+      <BookingViewDialog booking={viewing} onClose={() => setViewing(null)} />
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
@@ -275,6 +279,90 @@ const BookingTimeline = ({ history, notes }: { history: any; notes?: string | nu
       </div>
       {notes && <p className="text-[11px] text-red-500 mt-2">⚠ {notes}</p>}
     </div>
+  );
+};
+
+const Field = ({ label, value }: { label: string; value: any }) => {
+  if (value === null || value === undefined || value === '') return null;
+  return (
+    <div className="text-sm">
+      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="font-medium break-words">{String(value)}</p>
+    </div>
+  );
+};
+
+const BookingViewDialog = ({ booking, onClose }: { booking: any | null; onClose: () => void }) => {
+  if (!booking) return null;
+  const b = booking;
+  const details = (b.details && typeof b.details === 'object') ? b.details : null;
+  const addons = Array.isArray(b.addons) ? b.addons : null;
+  return (
+    <Dialog open={!!booking} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <span className="font-mono text-xs text-muted-foreground">TN45-{b.id.slice(0, 8)}</span>
+            <Badge className={`${statusColor[b.status]} text-white`}>{b.status}</Badge>
+            {b.source && <Badge variant="outline" className="text-xs">{b.source}</Badge>}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 mt-2">
+          <div>
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Service</p>
+            <p className="font-semibold">{b.service_name} <span className="text-muted-foreground font-normal">({b.service_code})</span></p>
+            <p className="text-sm mt-1">Price ₹{b.price} • Advance ₹{b.advance_amount} • Balance ₹{b.balance_amount}</p>
+          </div>
+          <div className="border-t border-border pt-3">
+            <p className="text-[11px] tracking-wide uppercase text-muted-foreground mb-2 font-semibold">Customer</p>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Name" value={b.name} />
+              <Field label="WhatsApp" value={b.wa_id} />
+              <Field label="Phone" value={b.phone} />
+            </div>
+          </div>
+          <div className="border-t border-border pt-3">
+            <p className="text-[11px] tracking-wide uppercase text-muted-foreground mb-2 font-semibold">Schedule & location</p>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Date" value={b.booking_date} />
+              <Field label="Time" value={b.booking_time} />
+              <Field label="Expected hours" value={b.expected_hours} />
+              <Field label="Address" value={b.address} />
+              <Field label="Landmark" value={b.landmark} />
+            </div>
+          </div>
+          <div className="border-t border-border pt-3">
+            <p className="text-[11px] tracking-wide uppercase text-muted-foreground mb-2 font-semibold">Transport</p>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Mode" value={b.transport_mode} />
+              <Field label="Details" value={b.transport_details} />
+            </div>
+          </div>
+          {addons && addons.length > 0 && (
+            <div className="border-t border-border pt-3">
+              <p className="text-[11px] tracking-wide uppercase text-muted-foreground mb-2 font-semibold">Add-ons</p>
+              <ul className="list-disc pl-5 text-sm">{addons.map((a: any, i: number) => <li key={i}>{typeof a === 'string' ? a : JSON.stringify(a)}</li>)}</ul>
+            </div>
+          )}
+          {details && Object.keys(details).length > 0 && (
+            <div className="border-t border-border pt-3">
+              <p className="text-[11px] tracking-wide uppercase text-muted-foreground mb-2 font-semibold">Flow submission</p>
+              <pre className="text-[11px] bg-muted/40 p-2 rounded-md whitespace-pre-wrap break-words">{JSON.stringify(details, null, 2)}</pre>
+            </div>
+          )}
+          <div className="border-t border-border pt-3">
+            <p className="text-[11px] tracking-wide uppercase text-muted-foreground mb-2 font-semibold">Meta</p>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Created" value={new Date(b.created_at).toLocaleString()} />
+              <Field label="Updated" value={new Date(b.updated_at).toLocaleString()} />
+              <Field label="Flow token" value={b.flow_token} />
+            </div>
+            {b.notes && <p className="text-xs text-red-500 mt-2">⚠ {b.notes}</p>}
+          </div>
+          <BookingTimeline history={b.status_history} notes={b.notes} />
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
