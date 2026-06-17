@@ -132,9 +132,10 @@ const Pricing = () => {
             Elevate Your Salon,<br className="hidden sm:block" />
             <span className="text-primary">Choose Your Plan</span>
           </h1>
-          <p className="text-sm sm:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto mb-6 sm:mb-8 px-4">
-            Start free and upgrade as you grow. All plans include our core salon management features.
+          <p className="text-sm sm:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto mb-2 px-4">
+            Start with a 14-day free trial on any paid plan. No card needed up-front — verify UPI payment when your trial ends to keep your workspace active.
           </p>
+          <p className="text-xs text-muted-foreground mb-6 sm:mb-8 px-4">Trial includes every feature. After 14 days, access is paused until your manual UPI payment is verified.</p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 mb-8 sm:mb-12">
             <div className="flex items-center gap-2 p-1 rounded-lg bg-muted">
