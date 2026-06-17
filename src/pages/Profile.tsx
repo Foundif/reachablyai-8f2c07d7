@@ -68,22 +68,10 @@ const Profile = () => {
   };
 
 
-  const [whiteLabel, setWhiteLabel] = useState(() => {
-    const raw = localStorage.getItem(WHITELABEL_STORAGE);
-    return raw ? JSON.parse(raw) : { brand: 'Chatarly', domain: '', primary: '#111111', hideBadge: false, supportEmail: '' };
-  });
-  const [savingWL, setSavingWL] = useState(false);
-
   const planStatus = (profile as any)?.subscription_status || 'free';
   const planLabel = planStatus === 'pro' ? 'Pro' : planStatus === 'growth' ? 'Growth' : 'Free';
   const storeName = profile?.store_name || 'My Business';
   const initial = (storeName?.[0] || 'B').toUpperCase();
-
-  const saveWhiteLabel = () => {
-    setSavingWL(true);
-    localStorage.setItem(WHITELABEL_STORAGE, JSON.stringify(whiteLabel));
-    setTimeout(() => { setSavingWL(false); toast.success('White-label saved'); }, 300);
-  };
 
   const handleSignOut = async () => {
     await signOut();
