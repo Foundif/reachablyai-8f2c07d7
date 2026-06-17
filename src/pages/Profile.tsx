@@ -145,6 +145,15 @@ const Profile = () => {
               right: <Switch checked={pushAlerts} onCheckedChange={setPushAlerts} onClick={(e) => e.stopPropagation()} />,
             },
             {
+              icon: muted ? VolumeX : Volume2, label: 'Message alert sound',
+              sub: muted ? 'Muted — no chime on new messages' : 'Plays chime on every new message',
+              right: <Switch checked={!muted} onCheckedChange={(v) => toggleMute(!v)} onClick={(e) => e.stopPropagation()} />,
+            },
+            {
+              icon: Play, label: 'Test sound', sub: 'Play the alert chime now',
+              onClick: testSound,
+            },
+            {
               icon: theme === 'dark' ? Moon : Sun, label: 'Dark mode', sub: 'Easy on the eyes',
               right: <Switch checked={theme === 'dark'} onCheckedChange={toggleTheme} onClick={(e) => e.stopPropagation()} />,
             },
