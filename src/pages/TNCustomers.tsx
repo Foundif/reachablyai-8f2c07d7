@@ -138,7 +138,92 @@ const TNCustomers = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <CustomerViewDialog customer={viewing} onClose={() => setViewing(null)} />
     </AppLayout>
+  );
+};
+
+const CustomerViewDialog = ({ customer, onClose }: { customer: any | null; onClose: () => void }) => {
+  const { user } = useAuth();
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [msgCount, setMsgCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!customer || !user) return;
+    (async () => {
+      const [{ data: bks }, { count }] = await Promise.all([
+        supabase.from('tn_bookings').select('id, service_name, status, price, booking_date, created_at')
+          .eq('user_id', user.id).eq('wa_id', customer.wa_id).order('created_at', { ascending: false }),
+        supabase.from('tn_messages').select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id).eq('wa_id', customer.wa_id),
+      ]);
+      setBookings(bks || []);
+      setMsgCount(count ?? 0);
+    })();
+  }, [customer, user]);
+
+  if (!customer) return null;
+  const totalSpent = bookings.filter(b => ['paid', 'confirmed', 'completed'].includes(b.status))
+    .reduce((s, b) => s + Number(b.price || 0), 0);
+
+  return (
+    <Dialog open={!!customer} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>{customer.name || 'Customer'} details</DialogTitle></DialogHeader>
+        <div className="space-y-4 mt-2">
+          <div className="flex items-center gap-3">
+            {customer.avatar_url ? (
+              <img src={customer.avatar_url} alt="" className="w-14 h-14 rounded-full object-cover bg-muted border" />
+            ) : (
+              <div className="w-14 h-14 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                <MessageCircle className="w-6 h-6" />
+              </div>
+            )}
+            <div>
+              <p className="font-semibold">{customer.name || 'Unnamed'}</p>
+              <p className="text-sm text-muted-foreground">{formatWhatsAppPhone(customer.wa_id)}</p>
+              <p className="text-xs text-muted-foreground">Last seen {new Date(customer.last_seen_at).toLocaleString()}</p>
+            </div>
+          </div>
+          {customer.notes && (
+            <div className="rounded-md bg-muted/40 p-3 text-sm"><b>Notes:</b> {customer.notes}</div>
+          )}
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div className="rounded-md border p-2">
+              <p className="text-[10px] uppercase text-muted-foreground">Bookings</p>
+              <p className="text-lg font-bold">{bookings.length}</p>
+            </div>
+            <div className="rounded-md border p-2">
+              <p className="text-[10px] uppercase text-muted-foreground">Messages</p>
+              <p className="text-lg font-bold">{msgCount ?? '—'}</p>
+            </div>
+            <div className="rounded-md border p-2">
+              <p className="text-[10px] uppercase text-muted-foreground">Spent</p>
+              <p className="text-lg font-bold">₹{totalSpent}</p>
+            </div>
+          </div>
+          <div>
+            <p className="text-[11px] tracking-wide uppercase text-muted-foreground mb-2 font-semibold">Booking history</p>
+            {bookings.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No bookings yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {bookings.map(b => (
+                  <div key={b.id} className="flex items-center justify-between text-sm border-b border-border pb-2 last:border-0">
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{b.service_name}</p>
+                      <p className="text-xs text-muted-foreground">{b.booking_date || new Date(b.created_at).toLocaleDateString()} • ₹{b.price}</p>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] capitalize">{b.status?.replace('_', ' ')}</Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
