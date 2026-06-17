@@ -31,8 +31,6 @@ export const MODULE_GROUPS: ModuleGroup[] = [
       { to: '/services', icon: Briefcase, label: 'Services & Tariff', status: 'live' },
       { to: '/bookings', icon: CalendarDays, label: 'Bookings', status: 'live' },
       { to: '/customers', icon: Users, label: 'Customers', status: 'live' },
-      { to: '/payments', icon: CreditCard, label: 'Payments', status: 'live' },
-    ],
   },
   {
     label: 'Business',
