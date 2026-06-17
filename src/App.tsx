@@ -88,7 +88,7 @@ const App = () => (
                 <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
                 <Route path="/messages" element={<Navigate to="/inbox" replace />} />
                 <Route path="/bookings" element={<ProtectedRoute><TNBookings /></ProtectedRoute>} />
-                <Route path="/payments" element={<ProtectedRoute><TNPayments /></ProtectedRoute>} />
+                <Route path="/payments" element={<Navigate to="/accounting" replace />} />
                 <Route path="/customers" element={<ProtectedRoute><TNCustomers /></ProtectedRoute>} />
                 <Route path="/services" element={<ProtectedRoute><TNServices /></ProtectedRoute>} />
                 <Route path="/whatsapp-settings" element={<ProtectedRoute><TNWhatsAppSettings /></ProtectedRoute>} />
