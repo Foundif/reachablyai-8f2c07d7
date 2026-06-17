@@ -5,12 +5,22 @@ import AppLayout from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import {
   Check, Crown, Sparkles, ArrowRight, Shield, Users, MessageCircle,
-  Headphones, Building2, Zap, Star, ArrowLeft, Phone,
+  Headphones, Building2, Zap, Star, ArrowLeft, Phone, Loader2,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import PaymentModal from '@/components/pricing/PaymentModal';
+import { supabase } from '@/integrations/supabase/client';
+
+declare global { interface Window { Razorpay?: any } }
+const loadRazorpay = () => new Promise<boolean>((resolve) => {
+  if (window.Razorpay) return resolve(true);
+  const s = document.createElement('script');
+  s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+  s.onload = () => resolve(true);
+  s.onerror = () => resolve(false);
+  document.body.appendChild(s);
+});
 
 type PlanId = 'starter' | 'growth' | 'professional' | 'enterprise';
 
@@ -43,7 +53,7 @@ const PLANS: {
       'Basic analytics',
       'Email support',
     ],
-    cta: 'Start 14-day free trial',
+    cta: 'Start 7-day free trial',
   },
   {
     id: 'growth',
@@ -64,7 +74,7 @@ const PLANS: {
       'Advanced analytics',
       'Priority support',
     ],
-    cta: 'Start 14-day free trial',
+    cta: 'Start 7-day free trial',
   },
   {
     id: 'professional',
@@ -83,7 +93,7 @@ const PLANS: {
       'White-label support',
       'Dedicated success manager',
     ],
-    cta: 'Start 14-day free trial',
+    cta: 'Start 7-day free trial',
   },
   {
     id: 'enterprise',
@@ -124,19 +134,47 @@ const formatINR = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
 const PricingContent = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
-  const [paymentOpen, setPaymentOpen] = useState(false);
-  const [selected, setSelected] = useState<typeof PLANS[number] | null>(null);
+  const [payingId, setPayingId] = useState<string | null>(null);
 
-  const handleSelect = (plan: typeof PLANS[number]) => {
+  const handleSelect = async (plan: typeof PLANS[number]) => {
     if (plan.id === 'enterprise') {
       window.location.href = 'mailto:sales@chatarly.com?subject=Enterprise%20Plan%20Enquiry';
       return;
     }
     if (!user) { navigate('/auth'); return; }
-    setSelected(plan);
-    setPaymentOpen(true);
+    if (plan.monthly === null) return;
+    const amount = billing === 'yearly' ? plan.yearly! : plan.monthly!;
+    setPayingId(plan.id);
+    try {
+      const ok = await loadRazorpay();
+      if (!ok) throw new Error('Failed to load Razorpay checkout');
+      const { data, error } = await supabase.functions.invoke('razorpay-create-order', {
+        body: { amount, currency: 'INR', plan_id: plan.id, billing_period: billing, user_id: user.id },
+      });
+      if (error || (data as any)?.error) throw new Error((data as any)?.error || error?.message || 'Order failed');
+      const { order, key_id } = data as any;
+      const rzp = new window.Razorpay({
+        key: key_id,
+        amount: order.amount,
+        currency: order.currency,
+        order_id: order.id,
+        name: 'Chatarly',
+        description: `${plan.name} plan (${billing})`,
+        prefill: { email: user.email || '', name: (profile as any)?.full_name || '' },
+        theme: { color: '#6366f1' },
+        handler: () => {
+          toast.success('Payment successful! Your plan will activate shortly.');
+        },
+        modal: { ondismiss: () => setPayingId(null) },
+      });
+      rzp.open();
+    } catch (e: any) {
+      toast.error(e.message || 'Razorpay error');
+    } finally {
+      setPayingId(null);
+    }
   };
 
   const priceFor = (p: typeof PLANS[number]) => {
@@ -154,7 +192,7 @@ const PricingContent = () => {
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-border mb-5">
               <Sparkles className="w-3.5 h-3.5 text-primary" />
-              <span className="text-xs font-medium">14-day free trial · No card required</span>
+              <span className="text-xs font-medium">7-day free trial · No card required</span>
             </div>
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
               Simple Pricing for{' '}
@@ -250,10 +288,11 @@ const PricingContent = () => {
 
                 <Button
                   onClick={() => handleSelect(plan)}
+                  disabled={payingId === plan.id}
                   variant={plan.popular ? 'default' : 'outline'}
                   className={cn('w-full rounded-full', plan.popular && 'bg-primary hover:bg-primary/90')}
                 >
-                  {plan.cta}<ArrowRight className="w-4 h-4" />
+                  {payingId === plan.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{plan.cta}<ArrowRight className="w-4 h-4" /></>}
                 </Button>
               </motion.div>
             );
@@ -339,21 +378,6 @@ const PricingContent = () => {
         </div>
       </div>
 
-      <PaymentModal
-        open={paymentOpen}
-        onOpenChange={setPaymentOpen}
-        plan={selected && selected.monthly !== null ? {
-          id: selected.id,
-          name: selected.name,
-          price: billing === 'yearly' ? selected.yearly! : selected.monthly,
-        } : null}
-        formattedPrice={selected && selected.monthly !== null
-          ? formatINR(billing === 'yearly' ? selected.yearly! : selected.monthly)
-          : ''}
-        billingPeriod={billing}
-        upiId="chatarly@ybl"
-        qrCodeUrl=""
-      />
     </div>
   );
 };
