@@ -27,6 +27,7 @@ const TNCustomers = () => {
   const { user } = useAuth();
   const [rows, setRows] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
+  const [viewing, setViewing] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(blankForm);
 
