@@ -27,7 +27,7 @@ const Analytics = () => {
     const since = new Date(Date.now() - Number(period) * 86400_000).toISOString();
     Promise.all([
       supabase.from('tn_bookings').select('*').eq('user_id', user.id).gte('created_at', since),
-      supabase.from('tn_payments').select('*').eq('user_id', user.id).eq('status', 'completed').gte('created_at', since),
+      supabase.from('tn_payments').select('*').eq('user_id', user.id).in('status', ['completed','verified','paid']).gte('created_at', since),
       supabase.from('tn_customers').select('*').eq('user_id', user.id),
     ]).then(([b, p, c]) => {
       setBookings(b.data || []); setPayments(p.data || []); setCustomers(c.data || []);
