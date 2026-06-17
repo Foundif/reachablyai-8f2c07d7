@@ -10,7 +10,7 @@ import { ThemeProvider } from "@/hooks/useTheme";
 import { LanguageProvider } from "@/hooks/useLanguage";
 import TNDashboard from "./pages/TNDashboard";
 import TNBookings from "./pages/TNBookings";
-import TNPayments from "./pages/TNPayments";
+// payments tab removed
 import TNCustomers from "./pages/TNCustomers";
 import TNServices from "./pages/TNServices";
 import TNWhatsAppSettings from "./pages/TNWhatsAppSettings";
