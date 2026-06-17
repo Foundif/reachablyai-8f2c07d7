@@ -177,6 +177,15 @@ const PaymentModal = ({ open, onOpenChange, plan, formattedPrice, billingPeriod,
                 ))}
               </div>
 
+              <Button className="w-full" onClick={handleRazorpay} disabled={rzpLoading}>
+                {rzpLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CreditCard className="w-4 h-4" /> Pay with Razorpay (Cards / UPI / Netbanking)</>}
+              </Button>
+
+              <div className="relative my-1">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
+                <div className="relative flex justify-center text-[10px] uppercase tracking-wider"><span className="bg-background px-2 text-muted-foreground">or pay manually</span></div>
+              </div>
+
               <Button variant="trust" className="w-full" onClick={() => setStep('waiting')}>
                 <Smartphone className="w-4 h-4" />I've made the payment
               </Button>
