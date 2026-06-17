@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { Plus, Edit3, Trash2, Loader2, Check } from 'lucide-react';
+import { Plus, Edit3, Trash2, Loader2, Check, Eye } from 'lucide-react';
 
 const statusColor: Record<string, string> = {
   draft: 'bg-gray-500',
