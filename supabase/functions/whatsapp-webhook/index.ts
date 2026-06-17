@@ -314,22 +314,51 @@ Deno.serve(async (req) => {
       const text = (msg?.text?.body || '').trim()
       const triggers = /\b(hi|hello|hai|help|assist|assistance|old\s*age|senior|elder|menu|start|book|booking|hey)\b/i
       if (msg.type === 'text' && triggers.test(text)) {
+        const matchedKeyword = text.match(triggers)?.[0] || 'trigger'
+        // 1) Create a draft booking row so the operator sees the lead immediately
+        const { data: cust } = await supabase
+          .from('tn_customers').select('id').eq('user_id', userId).eq('wa_id', waId).maybeSingle()
+        const { data: draftBooking } = await supabase.from('tn_bookings').insert({
+          user_id: userId,
+          customer_id: cust?.id || null,
+          wa_id: waId,
+          name: profileName || null,
+          service_code: 'pending',
+          service_name: `Lead from "${matchedKeyword}" message`,
+          price: 0,
+          status: 'draft',
+          source: 'whatsapp_keyword',
+          details: { trigger: matchedKeyword, raw_text: text, message_id: msg.id },
+        }).select().single()
+
+        // 2) Send the template that opens the Flow
         const out = templateMsg(waId, settings)
         const { ok: sendOk, status: sendStatus, result: res } = await sendWhatsApp(phoneNumberId, token, out)
         if (!sendOk || res?.error) {
           console.error('template send failed', JSON.stringify(res?.error || res))
+          if (draftBooking?.id) {
+            await supabase.from('tn_bookings').update({
+              details: { ...(draftBooking.details || {}), send_status: 'failed', error: res?.error || res },
+            }).eq('id', draftBooking.id)
+          }
           await supabase.from('notifications').insert({
             user_id: userId,
             type: 'whatsapp_inbound',
             title: 'WhatsApp template failed',
             message: res?.error?.message || `Meta rejected the configured template message (${sendStatus}).`,
-            data: { wa_id: waId, error: res?.error || res, template: configuredTemplateName(settings) },
+            data: { wa_id: waId, error: res?.error || res, template: configuredTemplateName(settings), booking_id: draftBooking?.id },
           })
           await supabase.from('tn_messages').insert({
             user_id: userId, wa_id: waId, direction: 'out', type: 'webhook_error',
             payload: { text: { body: res?.error?.message || 'Meta rejected the configured template message.' }, error: res?.error || res, template: configuredTemplateName(settings) },
           })
           continue
+        }
+        if (draftBooking?.id) {
+          await supabase.from('tn_bookings').update({
+            status: 'awaiting_payment',
+            details: { ...(draftBooking.details || {}), send_status: 'sent', wa_message_id: res?.messages?.[0]?.id },
+          }).eq('id', draftBooking.id)
         }
         await supabase.from('tn_messages').insert({
           user_id: userId, wa_id: waId, direction: 'out', type: 'template', payload: out, wa_message_id: res?.messages?.[0]?.id,
