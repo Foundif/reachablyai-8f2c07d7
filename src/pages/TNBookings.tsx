@@ -199,6 +199,8 @@ const TNBookings = () => {
         )}
       </div>
 
+      <BookingViewDialog booking={viewing} onClose={() => setViewing(null)} />
+
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{form.id ? 'Edit' : 'New'} booking</DialogTitle></DialogHeader>
