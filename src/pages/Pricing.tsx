@@ -54,7 +54,7 @@ const PLANS = [
       'Appointment booking',
       'Priority support',
     ],
-    cta: 'Go Professional',
+    cta: 'Start 14-day free trial',
     ctaVariant: 'trust' as const,
   },
   {
