@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { ChevronsLeft, ChevronsRight, Sparkles, Zap } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { MODULE_GROUPS } from '@/lib/modules';
 import { useAuth } from '@/hooks/useAuth';
 import { BrandMark } from '@/components/Brand';
