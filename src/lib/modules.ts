@@ -1,9 +1,7 @@
 import {
-  Inbox, Send, GitBranch,
-  Sparkles, BarChart3, Bot,
-  Users, CalendarDays, CreditCard,
-  UserCog, Shield, FileText, BookOpen, Settings,
-  LayoutDashboard, Library, Briefcase,
+  Inbox, Users, CalendarDays, CreditCard,
+  UserCog, Shield, FileText, Settings,
+  LayoutDashboard, Briefcase, BarChart3, Wallet,
 } from 'lucide-react';
 
 export type ModuleItem = {
@@ -16,8 +14,9 @@ export type ModuleItem = {
 
 export type ModuleGroup = { label: string; items: ModuleItem[] };
 
-// Travel-services focused navigation. Integrations / Billing / Plans / Catalog / Orders
-// are intentionally NOT in the sidebar — they live inside the Profile page now.
+// Travel-services focused navigation. Campaigns / Flow Builder / Templates /
+// AI Studio / AI Copilot / Knowledge Base routes still exist but are hidden
+// from the sidebar (phase 2). Accounting is now a first-class module.
 export const MODULE_GROUPS: ModuleGroup[] = [
   {
     label: 'Overview',
@@ -36,20 +35,10 @@ export const MODULE_GROUPS: ModuleGroup[] = [
     ],
   },
   {
-    label: 'Engage',
+    label: 'Business',
     items: [
-      { to: '/campaigns', icon: Send, label: 'Campaigns', status: 'live' },
+      { to: '/accounting', icon: Wallet, label: 'Accounting', status: 'live' },
       { to: '/analytics', icon: BarChart3, label: 'Analytics', status: 'live' },
-    ],
-  },
-  {
-    label: 'Automation',
-    items: [
-      { to: '/flows', icon: GitBranch, label: 'Flow Builder', status: 'live' },
-      { to: '/flows/templates', icon: Library, label: 'Templates', status: 'live' },
-      { to: '/ai-studio', icon: Sparkles, label: 'AI Agent Studio', status: 'live' },
-      { to: '/copilot', icon: Bot, label: 'AI Copilot', status: 'live' },
-      { to: '/knowledge', icon: BookOpen, label: 'Knowledge Base', status: 'live' },
     ],
   },
   {

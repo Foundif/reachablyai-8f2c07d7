@@ -16,6 +16,7 @@ export interface AppNotification {
 }
 
 const NOTIFICATION_SOUND_URL = alertSoundAsset.url;
+const MUTE_KEY = 'chatarly_notification_muted';
 
 let audioInstance: HTMLAudioElement | null = null;
 let audioUnlocked = false;
@@ -27,6 +28,14 @@ const ensureAudio = () => {
     audioInstance.preload = 'auto';
   }
   return audioInstance;
+};
+
+export const isNotificationMuted = () => {
+  try { return localStorage.getItem(MUTE_KEY) === '1'; } catch { return false; }
+};
+
+export const setNotificationMuted = (m: boolean) => {
+  try { localStorage.setItem(MUTE_KEY, m ? '1' : '0'); } catch {}
 };
 
 const unlockNotificationSound = () => {
@@ -47,14 +56,15 @@ const unlockNotificationSound = () => {
   } catch {}
 };
 
-export const playNotificationSound = () => {
+export const playNotificationSound = (force = false) => {
+  if (!force && isNotificationMuted()) return;
   try {
     const audioInstance = ensureAudio();
     audioInstance.muted = false;
     audioInstance.volume = 0.9;
     audioInstance.currentTime = 0;
     audioInstance.play().catch(() => {
-      toast.info('Click once anywhere to enable message alert sound');
+      if (force) toast.info('Click once anywhere to enable message alert sound');
     });
   } catch {}
 };

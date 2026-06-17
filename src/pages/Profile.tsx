@@ -12,9 +12,11 @@ import { Switch } from '@/components/ui/switch';
 import {
   Building2, Plane, BarChart3, Crown, Gift, Bell, Moon, Sun,
   Globe, Shield, LogOut, ChevronRight, Plug, Receipt, FileText, Check, Loader2,
+  Volume2, VolumeX, Play,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ChangePasswordModal from '@/components/profile/ChangePasswordModal';
+import { isNotificationMuted, setNotificationMuted, playNotificationSound, enableNotificationSound } from '@/hooks/useNotifications';
 
 const WHITELABEL_STORAGE = 'foundif_whitelabel';
 
@@ -52,7 +54,21 @@ const Profile = () => {
 
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [pushAlerts, setPushAlerts] = useState(true);
+  const [muted, setMuted] = useState(isNotificationMuted());
   const [editOpen, setEditOpen] = useState(false);
+
+  const toggleMute = (m: boolean) => {
+    setMuted(m);
+    setNotificationMuted(m);
+    toast.success(m ? 'Message sound muted' : 'Message sound unmuted');
+  };
+
+  const testSound = () => {
+    enableNotificationSound();
+    playNotificationSound(true);
+    toast.success('Playing test sound — if you hear nothing, click anywhere on the page first then try again.');
+  };
+
 
   const [whiteLabel, setWhiteLabel] = useState(() => {
     const raw = localStorage.getItem(WHITELABEL_STORAGE);
@@ -127,6 +143,15 @@ const Profile = () => {
             {
               icon: Bell, label: 'Push notifications', sub: 'Booking & payment alerts',
               right: <Switch checked={pushAlerts} onCheckedChange={setPushAlerts} onClick={(e) => e.stopPropagation()} />,
+            },
+            {
+              icon: muted ? VolumeX : Volume2, label: 'Message alert sound',
+              sub: muted ? 'Muted — no chime on new messages' : 'Plays chime on every new message',
+              right: <Switch checked={!muted} onCheckedChange={(v) => toggleMute(!v)} onClick={(e) => e.stopPropagation()} />,
+            },
+            {
+              icon: Play, label: 'Test sound', sub: 'Play the alert chime now',
+              onClick: testSound,
             },
             {
               icon: theme === 'dark' ? Moon : Sun, label: 'Dark mode', sub: 'Easy on the eyes',

@@ -486,6 +486,7 @@ export type Database = {
           id: string
           language: string | null
           logo_url: string | null
+          notification_sound_enabled: boolean
           onboarding_completed: boolean | null
           phone: string | null
           price_list_url: string | null
@@ -510,6 +511,7 @@ export type Database = {
           id?: string
           language?: string | null
           logo_url?: string | null
+          notification_sound_enabled?: boolean
           onboarding_completed?: boolean | null
           phone?: string | null
           price_list_url?: string | null
@@ -534,6 +536,7 @@ export type Database = {
           id?: string
           language?: string | null
           logo_url?: string | null
+          notification_sound_enabled?: boolean
           onboarding_completed?: boolean | null
           phone?: string | null
           price_list_url?: string | null
@@ -1306,6 +1309,45 @@ export type Database = {
           updated_at?: string
           user_id?: string
           wa_id?: string
+        }
+        Relationships: []
+      }
+      tn_expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          expense_date: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          updated_at: string
+          user_id: string
+          vendor: string | null
+        }
+        Insert: {
+          amount?: number
+          category?: string
+          created_at?: string
+          expense_date?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          updated_at?: string
+          user_id: string
+          vendor?: string | null
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          expense_date?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          updated_at?: string
+          user_id?: string
+          vendor?: string | null
         }
         Relationships: []
       }
