@@ -176,6 +176,7 @@ const TNBookings = () => {
                       <p className="text-muted-foreground">WA: {b.wa_id}</p>
                     </div>
                     <p className="text-xs text-muted-foreground mt-2">Advance ₹{b.advance_amount} • Balance ₹{b.balance_amount}</p>
+                    <BookingTimeline history={b.status_history} notes={b.notes} />
                   </div>
                   <div className="flex flex-col gap-2">
                     <div className="flex gap-1">
@@ -243,6 +244,37 @@ const TNBookings = () => {
         </DialogContent>
       </Dialog>
     </AppLayout>
+  );
+};
+
+const STATUS_ORDER = ['draft', 'awaiting_payment', 'paid', 'confirmed', 'completed'];
+const BookingTimeline = ({ history, notes }: { history: any; notes?: string | null }) => {
+  const arr: Array<{ status: string; at: string; note?: string }> = Array.isArray(history) ? history : [];
+  if (arr.length === 0) return null;
+  const latestByStatus: Record<string, string> = {};
+  arr.forEach(h => { if (h?.status) latestByStatus[h.status] = h.at; });
+  const reached = (s: string) => Boolean(latestByStatus[s]);
+  return (
+    <div className="mt-3 p-2.5 rounded-md bg-muted/40 border border-border/50">
+      <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2 font-semibold">Status timeline</p>
+      <div className="flex items-center gap-1 flex-wrap">
+        {STATUS_ORDER.map((s, i) => (
+          <div key={s} className="flex items-center gap-1">
+            <div className={`flex flex-col items-center min-w-[78px]`}>
+              <div className={`w-2.5 h-2.5 rounded-full ${reached(s) ? 'bg-emerald-500' : 'bg-muted-foreground/30'}`} />
+              <span className={`text-[10px] mt-1 capitalize ${reached(s) ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                {s.replace('_', ' ')}
+              </span>
+              {latestByStatus[s] && (
+                <span className="text-[9px] text-muted-foreground">{new Date(latestByStatus[s]).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+              )}
+            </div>
+            {i < STATUS_ORDER.length - 1 && <div className={`h-px w-4 ${reached(STATUS_ORDER[i + 1]) ? 'bg-emerald-500' : 'bg-muted-foreground/30'}`} />}
+          </div>
+        ))}
+      </div>
+      {notes && <p className="text-[11px] text-red-500 mt-2">⚠ {notes}</p>}
+    </div>
   );
 };
 

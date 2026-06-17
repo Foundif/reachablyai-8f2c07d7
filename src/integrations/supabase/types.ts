@@ -1161,12 +1161,14 @@ export type Database = {
           id: string
           landmark: string | null
           name: string | null
+          notes: string | null
           phone: string | null
           price: number
           service_code: string | null
           service_name: string | null
           source: string | null
           status: string
+          status_history: Json
           transport_details: string | null
           transport_mode: string | null
           updated_at: string
@@ -1188,12 +1190,14 @@ export type Database = {
           id?: string
           landmark?: string | null
           name?: string | null
+          notes?: string | null
           phone?: string | null
           price?: number
           service_code?: string | null
           service_name?: string | null
           source?: string | null
           status?: string
+          status_history?: Json
           transport_details?: string | null
           transport_mode?: string | null
           updated_at?: string
@@ -1215,12 +1219,14 @@ export type Database = {
           id?: string
           landmark?: string | null
           name?: string | null
+          notes?: string | null
           phone?: string | null
           price?: number
           service_code?: string | null
           service_name?: string | null
           source?: string | null
           status?: string
+          status_history?: Json
           transport_details?: string | null
           transport_mode?: string | null
           updated_at?: string

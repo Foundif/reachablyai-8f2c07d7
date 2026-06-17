@@ -36,7 +36,7 @@ const Accounting = () => {
     if (!user) return;
     const since = new Date(Date.now() - Number(period) * 86400_000).toISOString();
     const [pay, exp] = await Promise.all([
-      supabase.from('tn_payments').select('*, tn_bookings(service_name, name, wa_id)').eq('user_id', user.id).eq('status', 'completed').gte('created_at', since).order('created_at', { ascending: false }),
+      supabase.from('tn_payments').select('*, tn_bookings(service_name, name, wa_id)').eq('user_id', user.id).in('status', ['completed','verified','paid']).gte('created_at', since).order('created_at', { ascending: false }),
       supabase.from('tn_expenses').select('*').eq('user_id', user.id).gte('expense_date', since.slice(0, 10)).order('expense_date', { ascending: false }),
     ]);
     setIncome(pay.data || []);

@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { ChevronsLeft, ChevronsRight, Sparkles, Zap } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { MODULE_GROUPS } from '@/lib/modules';
 import { useAuth } from '@/hooks/useAuth';
 import { BrandMark } from '@/components/Brand';
@@ -110,31 +109,6 @@ const AppSidebar = () => {
             </div>
           ))}
         </nav>
-
-        {/* Upgrade card */}
-        {!collapsed && (
-          <div className="relative mx-3 mb-3 p-4 rounded-2xl overflow-hidden glass-panel glass-sheen">
-            <div className="absolute -inset-px rounded-2xl bg-gradient-to-br from-primary/40 via-secondary/30 to-accent/20 opacity-30 blur-md" />
-            <div className="relative">
-              <div className="flex items-center gap-2 mb-1.5">
-                <div className="w-6 h-6 rounded-md bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                  <Sparkles className="w-3.5 h-3.5 text-white" />
-                </div>
-                <span className="text-sm font-semibold">Upgrade to Pro</span>
-              </div>
-              <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
-                Unlock AI agents, broadcast campaigns and advanced analytics.
-              </p>
-              <Button
-                size="sm"
-                className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-95 text-white border-0 shadow-glow"
-                onClick={() => (window.location.href = '/pricing')}
-              >
-                <Zap className="w-3.5 h-3.5" /> Upgrade
-              </Button>
-            </div>
-          </div>
-        )}
 
         {/* Collapse */}
         <div className="relative p-2 border-t border-white/5">
