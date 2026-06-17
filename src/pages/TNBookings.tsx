@@ -282,4 +282,88 @@ const BookingTimeline = ({ history, notes }: { history: any; notes?: string | nu
   );
 };
 
+const Field = ({ label, value }: { label: string; value: any }) => {
+  if (value === null || value === undefined || value === '') return null;
+  return (
+    <div className="text-sm">
+      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="font-medium break-words">{String(value)}</p>
+    </div>
+  );
+};
+
+const BookingViewDialog = ({ booking, onClose }: { booking: any | null; onClose: () => void }) => {
+  if (!booking) return null;
+  const b = booking;
+  const details = (b.details && typeof b.details === 'object') ? b.details : null;
+  const addons = Array.isArray(b.addons) ? b.addons : null;
+  return (
+    <Dialog open={!!booking} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <span className="font-mono text-xs text-muted-foreground">TN45-{b.id.slice(0, 8)}</span>
+            <Badge className={`${statusColor[b.status]} text-white`}>{b.status}</Badge>
+            {b.source && <Badge variant="outline" className="text-xs">{b.source}</Badge>}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 mt-2">
+          <div>
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Service</p>
+            <p className="font-semibold">{b.service_name} <span className="text-muted-foreground font-normal">({b.service_code})</span></p>
+            <p className="text-sm mt-1">Price ₹{b.price} • Advance ₹{b.advance_amount} • Balance ₹{b.balance_amount}</p>
+          </div>
+          <div className="border-t border-border pt-3">
+            <p className="text-[11px] tracking-wide uppercase text-muted-foreground mb-2 font-semibold">Customer</p>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Name" value={b.name} />
+              <Field label="WhatsApp" value={b.wa_id} />
+              <Field label="Phone" value={b.phone} />
+            </div>
+          </div>
+          <div className="border-t border-border pt-3">
+            <p className="text-[11px] tracking-wide uppercase text-muted-foreground mb-2 font-semibold">Schedule & location</p>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Date" value={b.booking_date} />
+              <Field label="Time" value={b.booking_time} />
+              <Field label="Expected hours" value={b.expected_hours} />
+              <Field label="Address" value={b.address} />
+              <Field label="Landmark" value={b.landmark} />
+            </div>
+          </div>
+          <div className="border-t border-border pt-3">
+            <p className="text-[11px] tracking-wide uppercase text-muted-foreground mb-2 font-semibold">Transport</p>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Mode" value={b.transport_mode} />
+              <Field label="Details" value={b.transport_details} />
+            </div>
+          </div>
+          {addons && addons.length > 0 && (
+            <div className="border-t border-border pt-3">
+              <p className="text-[11px] tracking-wide uppercase text-muted-foreground mb-2 font-semibold">Add-ons</p>
+              <ul className="list-disc pl-5 text-sm">{addons.map((a: any, i: number) => <li key={i}>{typeof a === 'string' ? a : JSON.stringify(a)}</li>)}</ul>
+            </div>
+          )}
+          {details && Object.keys(details).length > 0 && (
+            <div className="border-t border-border pt-3">
+              <p className="text-[11px] tracking-wide uppercase text-muted-foreground mb-2 font-semibold">Flow submission</p>
+              <pre className="text-[11px] bg-muted/40 p-2 rounded-md whitespace-pre-wrap break-words">{JSON.stringify(details, null, 2)}</pre>
+            </div>
+          )}
+          <div className="border-t border-border pt-3">
+            <p className="text-[11px] tracking-wide uppercase text-muted-foreground mb-2 font-semibold">Meta</p>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Created" value={new Date(b.created_at).toLocaleString()} />
+              <Field label="Updated" value={new Date(b.updated_at).toLocaleString()} />
+              <Field label="Flow token" value={b.flow_token} />
+            </div>
+            {b.notes && <p className="text-xs text-red-500 mt-2">⚠ {b.notes}</p>}
+          </div>
+          <BookingTimeline history={b.status_history} notes={b.notes} />
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export default TNBookings;
