@@ -31,6 +31,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
       { to: '/services', icon: Briefcase, label: 'Services & Tariff', status: 'live' },
       { to: '/bookings', icon: CalendarDays, label: 'Bookings', status: 'live' },
       { to: '/customers', icon: Users, label: 'Customers', status: 'live' },
+    ],
   },
   {
     label: 'Business',
@@ -43,6 +44,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
     label: 'Settings',
     items: [
       { to: '/whatsapp-settings', icon: Settings, label: 'WhatsApp', status: 'live' },
+      { to: '/profile', icon: UserCircle, label: 'Profile', status: 'live' },
       { to: '/team', icon: UserCog, label: 'Team', status: 'live' },
       { to: '/roles', icon: Shield, label: 'Roles', status: 'live' },
       { to: '/audit', icon: FileText, label: 'Audit Logs', status: 'live' },
