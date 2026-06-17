@@ -87,8 +87,12 @@ export const useNotifications = () => {
     if (!user) return;
     fetchNotifications();
 
-    window.addEventListener('pointerdown', unlockNotificationSound, { once: true });
-    window.addEventListener('keydown', unlockNotificationSound, { once: true });
+    // Unlock audio on ANY first interaction (pointer, key, touch, or focus)
+    const unlock = () => unlockNotificationSound();
+    window.addEventListener('pointerdown', unlock, { once: true });
+    window.addEventListener('keydown', unlock, { once: true });
+    window.addEventListener('touchstart', unlock, { once: true });
+    window.addEventListener('click', unlock, { once: true });
 
     const channel = supabase
       .channel('notifications-realtime')
@@ -115,11 +119,14 @@ export const useNotifications = () => {
       .subscribe();
 
     return () => {
-      window.removeEventListener('pointerdown', unlockNotificationSound);
-      window.removeEventListener('keydown', unlockNotificationSound);
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+      window.removeEventListener('touchstart', unlock);
+      window.removeEventListener('click', unlock);
       supabase.removeChannel(channel);
     };
   }, [user, fetchNotifications]);
+
 
   const markAsRead = useCallback(async (id: string) => {
     await supabase.from('notifications').update({ read: true }).eq('id', id);
