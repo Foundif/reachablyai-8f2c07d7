@@ -1,10 +1,12 @@
 import logoLight from '@/assets/chatarly-logo-light.png.asset.json';
 import logoDark from '@/assets/chatarly-logo-dark.png.asset.json';
+import iconLight from '@/assets/chatarly-icon-light.png.asset.json';
+import iconDark from '@/assets/chatarly-icon-dark.png.asset.json';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
 import { cn } from '@/lib/utils';
 
-export const BRAND_ICON_URL = logoLight.url;
+export const BRAND_ICON_URL = iconLight.url;
 export const BRAND_WORDMARK_URL = logoLight.url;
 export const BRAND_LOGO_URL = logoLight.url;
 
@@ -23,13 +25,13 @@ export const BrandMark = ({
   const { profile } = useAuth();
   const { theme } = useTheme();
   const tenantLogo = (profile as any)?.logo_url;
-  const themedLogo = theme === 'dark' ? logoDark.url : logoLight.url;
-  // For the small icon variant, prefer the tenant's square icon if present.
+  const themedWord = theme === 'dark' ? logoDark.url : logoLight.url;
+  const themedIcon = theme === 'dark' ? iconDark.url : iconLight.url;
   const src = tenantLogo
     ? tenantLogo
     : variant === 'wordmark'
-      ? themedLogo
-      : themedLogo;
+      ? themedWord
+      : themedIcon;
 
   return (
     <img
@@ -40,12 +42,10 @@ export const BrandMark = ({
           ? undefined
           : variant === 'wordmark'
             ? { height: size, width: 'auto' }
-            : { height: size, width: 'auto', maxWidth: size * 3.5 }
+            : { height: size, width: size, objectFit: 'contain' }
       }
       className={cn(
-        fullWidth
-          ? 'w-full h-auto object-contain select-none'
-          : 'object-contain select-none',
+        fullWidth ? 'w-full h-auto object-contain select-none' : 'object-contain select-none',
         className,
       )}
       draggable={false}

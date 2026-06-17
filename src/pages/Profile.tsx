@@ -164,6 +164,14 @@ const Profile = () => {
           ]}
         />
 
+        <SectionCard
+          title="Legal"
+          rows={[
+            { icon: FileText, label: 'Privacy Policy', sub: 'How we handle your data', onClick: () => navigate('/privacy') },
+            { icon: Shield, label: 'Terms & Conditions', sub: 'Subscription, refunds & usage', onClick: () => navigate('/terms') },
+          ]}
+        />
+
 
         <Button
           onClick={handleSignOut}
