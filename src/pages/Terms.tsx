@@ -20,7 +20,7 @@ const TermsContent = () => (
     <section className="space-y-3">
       <h2 className="text-xl font-semibold">2. Subscriptions & Billing</h2>
       <ul className="list-disc pl-5 space-y-2 text-sm text-muted-foreground">
-        <li>Paid plans start with a 14-day free trial. After the trial, access is paused until the
+        <li>Paid plans start with a 7-day free trial. After the trial, access is paused until the
           first subscription payment is verified.</li>
         <li>Payments are processed in INR through Razorpay. Plan pricing is listed on the Pricing page.</li>
         <li>Subscriptions auto-renew monthly or yearly based on your selection. You may cancel anytime

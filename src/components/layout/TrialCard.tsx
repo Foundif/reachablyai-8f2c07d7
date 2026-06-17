@@ -13,7 +13,7 @@ const TrialCard = ({ compact = false }: { compact?: boolean }) => {
     : ((profile as any)?.created_at ? new Date((profile as any).created_at) : new Date());
   const end = (profile as any)?.trial_end_date
     ? new Date((profile as any).trial_end_date)
-    : new Date(start.getTime() + 14 * 86400000);
+    : new Date(start.getTime() + 7 * 86400000);
   const total = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000));
   const left = Math.max(0, Math.ceil((end.getTime() - Date.now()) / 86400000));
   const used = Math.min(total, total - left);

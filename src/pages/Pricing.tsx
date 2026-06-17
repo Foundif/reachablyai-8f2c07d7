@@ -43,7 +43,7 @@ const PLANS: {
       'Basic analytics',
       'Email support',
     ],
-    cta: 'Start 14-day free trial',
+    cta: 'Start 7-day free trial',
   },
   {
     id: 'growth',
@@ -64,7 +64,7 @@ const PLANS: {
       'Advanced analytics',
       'Priority support',
     ],
-    cta: 'Start 14-day free trial',
+    cta: 'Start 7-day free trial',
   },
   {
     id: 'professional',
@@ -83,7 +83,7 @@ const PLANS: {
       'White-label support',
       'Dedicated success manager',
     ],
-    cta: 'Start 14-day free trial',
+    cta: 'Start 7-day free trial',
   },
   {
     id: 'enterprise',
@@ -154,7 +154,7 @@ const PricingContent = () => {
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-border mb-5">
               <Sparkles className="w-3.5 h-3.5 text-primary" />
-              <span className="text-xs font-medium">14-day free trial · No card required</span>
+              <span className="text-xs font-medium">7-day free trial · No card required</span>
             </div>
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
               Simple Pricing for{' '}
