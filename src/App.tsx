@@ -46,6 +46,7 @@ import KnowledgeBase from "./pages/KnowledgeBase";
 import Catalog from "./pages/Catalog";
 import Orders from "./pages/Orders";
 import AICopilot from "./pages/AICopilot";
+import Accounting from "./pages/Accounting";
 
 const queryClient = new QueryClient();
 
@@ -114,6 +115,7 @@ const App = () => (
                 <Route path="/catalog" element={<ProtectedRoute><Catalog /></ProtectedRoute>} />
                 <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
                 <Route path="/copilot" element={<ProtectedRoute><AICopilot /></ProtectedRoute>} />
+                <Route path="/accounting" element={<ProtectedRoute><Accounting /></ProtectedRoute>} />
 
                 {comingSoonRoutes.filter(r => r !== '/messages').map((r) => (
                   <Route key={r} path={r} element={<ProtectedRoute><ComingSoon /></ProtectedRoute>} />
