@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { ChevronsLeft, ChevronsRight, Crown } from 'lucide-react';
 import { MODULE_GROUPS } from '@/lib/modules';
 import { useAuth } from '@/hooks/useAuth';
 import { BrandMark } from '@/components/Brand';
@@ -13,6 +13,7 @@ export const MENU_GROUPS = MODULE_GROUPS;
 const AppSidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const { profile } = useAuth();
   const inboxUnread = useInboxUnreadCount();
   const storeName = profile?.store_name?.trim() || 'My Workspace';
