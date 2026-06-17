@@ -148,6 +148,7 @@ const RazorpaySettings = () => {
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Pricing</p>
           <p className="text-sm">Razorpay charges <b>2% per transaction</b> (1.99% for UPI, capped). GST applies. Chatarly takes no cut on collections.</p>
         </Card>
+        </div>
       </div>
     </AppLayout>
   );
