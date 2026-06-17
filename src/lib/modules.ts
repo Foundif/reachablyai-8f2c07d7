@@ -1,9 +1,9 @@
 import {
-  Inbox, Send, GitBranch, ShoppingBag,
+  Inbox, Send, GitBranch,
   Sparkles, BarChart3, Bot,
-  Users, Package, CreditCard, CalendarDays,
-  UserCog, Shield, Plug, Webhook, FileText, Receipt, Building2, BookOpen, Settings,
-  LayoutDashboard, Library,
+  Users, CalendarDays, CreditCard,
+  UserCog, Shield, FileText, BookOpen, Settings,
+  LayoutDashboard, Library, Briefcase,
 } from 'lucide-react';
 
 export type ModuleItem = {
@@ -16,6 +16,8 @@ export type ModuleItem = {
 
 export type ModuleGroup = { label: string; items: ModuleItem[] };
 
+// Travel-services focused navigation. Integrations / Billing / Plans / Catalog / Orders
+// are intentionally NOT in the sidebar — they live inside the Profile page now.
 export const MODULE_GROUPS: ModuleGroup[] = [
   {
     label: 'Overview',
@@ -25,30 +27,29 @@ export const MODULE_GROUPS: ModuleGroup[] = [
     ],
   },
   {
-    label: 'Engage',
+    label: 'Services',
     items: [
-      { to: '/campaigns', icon: Send, label: 'Campaigns', status: 'live' },
-      { to: '/flows', icon: GitBranch, label: 'Flow Builder', status: 'live' },
-      { to: '/flows/templates', icon: Library, label: 'Templates', status: 'live' },
-      { to: '/catalog', icon: ShoppingBag, label: 'Catalog', status: 'live' },
+      { to: '/services', icon: Briefcase, label: 'Services & Tariff', status: 'live' },
+      { to: '/bookings', icon: CalendarDays, label: 'Bookings', status: 'live' },
+      { to: '/customers', icon: Users, label: 'Customers', status: 'live' },
+      { to: '/payments', icon: CreditCard, label: 'Payments', status: 'live' },
     ],
   },
   {
-    label: 'Intelligence',
+    label: 'Engage',
     items: [
-      { to: '/ai-studio', icon: Sparkles, label: 'AI Agent Studio', status: 'live' },
-      { to: '/copilot', icon: Bot, label: 'AI Copilot', status: 'live' },
-      { to: '/knowledge', icon: BookOpen, label: 'Knowledge Base', status: 'live' },
+      { to: '/campaigns', icon: Send, label: 'Campaigns', status: 'live' },
       { to: '/analytics', icon: BarChart3, label: 'Analytics', status: 'live' },
     ],
   },
   {
-    label: 'Operate',
+    label: 'Automation',
     items: [
-      { to: '/customers', icon: Users, label: 'Customers', status: 'live' },
-      { to: '/bookings', icon: CalendarDays, label: 'Bookings', status: 'live' },
-      { to: '/orders', icon: Package, label: 'Orders', status: 'live' },
-      { to: '/payments', icon: CreditCard, label: 'Payments', status: 'live' },
+      { to: '/flows', icon: GitBranch, label: 'Flow Builder', status: 'live' },
+      { to: '/flows/templates', icon: Library, label: 'Templates', status: 'live' },
+      { to: '/ai-studio', icon: Sparkles, label: 'AI Agent Studio', status: 'live' },
+      { to: '/copilot', icon: Bot, label: 'AI Copilot', status: 'live' },
+      { to: '/knowledge', icon: BookOpen, label: 'Knowledge Base', status: 'live' },
     ],
   },
   {
@@ -57,10 +58,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
       { to: '/whatsapp-settings', icon: Settings, label: 'WhatsApp', status: 'live' },
       { to: '/team', icon: UserCog, label: 'Team', status: 'live' },
       { to: '/roles', icon: Shield, label: 'Roles', status: 'live' },
-      { to: '/integrations', icon: Plug, label: 'Integrations', status: 'live' },
-      { to: '/webhooks', icon: Webhook, label: 'Webhooks', status: 'live' },
       { to: '/audit', icon: FileText, label: 'Audit Logs', status: 'live' },
-      { to: '/billing', icon: Receipt, label: 'Billing & Plans', status: 'live' },
     ],
   },
 ];
