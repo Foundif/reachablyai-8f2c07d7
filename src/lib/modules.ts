@@ -1,6 +1,6 @@
 import {
-  Inbox, Users, CalendarDays, CreditCard,
-  UserCog, Shield, FileText, Settings,
+  Inbox, Users, CalendarDays,
+  UserCog, Shield, FileText, Settings, UserCircle,
   LayoutDashboard, Briefcase, BarChart3, Wallet,
 } from 'lucide-react';
 
