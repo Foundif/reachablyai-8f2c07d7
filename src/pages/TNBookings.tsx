@@ -176,6 +176,7 @@ const TNBookings = () => {
                       <p className="text-muted-foreground">WA: {b.wa_id}</p>
                     </div>
                     <p className="text-xs text-muted-foreground mt-2">Advance ₹{b.advance_amount} • Balance ₹{b.balance_amount}</p>
+                    <BookingTimeline history={b.status_history} notes={b.notes} />
                   </div>
                   <div className="flex flex-col gap-2">
                     <div className="flex gap-1">
