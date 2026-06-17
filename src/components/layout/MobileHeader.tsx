@@ -6,6 +6,7 @@ import NotificationBell from '@/components/notifications/NotificationBell';
 import { MODULE_GROUPS } from '@/lib/modules';
 import { BrandMark } from '@/components/Brand';
 import CommandPalette from './CommandPalette';
+import TrialCard from './TrialCard';
 
 const MobileHeader = () => {
   const [open, setOpen] = useState(false);
@@ -39,6 +40,10 @@ const MobileHeader = () => {
               <button onClick={() => setOpen(false)} className="ml-auto p-2 rounded-xl hover:bg-white/[0.06]">
                 <X className="w-5 h-5" />
               </button>
+            </div>
+
+            <div className="px-3 pt-3">
+              <TrialCard />
             </div>
 
             <nav className="p-2 pb-32">
