@@ -1811,6 +1811,10 @@ export type Database = {
           meta_waba_id: string | null
           payee_name: string | null
           qr_image_url: string | null
+          razorpay_enabled: boolean
+          razorpay_key_id: string | null
+          razorpay_key_secret: string | null
+          razorpay_webhook_secret: string | null
           updated_at: string
           upi_id: string | null
           user_id: string
@@ -1834,6 +1838,10 @@ export type Database = {
           meta_waba_id?: string | null
           payee_name?: string | null
           qr_image_url?: string | null
+          razorpay_enabled?: boolean
+          razorpay_key_id?: string | null
+          razorpay_key_secret?: string | null
+          razorpay_webhook_secret?: string | null
           updated_at?: string
           upi_id?: string | null
           user_id: string
@@ -1857,6 +1865,10 @@ export type Database = {
           meta_waba_id?: string | null
           payee_name?: string | null
           qr_image_url?: string | null
+          razorpay_enabled?: boolean
+          razorpay_key_id?: string | null
+          razorpay_key_secret?: string | null
+          razorpay_webhook_secret?: string | null
           updated_at?: string
           upi_id?: string | null
           user_id?: string
