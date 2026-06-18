@@ -70,7 +70,7 @@ const TNDashboard = () => {
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-          <Stat icon={CalendarDays} label="Today Bookings" value={stats.todayBookings} accent="bg-primary" />
+          <Stat icon={CalendarDays} label="Today Bookings" value={stats.todayBookings} accent="bg-indigo-500" />
           <Stat icon={AlertCircle} label="Pending Payments" value={stats.pendingPayments} accent="bg-orange-500" />
           <Stat icon={Users} label="Total Customers" value={stats.customers} accent="bg-blue-500" />
           <Stat icon={MessageSquare} label="Msgs Today" value={stats.msgsToday} accent="bg-green-500" />
