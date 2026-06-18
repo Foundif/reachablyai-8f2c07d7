@@ -25,9 +25,10 @@ const statusColor: Record<string, string> = {
 
 const ADDONS = [
   { key: 'wheelchair', label: 'Wheelchair', icon: Accessibility, price: '+₹50' },
-  { key: 'battery_car', label: 'Battery Car', icon: BatteryCharging, price: 'Actuals' },
+  { key: 'battery', label: 'Battery Car', icon: BatteryCharging, price: 'Actuals' },
   { key: 'porter', label: 'Porter', icon: Luggage, price: 'Actuals' },
 ];
+
 
 const BookingDetail = () => {
   const { id } = useParams<{ id: string }>();

@@ -84,9 +84,10 @@ const Auth = () => {
         <div className="relative z-10 flex flex-col justify-center px-16">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-12">
             <div className="mb-8">
-              <BrandMark variant="wordmark" size={56} />
-              <p className="text-sm text-muted-foreground uppercase tracking-wider mt-3">WhatsApp Automation for Travel</p>
+              <BrandMark variant="wordmark" size={88} />
+              <p className="text-sm text-muted-foreground uppercase tracking-wider mt-4">WhatsApp Automation for Travel</p>
             </div>
+
 
             <h2 className="text-4xl font-bold text-foreground mb-4">
               Run your travel business.<br />
@@ -117,8 +118,9 @@ const Auth = () => {
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-            <BrandMark variant="wordmark" size={40} />
+            <BrandMark variant="wordmark" size={56} />
           </div>
+
 
           {isResettingPassword ? (
             <>
