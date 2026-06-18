@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Plus, Edit3, Trash2, Loader2, Check, Eye } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const statusColor: Record<string, string> = {
   draft: 'bg-gray-500',
@@ -43,6 +44,7 @@ const blankForm = {
 
 const TNBookings = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [rows, setRows] = useState<any[]>([]);
   const [filter, setFilter] = useState<string>('all');
   const [open, setOpen] = useState(false);
@@ -181,7 +183,7 @@ const TNBookings = () => {
                   </div>
                   <div className="flex flex-col gap-2">
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" title="View" onClick={() => setViewing(b)}><Eye className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" title="View details" onClick={() => navigate(`/bookings/${b.id}`)}><Eye className="w-4 h-4" /></Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit" onClick={() => openEdit(b)}><Edit3 className="w-4 h-4" /></Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" title="Delete" onClick={() => remove(b)}><Trash2 className="w-4 h-4" /></Button>
                     </div>

@@ -50,6 +50,7 @@ import Accounting from "./pages/Accounting";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import RazorpaySettings from "./pages/RazorpaySettings";
+import BookingDetail from "./pages/BookingDetail";
 
 const queryClient = new QueryClient();
 
@@ -93,6 +94,7 @@ const App = () => (
                 <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
                 <Route path="/messages" element={<Navigate to="/inbox" replace />} />
                 <Route path="/bookings" element={<ProtectedRoute><TNBookings /></ProtectedRoute>} />
+                <Route path="/bookings/:id" element={<ProtectedRoute><BookingDetail /></ProtectedRoute>} />
                 <Route path="/payments" element={<Navigate to="/accounting" replace />} />
                 <Route path="/customers" element={<ProtectedRoute><TNCustomers /></ProtectedRoute>} />
                 <Route path="/services" element={<ProtectedRoute><TNServices /></ProtectedRoute>} />
