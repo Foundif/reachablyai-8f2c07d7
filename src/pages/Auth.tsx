@@ -84,7 +84,7 @@ const Auth = () => {
         <div className="relative z-10 flex flex-col justify-center px-16">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-12">
             <div className="mb-8">
-              <BrandMark variant="wordmark" size={88} />
+              <BrandMark variant="wordmark" size={72} />
               <p className="text-sm text-muted-foreground uppercase tracking-wider mt-4">WhatsApp Automation for Travel</p>
             </div>
 
