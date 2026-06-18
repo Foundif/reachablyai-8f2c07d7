@@ -293,13 +293,13 @@ const Inbox = () => {
                             'max-w-[78%] px-3.5 py-2 text-sm leading-relaxed break-words',
                             'rounded-2xl',
                             isOut
-                              ? 'bg-gradient-to-br from-primary to-secondary text-white shadow-[0_4px_24px_-6px_hsl(211_100%_52%/0.45)] rounded-br-md'
+                              ? 'bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-[0_4px_24px_-6px_hsl(211_100%_52%/0.45)] rounded-br-md'
                               : 'bg-white/[0.06] text-foreground border border-white/[0.05] backdrop-blur rounded-bl-md',
                             grouped && (isOut ? 'rounded-tr-md' : 'rounded-tl-md'),
                           )}
                         >
                           <MessageBody message={m} text={text} />
-                          <div className={cn('text-[10px] mt-1 opacity-70', isOut ? 'text-white/80' : 'text-muted-foreground')}>
+                          <div className={cn('text-[10px] mt-1 opacity-70', isOut ? 'text-primary-foreground/80' : 'text-muted-foreground')}>
                             {fmtTime(m.created_at)}
                           </div>
                         </div>
