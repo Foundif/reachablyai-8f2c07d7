@@ -118,7 +118,7 @@ const Auth = () => {
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-            <BrandMark variant="wordmark" size={56} />
+            <BrandMark variant="wordmark" size={48} />
           </div>
 
 
