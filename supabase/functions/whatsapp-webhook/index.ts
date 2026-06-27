@@ -193,6 +193,58 @@ function parseHelpText(text: string): Record<string, any> {
 }
 
 
+async function createRazorpayLink(amount: number, booking: any, customerName: string, customerPhone: string) {
+  const keyId = Deno.env.get('RAZORPAY_KEY_ID')
+  const keySecret = Deno.env.get('RAZORPAY_KEY_SECRET')
+  if (!keyId || !keySecret) return { ok: false, error: 'Razorpay keys not configured' }
+  try {
+    const auth = btoa(`${keyId}:${keySecret}`)
+    const res = await fetch('https://api.razorpay.com/v1/payment_links', {
+      method: 'POST',
+      headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        amount: Math.round(amount * 100),
+        currency: 'INR',
+        accept_partial: false,
+        description: `TN45-${booking.id.slice(0,8)} ${booking.service_name || 'Travel Aid'} advance`,
+        customer: { name: customerName || 'Customer', contact: customerPhone || undefined },
+        notify: { sms: false, email: false },
+        reminder_enable: true,
+        notes: { booking_id: booking.id, wa_id: booking.wa_id },
+        callback_method: 'get',
+      }),
+    })
+    const json = await res.json()
+    return { ok: res.ok, link: json.short_url, id: json.id, raw: json }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || String(e) }
+  }
+}
+
+async function appendToGoogleSheet(sheetId: string, tab: string, row: (string | number)[]) {
+  const lovableKey = Deno.env.get('LOVABLE_API_KEY')
+  const connKey = Deno.env.get('GOOGLE_SHEETS_API_KEY')
+  if (!lovableKey || !connKey) return { ok: false, error: 'Google Sheets connection missing' }
+  try {
+    const range = encodeURIComponent(`${tab || 'Bookings'}!A:Z`)
+    const url = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${lovableKey}`,
+        'X-Connection-Api-Key': connKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ values: [row] }),
+    })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) console.error('sheets append failed', res.status, JSON.stringify(json).slice(0, 600))
+    return { ok: res.ok, status: res.status, raw: json }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || String(e) }
+  }
+}
+
 async function handleFlowSubmission(supabase: any, userId: string, waId: string, payload: any, settings: any, phoneNumberId: string, token: string) {
   const d = payload || {}
   const svcCode = String(d.service || '').trim()
@@ -240,34 +292,59 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
     return
   }
 
+  // 1) Razorpay payment link
+  const rzp = await createRazorpayLink(advance, booking, d.name || '', d.phone || waId)
   await supabase.from('tn_payments').insert({
-    user_id: userId, booking_id: booking?.id, amount: advance, method: 'upi', status: 'pending',
+    user_id: userId, booking_id: booking?.id, amount: advance,
+    method: rzp.ok ? 'razorpay' : 'manual',
+    status: 'pending',
+    screenshot_url: rzp.ok ? rzp.link : null,
   })
 
-  const upi = settings?.upi_id || '9486642242@kvb'
-  const payee = settings?.payee_name || 'Tamilnadu Travel'
-  const link = `upi://pay?pa=${encodeURIComponent(upi)}&pn=${encodeURIComponent(payee)}&am=${advance}&tn=TN45-${booking?.id?.slice(0,8)}`
+  // 2) Append to Google Sheet (best-effort)
+  if (settings?.google_sheet_enabled && settings?.google_sheet_id) {
+    const sheetRes = await appendToGoogleSheet(settings.google_sheet_id, settings.google_sheet_tab || 'Bookings', [
+      new Date().toISOString(),
+      `TN45-${booking.id.slice(0,8)}`,
+      d.name || '',
+      d.phone || waId,
+      svc.name,
+      d.date || '',
+      d.time || d.preferred_time || '',
+      d.transport_mode || '',
+      d.transport_details || '',
+      d.address || '',
+      d.landmark || '',
+      d.hours || '',
+      (addons || []).join(', '),
+      price,
+      advance,
+      'awaiting_payment',
+      rzp.ok ? rzp.link : '',
+    ])
+    if (!sheetRes.ok) {
+      await supabase.from('tn_audit_log').insert({
+        user_id: userId, actor_id: userId, entity_type: 'google_sheet_append',
+        entity_id: booking.id, action: 'failed',
+        after: { error: sheetRes.error || sheetRes.raw, status: sheetRes.status || null },
+      })
+    }
+  }
 
   const summary = `✅ *Booking Received!*\n\n` +
-    `🆔 TN45-${booking?.id?.slice(0,8)}\n` +
+    `🆔 TN45-${booking.id.slice(0,8)}\n` +
     `🧾 ${svc.name}\n` +
     `👤 ${d.name || '-'}\n` +
     `📞 ${d.phone || '-'}\n` +
-    `📅 ${d.date || '-'} • ${d.time || '-'}\n` +
+    `📅 ${d.date || '-'} • ${d.time || d.preferred_time || '-'}\n` +
     `🚉 ${d.transport_mode || '-'} ${d.transport_details ? '• ' + d.transport_details : ''}\n` +
-    `📍 ${d.address || '-'}\n` +
+    `📍 ${d.address || '-'}${d.landmark ? `\n🏷️ ${d.landmark}` : ''}\n` +
     (addons.length ? `➕ ${addons.join(', ')}\n` : '') +
     `\n💰 Estimated: ₹${price}\n` +
-    `💳 Pay Advance: *₹${advance}*\n${link}\n` +
-    `UPI: ${upi} (${payee})\n\n` +
-    `After payment, send screenshot here.`
-
-  if (settings?.qr_image_url) {
-    await sendWhatsApp(phoneNumberId, token, {
-      messaging_product: 'whatsapp', to: waId, type: 'image',
-      image: { link: settings.qr_image_url, caption: `Scan to pay ₹${advance}` },
-    })
-  }
+    `💳 Pay Advance: *₹${advance}*\n` +
+    (rzp.ok
+      ? `🔗 Razorpay link: ${rzp.link}\n(UPI / Card / Netbanking — secure)`
+      : `⚠️ Payment link unavailable right now. Our team will contact you.`)
   await sendWhatsApp(phoneNumberId, token, textMsg(waId, summary))
 }
 

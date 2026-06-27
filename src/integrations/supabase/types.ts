@@ -1801,6 +1801,9 @@ export type Database = {
           flow_footer: string | null
           flow_header: string | null
           flow_json: Json | null
+          google_sheet_enabled: boolean
+          google_sheet_id: string | null
+          google_sheet_tab: string | null
           greeting_template: string | null
           id: string
           meta_flow_cta: string | null
@@ -1828,6 +1831,9 @@ export type Database = {
           flow_footer?: string | null
           flow_header?: string | null
           flow_json?: Json | null
+          google_sheet_enabled?: boolean
+          google_sheet_id?: string | null
+          google_sheet_tab?: string | null
           greeting_template?: string | null
           id?: string
           meta_flow_cta?: string | null
@@ -1855,6 +1861,9 @@ export type Database = {
           flow_footer?: string | null
           flow_header?: string | null
           flow_json?: Json | null
+          google_sheet_enabled?: boolean
+          google_sheet_id?: string | null
+          google_sheet_tab?: string | null
           greeting_template?: string | null
           id?: string
           meta_flow_cta?: string | null
