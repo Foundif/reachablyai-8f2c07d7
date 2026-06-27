@@ -305,6 +305,37 @@ const TNWhatsAppSettings = () => {
           </div>
         </Card>
 
+        {/* Google Sheets sync */}
+        <Card className="p-5 space-y-4">
+          <h2 className="font-semibold text-lg">Google Sheets Sync</h2>
+          <p className="text-xs text-muted-foreground">Every WhatsApp Flow booking is appended as a new row to your sheet (date, ID, name, phone, service, date/time, transport, address, landmark, hours, add-ons, price, advance, status, Razorpay link). Make sure the Google account you connected has edit access to the sheet.</p>
+          <div>
+            <Label>Spreadsheet ID</Label>
+            <Input
+              value={s.google_sheet_id || ''}
+              onChange={e => setS({ ...s, google_sheet_id: e.target.value })}
+              placeholder="1lr46WioFekMm16j1W8MQZHgGTM17YWE0EK2gGZNTKJU"
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">From the sheet URL between <code>/d/</code> and <code>/edit</code>.</p>
+          </div>
+          <div>
+            <Label>Tab name</Label>
+            <Input
+              value={s.google_sheet_tab || 'Bookings'}
+              onChange={e => setS({ ...s, google_sheet_tab: e.target.value })}
+              placeholder="Bookings"
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={!!s.google_sheet_enabled}
+              onChange={e => setS({ ...s, google_sheet_enabled: e.target.checked })}
+            />
+            Enable auto-sync to Google Sheets
+          </label>
+        </Card>
+
         <Button onClick={save} className="w-full md:w-auto">Save Settings</Button>
       </div>
     </AppLayout>
