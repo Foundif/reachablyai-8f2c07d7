@@ -1,6 +1,15 @@
 // Canonical WhatsApp Flow JSON for TN45 Travel Aid.
 // Copy this into Meta Flow Manager → New Flow → Paste JSON → Publish.
 // Then take the returned Flow ID and paste it in /tn-flow.
+//
+// IMPORTANT CHANGES vs old version:
+//  • PAYMENT screen now informs the user a secure Razorpay link will be sent on
+//    WhatsApp right after they submit the booking (no manual UPI typing).
+//  • BOOKING_CONFIRMED footer no longer says "Book Again" (which caused the
+//    "trapped in a loop" complaint) — it now says "Done / முடிந்தது" and
+//    cleanly closes the flow via `complete`.
+//  • Review screen "Edit Details" passes the full payload back so the user
+//    doesn't lose what they typed.
 export const TN45_FLOW_JSON = {
   version: '7.3',
   screens: [
@@ -36,7 +45,7 @@ export const TN45_FLOW_JSON = {
                   { id: 'outstation', title: 'Outstation Medical Escort — ₹1200/day', description: 'வெளியூர் மருத்துவ துணை · per day' },
                 ],
               },
-              { type: 'TextCaption', text: '➕ Add-ons: ♿ Wheelchair +₹50 · 🧳 Porter (actual charges) · 🌙 After-hours +20%\n💳 Advance: ₹50 flat · Balance after service.' },
+              { type: 'TextCaption', text: '➕ Add-ons: ♿ Wheelchair +₹50 · 🔋 Battery Car · 🧳 Porter (actual)\n💳 Advance: ₹50 paid via secure Razorpay link · Balance after service.' },
               {
                 type: 'Footer',
                 label: 'Continue / தொடரவும்',
@@ -55,7 +64,7 @@ export const TN45_FLOW_JSON = {
       id: 'BOOKING_FORM',
       title: 'Fill Reporting Details',
       terminal: false,
-      data: { service: { type: 'string', __example__: 'terminal' } },
+      data: { service: { type: 'string', __example__: 'terminal-railbus' } },
       layout: {
         type: 'SingleColumnLayout',
         children: [
@@ -72,15 +81,16 @@ export const TN45_FLOW_JSON = {
                 'data-source': [
                   { id: 'train', title: 'Train / ரயில்' },
                   { id: 'bus', title: 'Bus / பேருந்து' },
+                  { id: 'flight', title: 'Flight / விமானம்' },
                   { id: 'private', title: 'Private Vehicle / சொந்த வாகனம்' },
                 ],
               },
-              { type: 'TextInput', name: 'transport_details', label: 'Transport Details / விவரம்', 'input-type': 'text', required: true, 'helper-text': 'Example : Flight: Indigo 6E204 | Train: 12637 Pandian Express | Bus: SETC Chennai–Madurai' },
-              { type: 'TextArea', name: 'address', label: 'Reporting Address / இடம்', required: true, 'helper-text': 'Enter full address / முழு முகவரி' },
-              { type: 'TextInput', name: 'landmark', label: 'Nearest Landmark', required: true, 'helper-text': 'Example: Near Central Bus Stand, Airport Entrance Gate 2, Railway Junction.' },
+              { type: 'TextInput', name: 'transport_details', label: 'Flight / Train / Bus Number', 'input-type': 'text', required: true, 'helper-text': 'Eg: Indigo 6E204 | 12637 Pandian Express | SETC Chennai-Madurai' },
+              { type: 'TextArea', name: 'address', label: 'Reporting Address / இடம்', required: true, 'helper-text': 'Full address / முழு முகவரி' },
+              { type: 'TextInput', name: 'landmark', label: 'Nearest Landmark / அடையாளம்', required: true, 'helper-text': 'Eg: Near Central Bus Stand, Airport Gate 2' },
               { type: 'DatePicker', name: 'date', label: 'Date / தேதி', required: true },
-              { type: 'TextInput', name: 'preferred_time', label: 'Reporting Time / நேரம்', 'input-type': 'text', required: true, 'helper-text': 'Example: 09:30 AM, 06:45 PM, 11:00 PM' },
-              { type: 'TextInput', name: 'hours', label: 'Expected Hours for Helper Service / உதவியாளர் சேவை மணி நேரம்', 'input-type': 'text', required: true, 'helper-text': 'Examples: 09:30 AM, Flight 6E204 Arrival 09:25 AM, Train 12637 Arrival 06:40 AM, Bus Departure 08:00 PM.' },
+              { type: 'TextInput', name: 'preferred_time', label: 'Reporting Time / நேரம்', 'input-type': 'text', required: true, 'helper-text': 'Eg: 09:30 AM, 06:45 PM' },
+              { type: 'TextInput', name: 'hours', label: 'Expected Hours for Helper Service', 'input-type': 'text', required: true, 'helper-text': 'Eg: 2 hours, 4 hours, Full day' },
               {
                 type: 'CheckboxGroup', name: 'addons', label: '♿ Special Arrangement / சிறப்பு ஏற்பாடு', required: false,
                 'data-source': [
@@ -114,7 +124,7 @@ export const TN45_FLOW_JSON = {
       title: 'Review Your Booking',
       terminal: false,
       data: {
-        service: { type: 'string', __example__: 'terminal' },
+        service: { type: 'string', __example__: 'terminal-railbus' },
         name: { type: 'string', __example__: 'Rajesh Kumar' },
         phone: { type: 'string', __example__: '+91 9XXXXXXXXX' },
         transport_mode: { type: 'string', __example__: 'flight' },
@@ -135,18 +145,18 @@ export const TN45_FLOW_JSON = {
           { type: 'TextSubheading', text: 'Name / பெயர்' }, { type: 'TextBody', text: '${data.name}' },
           { type: 'TextSubheading', text: 'Phone / தொலைபேசி' }, { type: 'TextBody', text: '${data.phone}' },
           { type: 'TextSubheading', text: 'Transport Mode' }, { type: 'TextBody', text: '${data.transport_mode}' },
-          { type: 'TextSubheading', text: 'Transport Details' }, { type: 'TextBody', text: '${data.transport_details}' },
+          { type: 'TextSubheading', text: 'Flight / Train / Bus No.' }, { type: 'TextBody', text: '${data.transport_details}' },
           { type: 'TextSubheading', text: 'Address / இடம்' }, { type: 'TextBody', text: '${data.address}' },
-          { type: 'TextSubheading', text: 'Landmark' }, { type: 'TextBody', text: '${data.landmark}' },
+          { type: 'TextSubheading', text: 'Landmark / அடையாளம்' }, { type: 'TextBody', text: '${data.landmark}' },
           { type: 'TextSubheading', text: 'Date / தேதி' }, { type: 'TextBody', text: '${data.date}' },
           { type: 'TextSubheading', text: 'Time / நேரம்' }, { type: 'TextBody', text: '${data.time}' },
-          { type: 'TextSubheading', text: 'Expected Hours for Helper Service' }, { type: 'TextBody', text: '${data.hours}' },
-          { type: 'TextCaption', text: 'Final fare calculated after service.\n Advance ₹50 · Balance after service.' },
+          { type: 'TextSubheading', text: 'Expected Hours' }, { type: 'TextBody', text: '${data.hours}' },
+          { type: 'TextCaption', text: 'Final fare calculated after service.\nAdvance ₹50 · Balance after service.' },
           {
             type: 'Form', name: 'review_form',
             children: [
               {
-                type: 'Footer', label: 'Proceed to Payment →',
+                type: 'Footer', label: 'Submit Booking → கட்டணம்',
                 'on-click-action': {
                   name: 'navigate',
                   next: { type: 'screen', name: 'PAYMENT' },
@@ -161,7 +171,7 @@ export const TN45_FLOW_JSON = {
             ],
           },
           {
-            type: 'EmbeddedLink', text: ' Edit Details / திருத்து',
+            type: 'EmbeddedLink', text: '✏️ Edit Details / திருத்து',
             'on-click-action': {
               name: 'navigate',
               next: { type: 'screen', name: 'BOOKING_FORM' },
@@ -173,10 +183,10 @@ export const TN45_FLOW_JSON = {
     },
     {
       id: 'PAYMENT',
-      title: 'Complete Payment',
+      title: 'Pay Advance',
       terminal: false,
       data: {
-        service: { type: 'string', __example__: 'terminal' },
+        service: { type: 'string', __example__: 'terminal-railbus' },
         name: { type: 'string', __example__: 'Rajesh Kumar' },
         phone: { type: 'string', __example__: '+91 9XXXXXXXXX' },
         transport_mode: { type: 'string', __example__: 'flight' },
@@ -191,27 +201,20 @@ export const TN45_FLOW_JSON = {
       layout: {
         type: 'SingleColumnLayout',
         children: [
-          { type: 'TextHeading', text: 'Pay Advance to Confirm' },
-          { type: 'TextCaption', text: 'Booking will only be confirmed after payment.' },
-          { type: 'TextBody', text: 'UPI ID: 9486642242@kvb' },
-          { type: 'TextBody', text: 'Name: Tamilnadu Travel' },
-          { type: 'TextBody', text: 'Amount: ₹50 (Advance)' },
-          { type: 'TextBody', text: 'Remaining Balance: Pay after service.' },
+          { type: 'TextHeading', text: '💳 Pay Advance ₹50' },
+          { type: 'TextCaption', text: 'Booking will be confirmed after payment.' },
+          { type: 'TextBody', text: '🔒 After you tap Confirm Booking below, we will send you a secure *Razorpay payment link* on WhatsApp instantly.' },
+          { type: 'TextBody', text: 'You can pay with any UPI app (GPay / PhonePe / Paytm), debit card, credit card or net banking through that link.' },
           { type: 'TextBody', text: '━━━━━━━━━━━━━━━━━━' },
-          { type: 'TextBody', text: 'How to Pay:' },
-          { type: 'TextBody', text: '1. Open Google Pay / PhonePe / Paytm' },
-          { type: 'TextBody', text: '2. Enter UPI ID: 9486642242@kvb' },
-          { type: 'TextBody', text: '3. Enter Amount: ₹50' },
-          { type: 'TextBody', text: '4. Make payment & take screenshot' },
-          { type: 'TextCaption', text: 'After payment, click below to confirm booking' },
-          { type: 'TextSubheading', text: 'Payment Method / கட்டண முறை' },
-          { type: 'TextBody', text: '💳 UPI / Payment Gateway: Pay ₹50 advance online' },
-          { type: 'TextBody', text: '💵 Cash: Pay full amount to helper at time of service' },
+          { type: 'TextSubheading', text: 'Payment Options' },
+          { type: 'TextBody', text: '💳 Razorpay link (UPI / card / netbanking) — recommended' },
+          { type: 'TextBody', text: '💵 Cash to helper — pay balance after service' },
+          { type: 'TextCaption', text: 'Amount: ₹50 advance · Balance after service.' },
           {
             type: 'Form', name: 'payment_form',
             children: [
               {
-                type: 'Footer', label: 'I have made the payment',
+                type: 'Footer', label: 'Confirm Booking →',
                 'on-click-action': {
                   name: 'navigate',
                   next: { type: 'screen', name: 'BOOKING_CONFIRMED' },
@@ -230,11 +233,11 @@ export const TN45_FLOW_JSON = {
     },
     {
       id: 'BOOKING_CONFIRMED',
-      title: 'Booking Confirmed',
+      title: 'Booking Submitted',
       terminal: true,
       success: true,
       data: {
-        service: { type: 'string', __example__: 'terminal' },
+        service: { type: 'string', __example__: 'terminal-railbus' },
         name: { type: 'string', __example__: 'Rajesh Kumar' },
         phone: { type: 'string', __example__: '+91 9XXXXXXXXX' },
         transport_mode: { type: 'string', __example__: 'flight' },
@@ -249,30 +252,26 @@ export const TN45_FLOW_JSON = {
       layout: {
         type: 'SingleColumnLayout',
         children: [
-          { type: 'TextHeading', text: 'Booking Confirmed!' },
-          { type: 'TextCaption', text: 'பதிவு உறுதிப்படுத்தப்பட்டது!' },
+          { type: 'TextHeading', text: '✅ Booking Submitted!' },
+          { type: 'TextCaption', text: 'பதிவு பெறப்பட்டது!' },
           { type: 'TextSubheading', text: 'Service / சேவை' }, { type: 'TextBody', text: '${data.service}' },
           { type: 'TextSubheading', text: 'Name / பெயர்' }, { type: 'TextBody', text: '${data.name}' },
-          { type: 'TextSubheading', text: 'Date / தேதி' }, { type: 'TextBody', text: '${data.date}' },
-          { type: 'TextSubheading', text: 'Time / நேரம்' }, { type: 'TextBody', text: '${data.time}' },
-          { type: 'TextSubheading', text: 'Transport' }, { type: 'TextBody', text: '${data.transport_mode}' },
-          { type: 'TextSubheading', text: 'Flight / Train No.' }, { type: 'TextBody', text: '${data.transport_details}' },
-          { type: 'TextSubheading', text: 'Address / இடம்' }, { type: 'TextBody', text: '${data.address}' },
-          { type: 'TextSubheading', text: 'Helper / உதவியாளர்' }, { type: 'TextBody', text: '1hr முன்பு நியமிக்கப்படும் · Assigned 1 hr before' },
+          { type: 'TextSubheading', text: 'Date & Time' }, { type: 'TextBody', text: '${data.date} · ${data.time}' },
+          { type: 'TextSubheading', text: 'Transport' }, { type: 'TextBody', text: '${data.transport_mode} — ${data.transport_details}' },
+          { type: 'TextSubheading', text: 'Pickup / இடம்' }, { type: 'TextBody', text: '${data.address}' },
           { type: 'TextHeading', text: '━━━━━━━━━━━━━' },
-          { type: 'TextSubheading', text: 'Payment Status' },
-          { type: 'TextBody', text: 'Advance Payment Verification Pending' },
-          { type: 'TextBody', text: 'Our team will verify your payment and confirm the booking shortly.' },
-          { type: 'TextBody', text: 'Remaining Balance: Pay after service.' },
+          { type: 'TextSubheading', text: '💳 Next step: Pay Advance' },
+          { type: 'TextBody', text: 'A Razorpay payment link for ₹50 will arrive on this chat in a few seconds. Tap it to pay and confirm your booking.' },
+          { type: 'TextBody', text: 'Balance is collected by the helper after service.' },
           { type: 'TextHeading', text: '━━━━━━━━━━━━━' },
           { type: 'TextCaption', text: '⚠️ Helper assigned 1 hour before service.\nஉதவியாளர் 1 மணி நேரம் முன்பு நியமிக்கப்படுவார்.' },
-          { type: 'TextCaption', text: '🔒 All communication through TN45 only.\nஅனைத்து தொடர்பும் TN45 வழியாக மட்டுமே.' },
+          { type: 'TextCaption', text: '🔒 All communication through TN45 only.' },
           {
             type: 'Form', name: 'confirmed_form',
             children: [
               {
-                type: 'Footer', label: '🔁 Book Again / மீண்டும்',
-                'on-click-action': { name: 'complete', payload: { status: 'done' } },
+                type: 'Footer', label: 'Done / முடிந்தது',
+                'on-click-action': { name: 'complete', payload: { status: 'submitted' } },
               },
             ],
           },
