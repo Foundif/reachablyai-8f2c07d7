@@ -153,7 +153,7 @@ const CustomerViewDialog = ({ customer, onClose }: { customer: any | null; onClo
     if (!customer || !user) return;
     (async () => {
       const [{ data: bks }, { count }] = await Promise.all([
-        supabase.from('tn_bookings').select('id, service_name, status, price, booking_date, created_at')
+        supabase.from('tn_bookings').select('*')
           .eq('user_id', user.id).eq('wa_id', customer.wa_id).order('created_at', { ascending: false }),
         supabase.from('tn_messages').select('id', { count: 'exact', head: true })
           .eq('user_id', user.id).eq('wa_id', customer.wa_id),
@@ -166,11 +166,13 @@ const CustomerViewDialog = ({ customer, onClose }: { customer: any | null; onClo
   if (!customer) return null;
   const totalSpent = bookings.filter(b => ['paid', 'confirmed', 'completed'].includes(b.status))
     .reduce((s, b) => s + Number(b.price || 0), 0);
+  const labelize = (s?: string | null) =>
+    (s || '').replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || '—';
 
   return (
     <Dialog open={!!customer} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>{customer.name || 'Customer'} details</DialogTitle></DialogHeader>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>{customer.name || 'Customer'} — full submission history</DialogTitle></DialogHeader>
         <div className="space-y-4 mt-2">
           <div className="flex items-center gap-3">
             {customer.avatar_url ? (
@@ -204,20 +206,47 @@ const CustomerViewDialog = ({ customer, onClose }: { customer: any | null; onClo
             </div>
           </div>
           <div>
-            <p className="text-[11px] tracking-wide uppercase text-muted-foreground mb-2 font-semibold">Booking history</p>
+            <p className="text-[11px] tracking-wide uppercase text-muted-foreground mb-2 font-semibold">Booking submissions ({bookings.length})</p>
             {bookings.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No bookings yet.</p>
+              <p className="text-sm text-muted-foreground">No bookings yet from this customer.</p>
             ) : (
-              <div className="space-y-2">
-                {bookings.map(b => (
-                  <div key={b.id} className="flex items-center justify-between text-sm border-b border-border pb-2 last:border-0">
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">{b.service_name}</p>
-                      <p className="text-xs text-muted-foreground">{b.booking_date || new Date(b.created_at).toLocaleDateString()} • ₹{b.price}</p>
+              <div className="space-y-3">
+                {bookings.map(b => {
+                  const addons = Array.isArray(b.addons) ? b.addons : [];
+                  return (
+                    <div key={b.id} className="rounded-lg border border-border p-3 space-y-2 bg-card">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-sm truncate">{b.service_name || labelize(b.service_code)}</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            ID: TN45-{b.id.slice(0, 8)} • {new Date(b.created_at).toLocaleString()}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="text-[10px] capitalize shrink-0">{b.status?.replace(/_/g, ' ')}</Badge>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                        <div><span className="text-muted-foreground">Name:</span> {b.name || '—'}</div>
+                        <div><span className="text-muted-foreground">Phone:</span> {b.phone || formatWhatsAppPhone(b.wa_id)}</div>
+                        <div><span className="text-muted-foreground">Date:</span> {b.booking_date || '—'}</div>
+                        <div><span className="text-muted-foreground">Time:</span> {b.booking_time || '—'}</div>
+                        <div><span className="text-muted-foreground">Transport:</span> {labelize(b.transport_mode)}</div>
+                        <div><span className="text-muted-foreground">Details:</span> {b.transport_details || '—'}</div>
+                        <div className="col-span-2"><span className="text-muted-foreground">Address:</span> {b.address || '—'}</div>
+                        <div className="col-span-2"><span className="text-muted-foreground">Landmark:</span> {b.landmark || '—'}</div>
+                        <div><span className="text-muted-foreground">Helper hours:</span> {b.expected_hours || '—'}</div>
+                        <div><span className="text-muted-foreground">Price:</span> ₹{b.price ?? 0} (adv ₹{b.advance_amount ?? 0})</div>
+                      </div>
+                      {addons.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {addons.map((a: string) => (
+                            <Badge key={a} variant="secondary" className="text-[10px] capitalize">{a.replace(/_/g, ' ')}</Badge>
+                          ))}
+                        </div>
+                      )}
+                      {b.notes && <p className="text-[11px] text-muted-foreground italic">📝 {b.notes}</p>}
                     </div>
-                    <Badge variant="outline" className="text-[10px] capitalize">{b.status?.replace('_', ' ')}</Badge>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
