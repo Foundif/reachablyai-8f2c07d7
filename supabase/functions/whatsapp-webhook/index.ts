@@ -297,36 +297,8 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
     .upsert({ user_id: userId, wa_id: waId, name: d.name || null }, { onConflict: 'user_id,wa_id' })
     .select().single()
 
-  const advance = Number(settings?.advance_amount || 50)
-  const { data: booking, error: bErr } = await supabase.from('tn_bookings').insert({
-    user_id: userId,
-    customer_id: customer?.id,
-    wa_id: waId,
-    service_code: svcCode,
-    service_name: svc.name,
-    price,
-    addons,
-    name: d.name || null,
-    phone: d.phone || null,
-    transport_mode: d.transport_mode || null,
-    transport_details: d.transport_details || null,
-    address: d.address || null,
-    landmark: d.landmark || null,
-    booking_date: d.date || null,
-    booking_time: d.time || d.preferred_time || null,
-    expected_hours: d.hours || null,
-    details: d,
-    status: 'awaiting_payment',
-    advance_amount: advance,
-    balance_amount: Math.max(0, price - advance),
-    source: 'whatsapp_flow',
-    flow_token: d.flow_token || null,
-  }).select().single()
 
-  if (bErr) {
-    console.error('booking insert error', bErr)
-    return
-  }
+
 
   const advance = Number(settings?.advance_amount || 200)
   const { data: booking, error: bErr } = await supabase.from('tn_bookings').insert({
