@@ -46,7 +46,7 @@ const extractStatusError = (status: any) => {
 const configuredTemplateName = (settings: any) => settings.meta_template_name || 'tn45_whatsapp_automation'
 const configuredTemplateLanguage = (settings: any) => settings.meta_template_language || 'en'
 
-const templateMsg = (to: string, settings: any) => ({
+const templateMsg = (to: string, settings: any, flowToken = `tn45-${crypto.randomUUID()}`) => ({
   messaging_product: 'whatsapp',
   recipient_type: 'individual',
   to,
@@ -63,7 +63,7 @@ const templateMsg = (to: string, settings: any) => ({
           {
             type: 'action',
             action: {
-              flow_token: `tn45-${crypto.randomUUID()}`,
+              flow_token: flowToken,
               flow_action_data: {},
             },
           },
@@ -257,21 +257,43 @@ async function sheetsFetch(url: string, init: RequestInit) {
   return { ok: res.ok, status: res.status, json }
 }
 
+const cleanSheetTitle = (tab?: string) => String(tab || 'Bookings').trim() || 'Bookings'
+const a1Sheet = (tab: string) => /^[A-Za-z0-9_]+$/.test(tab) ? tab : `'${tab.replace(/'/g, "''")}'`
+
+async function ensureSheetExists(sheetId: string, tab: string) {
+  const metaUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}?fields=sheets.properties.title`
+  const meta = await sheetsFetch(metaUrl, { method: 'GET' })
+  if (!meta.ok) return meta
+  const titles = (meta.json?.sheets || []).map((s: any) => s?.properties?.title).filter(Boolean)
+  if (titles.includes(tab)) return { ok: true, status: 200, json: { tab } }
+  const batchUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}:batchUpdate`
+  return await sheetsFetch(batchUrl, {
+    method: 'POST',
+    body: JSON.stringify({ requests: [{ addSheet: { properties: { title: tab } } }] }),
+  })
+}
+
 async function ensureSheetHeader(sheetId: string, tab: string) {
-  const range = `${tab}!A1:R1`
+  const safeTab = cleanSheetTitle(tab)
+  const exists = await ensureSheetExists(sheetId, safeTab)
+  if (!exists.ok) return exists
+  const range = `${a1Sheet(safeTab)}!A1:R1`
   const getUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}`
   const r = await sheetsFetch(getUrl, { method: 'GET' })
+  if (!r.ok) return r
   const firstRow = r.json?.values?.[0] || []
-  if (firstRow.length >= SHEET_HEADERS.length) return
+  if (firstRow.length >= SHEET_HEADERS.length) return { ok: true, status: 200, json: { header: 'exists' } }
   // Write header at A1:R1
   const putUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}?valueInputOption=USER_ENTERED`
-  await sheetsFetch(putUrl, { method: 'PUT', body: JSON.stringify({ values: [SHEET_HEADERS] }) })
+  return await sheetsFetch(putUrl, { method: 'PUT', body: JSON.stringify({ values: [SHEET_HEADERS] }) })
 }
 
 async function appendToGoogleSheet(sheetId: string, tab: string, row: (string | number)[]) {
   try {
-    await ensureSheetHeader(sheetId, tab || 'Bookings')
-    const range = `${tab || 'Bookings'}!A:R`
+    const safeTab = cleanSheetTitle(tab)
+    const header = await ensureSheetHeader(sheetId, safeTab)
+    if (!header?.ok) return { ok: false, status: header?.status || 0, raw: header?.json || header }
+    const range = `${a1Sheet(safeTab)}!A:R`
     const url = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`
     const r = await sheetsFetch(url, { method: 'POST', body: JSON.stringify({ values: [row] }) })
     if (!r.ok) console.error('sheets append failed', r.status, JSON.stringify(r.json).slice(0, 600))
@@ -283,6 +305,34 @@ async function appendToGoogleSheet(sheetId: string, tab: string, row: (string | 
 
 async function handleFlowSubmission(supabase: any, userId: string, waId: string, payload: any, settings: any, phoneNumberId: string, token: string) {
   const d = payload || {}
+  const hasSubmittedFields = Boolean(d.service || d.name || d.phone || d.transport_mode || d.transport_details || d.service_info || d.address || d.landmark || d.date || d.time || d.hours || d.addons)
+  if (!hasSubmittedFields) {
+    const { data: draft } = await supabase
+      .from('tn_bookings')
+      .select('id, details')
+      .eq('user_id', userId)
+      .eq('wa_id', waId)
+      .in('status', ['draft', 'awaiting_payment'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (draft?.id) {
+      await supabase.from('tn_bookings').update({
+        notes: 'Meta returned an empty Flow payload. The customer must submit the updated published Flow.',
+        details: { ...(draft.details || {}), empty_flow_payload: d },
+      }).eq('id', draft.id)
+    }
+    await supabase.from('tn_audit_log').insert({
+      user_id: userId,
+      actor_id: userId,
+      entity_type: 'whatsapp_flow_submission',
+      entity_id: draft?.id || null,
+      action: 'empty_payload',
+      after: { payload: d, reason: 'Meta nfm_reply did not include booking form fields. Usually caused by an old Flow/template still attached in Meta.' },
+    })
+    await sendWhatsApp(phoneNumberId, token, textMsg(waId, '⚠️ Booking details were not received from Meta. Please tap Help again and submit the updated booking form.'))
+    return
+  }
   const svcCode = String(d.service || '').trim()
   const svc = SERVICE_PRICES[svcCode] || { name: svcCode || 'Service', price: 0 }
   let addons: string[] = []
@@ -524,6 +574,7 @@ Deno.serve(async (req) => {
         const svcCode = parsed.service ? String(parsed.service) : null
         const svc = svcCode ? SERVICE_PRICES[svcCode] : null
         const advance = Number(parsed.advance || settings?.advance_amount || 200)
+        const flowToken = `tn45-${crypto.randomUUID()}`
 
         // 1) Create a draft booking row prefilled from parsed text
         const { data: cust } = await supabase
@@ -545,11 +596,13 @@ Deno.serve(async (req) => {
           transport_details: parsed.transport_details || null,
           status: 'draft',
           source: 'whatsapp_keyword',
+          flow_token: flowToken,
           details: { trigger: matchedKeyword, raw_text: text, message_id: msg.id, parsed },
         }).select().single()
 
-        // 2) Send the template that opens the Flow
-        const out = templateMsg(waId, settings)
+        // 2) Send the configured published Flow directly inside the 24-hour customer service window.
+        // This avoids old Meta templates opening an older Flow version that only returns status + flow_token.
+        const out = settings?.meta_flow_id ? flowMsg(waId, settings, flowToken) : templateMsg(waId, settings, flowToken)
         const { ok: sendOk, status: sendStatus, result: res } = await sendWhatsApp(phoneNumberId, token, out)
 
         // 3) Audit log of the entire Help trigger attempt
@@ -562,7 +615,9 @@ Deno.serve(async (req) => {
             action: sendOk && !res?.error ? 'template_sent' : 'template_failed',
             before: { wa_id: waId, keyword: matchedKeyword, raw_text: text, parsed },
             after: {
-              request: { template: configuredTemplateName(settings), language: configuredTemplateLanguage(settings) },
+              request: settings?.meta_flow_id
+                ? { mode: 'direct_flow', flow_id: settings.meta_flow_id, flow_token: flowToken }
+                : { mode: 'template_flow', template: configuredTemplateName(settings), language: configuredTemplateLanguage(settings), flow_token: flowToken },
               response: { http_status: sendStatus, ok: sendOk, body: res },
               booking_id: draftBooking?.id || null,
               booking_status: sendOk && !res?.error ? 'awaiting_payment' : 'send_failed',
