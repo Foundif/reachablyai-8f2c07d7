@@ -328,6 +328,37 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
     return
   }
 
+  const advance = Number(settings?.advance_amount || 200)
+  const { data: booking, error: bErr } = await supabase.from('tn_bookings').insert({
+    user_id: userId,
+    customer_id: customer?.id,
+    wa_id: waId,
+    service_code: svcCode,
+    service_name: svc.name,
+    price,
+    addons,
+    name: d.name || null,
+    phone: d.phone || null,
+    transport_mode: d.transport_mode || null,
+    transport_details: d.transport_details || null,
+    address: d.address || null,
+    landmark: d.landmark || null,
+    booking_date: d.date || null,
+    booking_time: d.time || d.preferred_time || null,
+    expected_hours: d.hours || null,
+    details: { ...d, service_info: d.service_info || null },
+    status: 'awaiting_payment',
+    advance_amount: advance,
+    balance_amount: Math.max(0, price - advance),
+    source: 'whatsapp_flow',
+    flow_token: d.flow_token || null,
+  }).select().single()
+
+  if (bErr) {
+    console.error('booking insert error', bErr)
+    return
+  }
+
   // 1) Razorpay payment link
   const rzp = await createRazorpayLink(advance, booking, d.name || '', d.phone || waId)
   await supabase.from('tn_payments').insert({
@@ -337,32 +368,42 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
     screenshot_url: rzp.ok ? rzp.link : null,
   })
 
-  // 2) Append to Google Sheet (best-effort)
+  // 2) Append to Google Sheet — 18 columns, exact mapping
   if (settings?.google_sheet_enabled && settings?.google_sheet_id) {
-    const sheetRes = await appendToGoogleSheet(settings.google_sheet_id, settings.google_sheet_tab || 'Bookings', [
-      new Date().toISOString(),
-      `TN45-${booking.id.slice(0,8)}`,
-      d.name || '',
-      d.phone || waId,
-      svc.name,
-      d.date || '',
-      d.time || d.preferred_time || '',
-      d.transport_mode || '',
-      d.transport_details || '',
-      d.address || '',
-      d.landmark || '',
-      d.hours || '',
-      (addons || []).join(', '),
-      price,
-      advance,
-      'awaiting_payment',
-      rzp.ok ? rzp.link : '',
-    ])
+    // Daily incrementing 4-digit counter per user
+    const todayStart = new Date(); todayStart.setUTCHours(0,0,0,0)
+    const { count } = await supabase
+      .from('tn_bookings').select('*', { count: 'exact', head: true })
+      .eq('user_id', userId).gte('created_at', todayStart.toISOString())
+    const bookingId = bookingIdFor(count || 1)
+
+    const addonText = (addons && addons.length) ? addons.join(', ') : 'None'
+    const row = [
+      istTimestamp(),                              // A Timestamp
+      bookingId,                                    // B Booking ID
+      svcCode || '',                                // C Service Selected
+      d.name || '',                                 // D Customer Name
+      d.phone || waId || '',                        // E Phone Number
+      d.transport_mode || '',                       // F Transport Mode
+      d.transport_details || '',                    // G Service Category
+      d.service_info || '',                         // H Service Info
+      d.address || '',                              // I Reporting Address
+      d.landmark || '',                             // J Nearest Landmark
+      d.date || '',                                 // K Date of Service
+      d.time || d.preferred_time || '',             // L Reporting Time
+      d.hours || '',                                // M Expected Hrs/Days
+      addonText,                                    // N Add-ons Selected
+      `Advance Pending ₹${advance}`,                // O Payment Status
+      '',                                           // P UPI Reference
+      '',                                           // Q Helper Assigned
+      'New',                                        // R Booking Status
+    ]
+    const sheetRes = await appendToGoogleSheet(settings.google_sheet_id, settings.google_sheet_tab || 'Bookings', row)
     if (!sheetRes.ok) {
       await supabase.from('tn_audit_log').insert({
         user_id: userId, actor_id: userId, entity_type: 'google_sheet_append',
         entity_id: booking.id, action: 'failed',
-        after: { error: sheetRes.error || sheetRes.raw, status: sheetRes.status || null },
+        after: { error: sheetRes.error || sheetRes.raw, status: sheetRes.status || null, row, payload: d },
       })
     }
   }
@@ -373,7 +414,7 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
     `👤 ${d.name || '-'}\n` +
     `📞 ${d.phone || '-'}\n` +
     `📅 ${d.date || '-'} • ${d.time || d.preferred_time || '-'}\n` +
-    `🚉 ${d.transport_mode || '-'} ${d.transport_details ? '• ' + d.transport_details : ''}\n` +
+    `🚉 ${d.transport_mode || '-'}${d.service_info ? ' • ' + d.service_info : (d.transport_details ? ' • ' + d.transport_details : '')}\n` +
     `📍 ${d.address || '-'}${d.landmark ? `\n🏷️ ${d.landmark}` : ''}\n` +
     (addons.length ? `➕ ${addons.join(', ')}\n` : '') +
     `\n💰 Estimated: ₹${price}\n` +
