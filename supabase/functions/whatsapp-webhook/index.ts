@@ -523,7 +523,7 @@ Deno.serve(async (req) => {
         const parsed = parseHelpText(text)
         const svcCode = parsed.service ? String(parsed.service) : null
         const svc = svcCode ? SERVICE_PRICES[svcCode] : null
-        const advance = Number(parsed.advance || settings?.advance_amount || 50)
+        const advance = Number(parsed.advance || settings?.advance_amount || 200)
 
         // 1) Create a draft booking row prefilled from parsed text
         const { data: cust } = await supabase
