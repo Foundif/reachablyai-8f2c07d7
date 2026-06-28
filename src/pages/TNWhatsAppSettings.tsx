@@ -16,7 +16,7 @@ const WEBHOOK_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-
 const TNWhatsAppSettings = () => {
   const { user } = useAuth();
   const [s, setS] = useState<any>({
-    upi_id: '', payee_name: '', qr_image_url: '', advance_amount: 50,
+    upi_id: '', payee_name: '', qr_image_url: '', advance_amount: 200,
     meta_phone_number_id: '', meta_waba_id: '', verify_token_hint: '',
     meta_template_name: '', meta_template_language: 'en_US',
   });
@@ -296,7 +296,7 @@ const TNWhatsAppSettings = () => {
           </div>
           <div>
             <Label>Advance Amount (₹)</Label>
-            <Input type="number" value={s.advance_amount || 50} onChange={e => setS({ ...s, advance_amount: Number(e.target.value) })} />
+            <Input type="number" value={s.advance_amount || 200} onChange={e => setS({ ...s, advance_amount: Number(e.target.value) })} />
           </div>
           <div>
             <Label>UPI QR Image</Label>
@@ -308,7 +308,7 @@ const TNWhatsAppSettings = () => {
         {/* Google Sheets sync */}
         <Card className="p-5 space-y-4">
           <h2 className="font-semibold text-lg">Google Sheets Sync</h2>
-          <p className="text-xs text-muted-foreground">Every WhatsApp Flow booking is appended as a new row to your sheet (date, ID, name, phone, service, date/time, transport, address, landmark, hours, add-ons, price, advance, status, Razorpay link). Make sure the Google account you connected has edit access to the sheet.</p>
+          <p className="text-xs text-muted-foreground">Every WhatsApp Flow booking is appended as a new row to your selected tab using the exact 18-column TN45 mapping. If the tab does not exist, Chatarly creates it automatically. Make sure the connected Google account has edit access to the sheet.</p>
           <div>
             <Label>Spreadsheet ID</Label>
             <Input
@@ -321,9 +321,9 @@ const TNWhatsAppSettings = () => {
           <div>
             <Label>Tab name</Label>
             <Input
-              value={s.google_sheet_tab || 'Bookings'}
+              value={s.google_sheet_tab || 'Sheet1'}
               onChange={e => setS({ ...s, google_sheet_tab: e.target.value })}
-              placeholder="Bookings"
+              placeholder="Sheet1"
             />
           </div>
           <label className="flex items-center gap-2 text-sm">
