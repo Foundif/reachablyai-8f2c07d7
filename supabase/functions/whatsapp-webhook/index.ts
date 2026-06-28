@@ -92,9 +92,10 @@ function flowMsg(to: string, settings: any, flowToken: string) {
           flow_id: settings.meta_flow_id,
           flow_cta: settings.meta_flow_cta || 'Book Now',
           flow_action: 'navigate',
+          // IMPORTANT: do NOT include `data` when there is nothing to pass.
+          // Meta rejects `data: {}` with error 131009 "data ... must be of type dynamic_object".
           flow_action_payload: {
             screen: 'SERVICE_MENU',
-            data: {},
           },
         },
       },
