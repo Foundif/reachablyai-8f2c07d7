@@ -1,15 +1,13 @@
 // Canonical WhatsApp Flow JSON for TN45 Travel Aid.
 // Copy this into Meta Flow Manager → New Flow → Paste JSON → Publish.
-// Then take the returned Flow ID and paste it in /tn-flow.
 //
-// IMPORTANT CHANGES vs old version:
-//  • PAYMENT screen now informs the user a secure Razorpay link will be sent on
-//    WhatsApp right after they submit the booking (no manual UPI typing).
-//  • BOOKING_CONFIRMED footer no longer says "Book Again" (which caused the
-//    "trapped in a loop" complaint) — it now says "Done / முடிந்தது" and
-//    cleanly closes the flow via `complete`.
-//  • Review screen "Edit Details" passes the full payload back so the user
-//    doesn't lose what they typed.
+// KEY FIXES vs older versions:
+//  • Adds the new `service_info` field (Bus No / Train No / Hospital Name / Festival Location / OS Hospital).
+//  • Renames preferred_time → `time` so the payload matches the new sheet mapping.
+//  • Advance is now ₹200 (was ₹50).
+//  • BOOKING_CONFIRMED "Done" now forwards the FULL booking payload back to the
+//    webhook (previous version only sent `{status:'submitted'}` which is why
+//    the WhatsApp summary message arrived with all fields blank).
 export const TN45_FLOW_JSON = {
   version: '7.3',
   screens: [
@@ -31,21 +29,19 @@ export const TN45_FLOW_JSON = {
               {
                 type: 'RadioButtonsGroup',
                 name: 'service',
-                label: 'Flight · Train · Bus / விமானம் · ரயில் · பேருந்து',
+                label: 'Train · Bus · Flight / ரயில் · பேருந்து · விமானம்',
                 required: true,
                 'data-source': [
-                  { id: 'terminal-railbus', title: 'In Railway/Bus Station Assist — ₹200', description: 'பேருந்து / ரயில் நிலையம் உதவி · up to 2 hrs' },
-                  { id: 'home-terminal', title: 'Home to Terminal — ₹200', description: 'வீட்டிலிருந்து விமான நிலையம் · up to 2 hrs' },
-                  { id: 'home-railbus', title: 'Home to Railway/Bus Station — ₹200', description: 'வீட்டிலிருந்து ரயில்/பேருந்து நிலையம் · up to 2 hrs' },
-                  { id: 'terminal-home', title: 'Terminal to Home — ₹200', description: 'விமான நிலையத்திலிருந்து வீடு · up to 2 hrs' },
-                  { id: 'railbus-home', title: 'Railway/Bus Station to Home — ₹200', description: 'ரயில்/பேருந்து நிலையத்திலிருந்து வீடு · up to 2 hrs' },
-                  { id: 'festivity-half', title: 'Festivity Half Day (6H) — ₹600', description: 'விழா அரை நாள் · 6 hours' },
-                  { id: 'festivity-full', title: 'Festivity Full Day (12H) — ₹1200', description: 'விழா முழு நாள் · 12 hours' },
-                  { id: 'hospital', title: 'Hospital Visit Assist (4H) — ₹500', description: 'மருத்துவமனை உதவி · Pickup, OPD, drop · +₹100/hr extra' },
+                  { id: 'terminal-railbus', title: 'In Railway/Bus Station Assist — ₹200', description: 'பேருந்து / ரயில் நிலையம் உதவி · for 1 hour' },
+                  { id: 'home-railbus', title: 'Home to seat (Railway/Bus) — ₹200', description: 'வீட்டிலிருந்து ரயில்/பேருந்து நிலையம்' },
+                  { id: 'railbus-home', title: 'Railway/Bus Station to Home — ₹200', description: 'ரயில்/பேருந்து நிலையத்திலிருந்து வீடு' },
+                  { id: 'festivity-half', title: 'Festivity Half Day (6H) — ₹600', description: 'விழா பயணம் உதவி அரை நாள்' },
+                  { id: 'festivity-full', title: 'Festivity Full Day (12H) — ₹1200', description: 'விழா பயணம் உதவி முழு நாள்' },
+                  { id: 'hospital', title: 'Hospital Visit Assist (4H) — ₹500', description: 'மருத்துவமனை உதவி · Pickup, OPD, drop' },
                   { id: 'outstation', title: 'Outstation Medical Escort — ₹1200/day', description: 'வெளியூர் மருத்துவ துணை · per day' },
                 ],
               },
-              { type: 'TextCaption', text: '➕ Add-ons: ♿ Wheelchair +₹50 · 🔋 Battery Car · 🧳 Porter (actual)\n💳 Advance: ₹50 paid via secure Razorpay link · Balance after service.' },
+              { type: 'TextCaption', text: '➕ Add-ons: ♿ Wheelchair · 🔋 Battery Car · 🧳 Porter (actual)\n💳 Advance: ₹200 via secure Razorpay link · Balance after service.' },
               {
                 type: 'Footer',
                 label: 'Continue / தொடரவும்',
@@ -74,7 +70,7 @@ export const TN45_FLOW_JSON = {
             type: 'Form',
             name: 'booking_form',
             children: [
-              { type: 'TextInput', name: 'name', label: 'Name / பெயர்', 'input-type': 'text', required: true, 'helper-text': 'Your full name / உங்கள் பெயர்' },
+              { type: 'TextInput', name: 'name', label: 'Name / பெயர்', 'input-type': 'text', required: true, 'helper-text': 'Your full name' },
               { type: 'TextInput', name: 'phone', label: 'Phone / தொலைபேசி', 'input-type': 'phone', required: true, 'helper-text': '+91 96554 51299' },
               {
                 type: 'Dropdown', name: 'transport_mode', label: 'Transport Mode / பயண வகை', required: true,
@@ -85,18 +81,28 @@ export const TN45_FLOW_JSON = {
                   { id: 'private', title: 'Private Vehicle / சொந்த வாகனம்' },
                 ],
               },
-              { type: 'TextInput', name: 'transport_details', label: 'Flight / Train / Bus Number', 'input-type': 'text', required: true, 'helper-text': 'Eg: Indigo 6E204 | 12637 Pandian Express | SETC Chennai-Madurai' },
-              { type: 'TextArea', name: 'address', label: 'Reporting Address / இடம்', required: true, 'helper-text': 'Full address / முழு முகவரி' },
-              { type: 'TextInput', name: 'landmark', label: 'Nearest Landmark / அடையாளம்', required: true, 'helper-text': 'Eg: Near Central Bus Stand, Airport Gate 2' },
-              { type: 'DatePicker', name: 'date', label: 'Date / தேதி', required: true },
-              { type: 'TextInput', name: 'preferred_time', label: 'Reporting Time / நேரம்', 'input-type': 'text', required: true, 'helper-text': 'Eg: 09:30 AM, 06:45 PM' },
-              { type: 'TextInput', name: 'hours', label: 'Expected Hours for Helper Service', 'input-type': 'text', required: true, 'helper-text': 'Eg: 2 hours, 4 hours, Full day' },
               {
-                type: 'CheckboxGroup', name: 'addons', label: '♿ Special Arrangement / சிறப்பு ஏற்பாடு', required: false,
+                type: 'Dropdown', name: 'transport_details', label: 'Service Category', required: true,
                 'data-source': [
-                  { id: 'wheelchair', title: '♿ Wheelchair +₹50' },
+                  { id: 'pickup', title: 'Pickup (Home → Station)' },
+                  { id: 'dropoff', title: 'Drop-off (Station → Home)' },
+                  { id: 'medical-trip', title: 'Medical Trip' },
+                  { id: 'festival', title: 'Festival Trip' },
+                  { id: 'os-medical', title: 'Outstation Medical' },
+                ],
+              },
+              { type: 'TextInput', name: 'service_info', label: 'Bus / Train / Hospital / Festival Name', 'input-type': 'text', required: true, 'helper-text': 'Eg: 6E204 Indigo · 12637 Pandian Exp · Rajaji Hospital Madurai' },
+              { type: 'TextArea', name: 'address', label: 'Reporting Address / இடம்', required: true, 'helper-text': 'Full address' },
+              { type: 'TextInput', name: 'landmark', label: 'Nearest Landmark / அடையாளம்', required: true, 'helper-text': 'Eg: Near Central Bus Stand' },
+              { type: 'DatePicker', name: 'date', label: 'Date of Service / தேதி', required: true },
+              { type: 'TextInput', name: 'time', label: 'Reporting Time / நேரம்', 'input-type': 'text', required: true, 'helper-text': 'Eg: 09:30 AM' },
+              { type: 'TextInput', name: 'hours', label: 'Expected Hours / Days', 'input-type': 'text', required: true, 'helper-text': 'Eg: 2 hours, Full day, 2 days' },
+              {
+                type: 'CheckboxGroup', name: 'addons', label: '♿ Special Arrangement', required: false,
+                'data-source': [
+                  { id: 'wheelchair', title: '♿ Wheelchair' },
                   { id: 'battery', title: '🔋 Battery Car' },
-                  { id: 'porter', title: '🧳 Porter (Actual Charges)' },
+                  { id: 'porter', title: '🧳 Porter (Actual)' },
                 ],
               },
               { type: 'TextCaption', text: '💰 Base fare shown on service · Extra hours +₹100/hr · After-hours (after 9 PM) +20%' },
@@ -109,8 +115,9 @@ export const TN45_FLOW_JSON = {
                   payload: {
                     service: '${data.service}', name: '${form.name}', phone: '${form.phone}',
                     transport_mode: '${form.transport_mode}', transport_details: '${form.transport_details}',
+                    service_info: '${form.service_info}',
                     address: '${form.address}', landmark: '${form.landmark}',
-                    date: '${form.date}', time: '${form.preferred_time}', hours: '${form.hours}', addons: '${form.addons}',
+                    date: '${form.date}', time: '${form.time}', hours: '${form.hours}', addons: '${form.addons}',
                   },
                 },
               },
@@ -124,16 +131,17 @@ export const TN45_FLOW_JSON = {
       title: 'Review Your Booking',
       terminal: false,
       data: {
-        service: { type: 'string', __example__: 'terminal-railbus' },
+        service: { type: 'string', __example__: 'hospital' },
         name: { type: 'string', __example__: 'Rajesh Kumar' },
         phone: { type: 'string', __example__: '+91 9XXXXXXXXX' },
-        transport_mode: { type: 'string', __example__: 'flight' },
-        transport_details: { type: 'string', __example__: '6E 204 CHN-TRZ' },
+        transport_mode: { type: 'string', __example__: 'train' },
+        transport_details: { type: 'string', __example__: 'medical-trip' },
+        service_info: { type: 'string', __example__: 'Rajaji Hospital, Madurai' },
         address: { type: 'string', __example__: '12, Anna Nagar, Trichy' },
         landmark: { type: 'string', __example__: 'Near Bus Stand' },
-        date: { type: 'string', __example__: '2026-05-31' },
-        time: { type: 'string', __example__: '09:00 AM' },
-        hours: { type: 'string', __example__: '2' },
+        date: { type: 'string', __example__: '2026-07-05' },
+        time: { type: 'string', __example__: '09:30 AM' },
+        hours: { type: 'string', __example__: '4' },
         addons: { type: 'array', items: { type: 'string' }, __example__: [] },
       },
       layout: {
@@ -141,17 +149,18 @@ export const TN45_FLOW_JSON = {
         children: [
           { type: 'TextHeading', text: 'Review Your Booking' },
           { type: 'TextCaption', text: 'பதிவை சரிபார்க்கவும் · Verify before confirming' },
-          { type: 'TextSubheading', text: 'Service / சேவை' }, { type: 'TextBody', text: '${data.service}' },
-          { type: 'TextSubheading', text: 'Name / பெயர்' }, { type: 'TextBody', text: '${data.name}' },
-          { type: 'TextSubheading', text: 'Phone / தொலைபேசி' }, { type: 'TextBody', text: '${data.phone}' },
+          { type: 'TextSubheading', text: 'Service' }, { type: 'TextBody', text: '${data.service}' },
+          { type: 'TextSubheading', text: 'Name' }, { type: 'TextBody', text: '${data.name}' },
+          { type: 'TextSubheading', text: 'Phone' }, { type: 'TextBody', text: '${data.phone}' },
           { type: 'TextSubheading', text: 'Transport Mode' }, { type: 'TextBody', text: '${data.transport_mode}' },
-          { type: 'TextSubheading', text: 'Flight / Train / Bus No.' }, { type: 'TextBody', text: '${data.transport_details}' },
-          { type: 'TextSubheading', text: 'Address / இடம்' }, { type: 'TextBody', text: '${data.address}' },
-          { type: 'TextSubheading', text: 'Landmark / அடையாளம்' }, { type: 'TextBody', text: '${data.landmark}' },
-          { type: 'TextSubheading', text: 'Date / தேதி' }, { type: 'TextBody', text: '${data.date}' },
-          { type: 'TextSubheading', text: 'Time / நேரம்' }, { type: 'TextBody', text: '${data.time}' },
-          { type: 'TextSubheading', text: 'Expected Hours' }, { type: 'TextBody', text: '${data.hours}' },
-          { type: 'TextCaption', text: 'Final fare calculated after service.\nAdvance ₹50 · Balance after service.' },
+          { type: 'TextSubheading', text: 'Service Category' }, { type: 'TextBody', text: '${data.transport_details}' },
+          { type: 'TextSubheading', text: 'Service Info' }, { type: 'TextBody', text: '${data.service_info}' },
+          { type: 'TextSubheading', text: 'Address' }, { type: 'TextBody', text: '${data.address}' },
+          { type: 'TextSubheading', text: 'Landmark' }, { type: 'TextBody', text: '${data.landmark}' },
+          { type: 'TextSubheading', text: 'Date' }, { type: 'TextBody', text: '${data.date}' },
+          { type: 'TextSubheading', text: 'Time' }, { type: 'TextBody', text: '${data.time}' },
+          { type: 'TextSubheading', text: 'Expected Hours / Days' }, { type: 'TextBody', text: '${data.hours}' },
+          { type: 'TextCaption', text: 'Final fare calculated after service.\nAdvance ₹200 · Balance after service.' },
           {
             type: 'Form', name: 'review_form',
             children: [
@@ -163,6 +172,7 @@ export const TN45_FLOW_JSON = {
                   payload: {
                     service: '${data.service}', name: '${data.name}', phone: '${data.phone}',
                     transport_mode: '${data.transport_mode}', transport_details: '${data.transport_details}',
+                    service_info: '${data.service_info}',
                     address: '${data.address}', landmark: '${data.landmark}',
                     date: '${data.date}', time: '${data.time}', hours: '${data.hours}', addons: '${data.addons}',
                   },
@@ -186,30 +196,31 @@ export const TN45_FLOW_JSON = {
       title: 'Pay Advance',
       terminal: false,
       data: {
-        service: { type: 'string', __example__: 'terminal-railbus' },
+        service: { type: 'string', __example__: 'hospital' },
         name: { type: 'string', __example__: 'Rajesh Kumar' },
         phone: { type: 'string', __example__: '+91 9XXXXXXXXX' },
-        transport_mode: { type: 'string', __example__: 'flight' },
-        transport_details: { type: 'string', __example__: '6E 204 CHN-TRZ' },
+        transport_mode: { type: 'string', __example__: 'train' },
+        transport_details: { type: 'string', __example__: 'medical-trip' },
+        service_info: { type: 'string', __example__: 'Rajaji Hospital, Madurai' },
         address: { type: 'string', __example__: '12, Anna Nagar, Trichy' },
         landmark: { type: 'string', __example__: 'Near Bus Stand' },
-        date: { type: 'string', __example__: '2026-05-31' },
-        time: { type: 'string', __example__: '09:00 AM' },
-        hours: { type: 'string', __example__: '2' },
+        date: { type: 'string', __example__: '2026-07-05' },
+        time: { type: 'string', __example__: '09:30 AM' },
+        hours: { type: 'string', __example__: '4' },
         addons: { type: 'array', items: { type: 'string' }, __example__: [] },
       },
       layout: {
         type: 'SingleColumnLayout',
         children: [
-          { type: 'TextHeading', text: '💳 Pay Advance ₹50' },
+          { type: 'TextHeading', text: '💳 Pay Advance ₹200' },
           { type: 'TextCaption', text: 'Booking will be confirmed after payment.' },
-          { type: 'TextBody', text: '🔒 After you tap Confirm Booking below, we will send you a secure *Razorpay payment link* on WhatsApp instantly.' },
-          { type: 'TextBody', text: 'You can pay with any UPI app (GPay / PhonePe / Paytm), debit card, credit card or net banking through that link.' },
+          { type: 'TextBody', text: '🔒 After you tap Confirm Booking below, a secure *Razorpay payment link* arrives on WhatsApp instantly.' },
+          { type: 'TextBody', text: 'Pay with any UPI app (GPay / PhonePe / Paytm), debit / credit card or net banking.' },
           { type: 'TextBody', text: '━━━━━━━━━━━━━━━━━━' },
           { type: 'TextSubheading', text: 'Payment Options' },
-          { type: 'TextBody', text: '💳 Razorpay link (UPI / card / netbanking) — recommended' },
-          { type: 'TextBody', text: '💵 Cash to helper — pay balance after service' },
-          { type: 'TextCaption', text: 'Amount: ₹50 advance · Balance after service.' },
+          { type: 'TextBody', text: '💳 Razorpay link — recommended' },
+          { type: 'TextBody', text: '💵 Cash to helper — for balance after service' },
+          { type: 'TextCaption', text: 'Amount: ₹200 advance · Balance after service.' },
           {
             type: 'Form', name: 'payment_form',
             children: [
@@ -221,6 +232,7 @@ export const TN45_FLOW_JSON = {
                   payload: {
                     service: '${data.service}', name: '${data.name}', phone: '${data.phone}',
                     transport_mode: '${data.transport_mode}', transport_details: '${data.transport_details}',
+                    service_info: '${data.service_info}',
                     address: '${data.address}', landmark: '${data.landmark}',
                     date: '${data.date}', time: '${data.time}', hours: '${data.hours}', addons: '${data.addons}',
                   },
@@ -237,16 +249,17 @@ export const TN45_FLOW_JSON = {
       terminal: true,
       success: true,
       data: {
-        service: { type: 'string', __example__: 'terminal-railbus' },
+        service: { type: 'string', __example__: 'hospital' },
         name: { type: 'string', __example__: 'Rajesh Kumar' },
         phone: { type: 'string', __example__: '+91 9XXXXXXXXX' },
-        transport_mode: { type: 'string', __example__: 'flight' },
-        transport_details: { type: 'string', __example__: '6E 204 CHN-TRZ' },
+        transport_mode: { type: 'string', __example__: 'train' },
+        transport_details: { type: 'string', __example__: 'medical-trip' },
+        service_info: { type: 'string', __example__: 'Rajaji Hospital, Madurai' },
         address: { type: 'string', __example__: '12, Anna Nagar, Trichy' },
         landmark: { type: 'string', __example__: 'Near Bus Stand' },
-        date: { type: 'string', __example__: '2026-05-31' },
-        time: { type: 'string', __example__: '09:00 AM' },
-        hours: { type: 'string', __example__: '2' },
+        date: { type: 'string', __example__: '2026-07-05' },
+        time: { type: 'string', __example__: '09:30 AM' },
+        hours: { type: 'string', __example__: '4' },
         addons: { type: 'array', items: { type: 'string' }, __example__: [] },
       },
       layout: {
@@ -254,24 +267,37 @@ export const TN45_FLOW_JSON = {
         children: [
           { type: 'TextHeading', text: '✅ Booking Submitted!' },
           { type: 'TextCaption', text: 'பதிவு பெறப்பட்டது!' },
-          { type: 'TextSubheading', text: 'Service / சேவை' }, { type: 'TextBody', text: '${data.service}' },
-          { type: 'TextSubheading', text: 'Name / பெயர்' }, { type: 'TextBody', text: '${data.name}' },
+          { type: 'TextSubheading', text: 'Service' }, { type: 'TextBody', text: '${data.service}' },
+          { type: 'TextSubheading', text: 'Name' }, { type: 'TextBody', text: '${data.name}' },
           { type: 'TextSubheading', text: 'Date & Time' }, { type: 'TextBody', text: '${data.date} · ${data.time}' },
-          { type: 'TextSubheading', text: 'Transport' }, { type: 'TextBody', text: '${data.transport_mode} — ${data.transport_details}' },
+          { type: 'TextSubheading', text: 'Transport' }, { type: 'TextBody', text: '${data.transport_mode} — ${data.service_info}' },
           { type: 'TextSubheading', text: 'Pickup / இடம்' }, { type: 'TextBody', text: '${data.address}' },
           { type: 'TextHeading', text: '━━━━━━━━━━━━━' },
-          { type: 'TextSubheading', text: '💳 Next step: Pay Advance' },
-          { type: 'TextBody', text: 'A Razorpay payment link for ₹50 will arrive on this chat in a few seconds. Tap it to pay and confirm your booking.' },
+          { type: 'TextSubheading', text: '💳 Next step: Pay Advance ₹200' },
+          { type: 'TextBody', text: 'A Razorpay payment link for ₹200 will arrive on this chat in a few seconds.' },
           { type: 'TextBody', text: 'Balance is collected by the helper after service.' },
           { type: 'TextHeading', text: '━━━━━━━━━━━━━' },
-          { type: 'TextCaption', text: '⚠️ Helper assigned 1 hour before service.\nஉதவியாளர் 1 மணி நேரம் முன்பு நியமிக்கப்படுவார்.' },
+          { type: 'TextCaption', text: '⚠️ Helper assigned 1 hour before service.' },
           { type: 'TextCaption', text: '🔒 All communication through TN45 only.' },
           {
             type: 'Form', name: 'confirmed_form',
             children: [
               {
                 type: 'Footer', label: 'Done / முடிந்தது',
-                'on-click-action': { name: 'complete', payload: { status: 'submitted' } },
+                // IMPORTANT: forward ALL fields so the webhook receives the full
+                // submission — previously only {status:'submitted'} was sent,
+                // which is why the WhatsApp summary message was empty.
+                'on-click-action': {
+                  name: 'complete',
+                  payload: {
+                    status: 'submitted',
+                    service: '${data.service}', name: '${data.name}', phone: '${data.phone}',
+                    transport_mode: '${data.transport_mode}', transport_details: '${data.transport_details}',
+                    service_info: '${data.service_info}',
+                    address: '${data.address}', landmark: '${data.landmark}',
+                    date: '${data.date}', time: '${data.time}', hours: '${data.hours}', addons: '${data.addons}',
+                  },
+                },
               },
             ],
           },
