@@ -321,7 +321,7 @@ const TNWhatsAppSettings = () => {
           <div>
             <Label>Tab name</Label>
             <Input
-              value={s.google_sheet_tab || 'Bookings'}
+              value={s.google_sheet_tab || 'Sheet1'}
               onChange={e => setS({ ...s, google_sheet_tab: e.target.value })}
               placeholder="Sheet1"
             />
