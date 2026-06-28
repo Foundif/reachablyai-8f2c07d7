@@ -221,25 +221,61 @@ async function createRazorpayLink(amount: number, booking: any, customerName: st
   }
 }
 
-async function appendToGoogleSheet(sheetId: string, tab: string, row: (string | number)[]) {
+const SHEET_HEADERS = [
+  'Timestamp','Booking ID','Service Selected','Customer Name','Phone Number',
+  'Transport Mode','Service Category','Service Info','Reporting Address',
+  'Nearest Landmark','Date of Service','Reporting Time','Expected Hrs/Days',
+  'Add-ons Selected','Payment Status','UPI Reference','Helper Assigned','Booking Status',
+]
+
+function istTimestamp() {
+  // IST = UTC + 5:30
+  const d = new Date(Date.now() + 5.5 * 60 * 60 * 1000)
+  return d.toISOString().replace('T', ' ').slice(0, 19) + ' IST'
+}
+
+function bookingIdFor(seq: number) {
+  const d = new Date(Date.now() + 5.5 * 60 * 60 * 1000)
+  const ymd = `${d.getUTCFullYear()}${String(d.getUTCMonth()+1).padStart(2,'0')}${String(d.getUTCDate()).padStart(2,'0')}`
+  return `TN45-${ymd}-${String(seq).padStart(4,'0')}`
+}
+
+async function sheetsFetch(url: string, init: RequestInit) {
   const lovableKey = Deno.env.get('LOVABLE_API_KEY')
   const connKey = Deno.env.get('GOOGLE_SHEETS_API_KEY')
-  if (!lovableKey || !connKey) return { ok: false, error: 'Google Sheets connection missing' }
+  if (!lovableKey || !connKey) return { ok: false, status: 0, json: { error: 'Google Sheets connection missing' } }
+  const res = await fetch(url, {
+    ...init,
+    headers: {
+      ...(init.headers || {}),
+      Authorization: `Bearer ${lovableKey}`,
+      'X-Connection-Api-Key': connKey,
+      'Content-Type': 'application/json',
+    },
+  })
+  const json = await res.json().catch(() => ({}))
+  return { ok: res.ok, status: res.status, json }
+}
+
+async function ensureSheetHeader(sheetId: string, tab: string) {
+  const range = `${tab}!A1:R1`
+  const getUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}`
+  const r = await sheetsFetch(getUrl, { method: 'GET' })
+  const firstRow = r.json?.values?.[0] || []
+  if (firstRow.length >= SHEET_HEADERS.length) return
+  // Write header at A1:R1
+  const putUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}?valueInputOption=USER_ENTERED`
+  await sheetsFetch(putUrl, { method: 'PUT', body: JSON.stringify({ values: [SHEET_HEADERS] }) })
+}
+
+async function appendToGoogleSheet(sheetId: string, tab: string, row: (string | number)[]) {
   try {
-    const range = encodeURIComponent(`${tab || 'Bookings'}!A:Z`)
+    await ensureSheetHeader(sheetId, tab || 'Bookings')
+    const range = `${tab || 'Bookings'}!A:R`
     const url = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${lovableKey}`,
-        'X-Connection-Api-Key': connKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ values: [row] }),
-    })
-    const json = await res.json().catch(() => ({}))
-    if (!res.ok) console.error('sheets append failed', res.status, JSON.stringify(json).slice(0, 600))
-    return { ok: res.ok, status: res.status, raw: json }
+    const r = await sheetsFetch(url, { method: 'POST', body: JSON.stringify({ values: [row] }) })
+    if (!r.ok) console.error('sheets append failed', r.status, JSON.stringify(r.json).slice(0, 600))
+    return { ok: r.ok, status: r.status, raw: r.json }
   } catch (e: any) {
     return { ok: false, error: e?.message || String(e) }
   }
