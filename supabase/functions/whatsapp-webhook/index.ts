@@ -221,25 +221,61 @@ async function createRazorpayLink(amount: number, booking: any, customerName: st
   }
 }
 
-async function appendToGoogleSheet(sheetId: string, tab: string, row: (string | number)[]) {
+const SHEET_HEADERS = [
+  'Timestamp','Booking ID','Service Selected','Customer Name','Phone Number',
+  'Transport Mode','Service Category','Service Info','Reporting Address',
+  'Nearest Landmark','Date of Service','Reporting Time','Expected Hrs/Days',
+  'Add-ons Selected','Payment Status','UPI Reference','Helper Assigned','Booking Status',
+]
+
+function istTimestamp() {
+  // IST = UTC + 5:30
+  const d = new Date(Date.now() + 5.5 * 60 * 60 * 1000)
+  return d.toISOString().replace('T', ' ').slice(0, 19) + ' IST'
+}
+
+function bookingIdFor(seq: number) {
+  const d = new Date(Date.now() + 5.5 * 60 * 60 * 1000)
+  const ymd = `${d.getUTCFullYear()}${String(d.getUTCMonth()+1).padStart(2,'0')}${String(d.getUTCDate()).padStart(2,'0')}`
+  return `TN45-${ymd}-${String(seq).padStart(4,'0')}`
+}
+
+async function sheetsFetch(url: string, init: RequestInit) {
   const lovableKey = Deno.env.get('LOVABLE_API_KEY')
   const connKey = Deno.env.get('GOOGLE_SHEETS_API_KEY')
-  if (!lovableKey || !connKey) return { ok: false, error: 'Google Sheets connection missing' }
+  if (!lovableKey || !connKey) return { ok: false, status: 0, json: { error: 'Google Sheets connection missing' } }
+  const res = await fetch(url, {
+    ...init,
+    headers: {
+      ...(init.headers || {}),
+      Authorization: `Bearer ${lovableKey}`,
+      'X-Connection-Api-Key': connKey,
+      'Content-Type': 'application/json',
+    },
+  })
+  const json = await res.json().catch(() => ({}))
+  return { ok: res.ok, status: res.status, json }
+}
+
+async function ensureSheetHeader(sheetId: string, tab: string) {
+  const range = `${tab}!A1:R1`
+  const getUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}`
+  const r = await sheetsFetch(getUrl, { method: 'GET' })
+  const firstRow = r.json?.values?.[0] || []
+  if (firstRow.length >= SHEET_HEADERS.length) return
+  // Write header at A1:R1
+  const putUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}?valueInputOption=USER_ENTERED`
+  await sheetsFetch(putUrl, { method: 'PUT', body: JSON.stringify({ values: [SHEET_HEADERS] }) })
+}
+
+async function appendToGoogleSheet(sheetId: string, tab: string, row: (string | number)[]) {
   try {
-    const range = encodeURIComponent(`${tab || 'Bookings'}!A:Z`)
+    await ensureSheetHeader(sheetId, tab || 'Bookings')
+    const range = `${tab || 'Bookings'}!A:R`
     const url = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${lovableKey}`,
-        'X-Connection-Api-Key': connKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ values: [row] }),
-    })
-    const json = await res.json().catch(() => ({}))
-    if (!res.ok) console.error('sheets append failed', res.status, JSON.stringify(json).slice(0, 600))
-    return { ok: res.ok, status: res.status, raw: json }
+    const r = await sheetsFetch(url, { method: 'POST', body: JSON.stringify({ values: [row] }) })
+    if (!r.ok) console.error('sheets append failed', r.status, JSON.stringify(r.json).slice(0, 600))
+    return { ok: r.ok, status: r.status, raw: r.json }
   } catch (e: any) {
     return { ok: false, error: e?.message || String(e) }
   }
@@ -261,7 +297,10 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
     .upsert({ user_id: userId, wa_id: waId, name: d.name || null }, { onConflict: 'user_id,wa_id' })
     .select().single()
 
-  const advance = Number(settings?.advance_amount || 50)
+
+
+
+  const advance = Number(settings?.advance_amount || 200)
   const { data: booking, error: bErr } = await supabase.from('tn_bookings').insert({
     user_id: userId,
     customer_id: customer?.id,
@@ -279,7 +318,7 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
     booking_date: d.date || null,
     booking_time: d.time || d.preferred_time || null,
     expected_hours: d.hours || null,
-    details: d,
+    details: { ...d, service_info: d.service_info || null },
     status: 'awaiting_payment',
     advance_amount: advance,
     balance_amount: Math.max(0, price - advance),
@@ -301,32 +340,42 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
     screenshot_url: rzp.ok ? rzp.link : null,
   })
 
-  // 2) Append to Google Sheet (best-effort)
+  // 2) Append to Google Sheet — 18 columns, exact mapping
   if (settings?.google_sheet_enabled && settings?.google_sheet_id) {
-    const sheetRes = await appendToGoogleSheet(settings.google_sheet_id, settings.google_sheet_tab || 'Bookings', [
-      new Date().toISOString(),
-      `TN45-${booking.id.slice(0,8)}`,
-      d.name || '',
-      d.phone || waId,
-      svc.name,
-      d.date || '',
-      d.time || d.preferred_time || '',
-      d.transport_mode || '',
-      d.transport_details || '',
-      d.address || '',
-      d.landmark || '',
-      d.hours || '',
-      (addons || []).join(', '),
-      price,
-      advance,
-      'awaiting_payment',
-      rzp.ok ? rzp.link : '',
-    ])
+    // Daily incrementing 4-digit counter per user
+    const todayStart = new Date(); todayStart.setUTCHours(0,0,0,0)
+    const { count } = await supabase
+      .from('tn_bookings').select('*', { count: 'exact', head: true })
+      .eq('user_id', userId).gte('created_at', todayStart.toISOString())
+    const bookingId = bookingIdFor(count || 1)
+
+    const addonText = (addons && addons.length) ? addons.join(', ') : 'None'
+    const row = [
+      istTimestamp(),                              // A Timestamp
+      bookingId,                                    // B Booking ID
+      svcCode || '',                                // C Service Selected
+      d.name || '',                                 // D Customer Name
+      d.phone || waId || '',                        // E Phone Number
+      d.transport_mode || '',                       // F Transport Mode
+      d.transport_details || '',                    // G Service Category
+      d.service_info || '',                         // H Service Info
+      d.address || '',                              // I Reporting Address
+      d.landmark || '',                             // J Nearest Landmark
+      d.date || '',                                 // K Date of Service
+      d.time || d.preferred_time || '',             // L Reporting Time
+      d.hours || '',                                // M Expected Hrs/Days
+      addonText,                                    // N Add-ons Selected
+      `Advance Pending ₹${advance}`,                // O Payment Status
+      '',                                           // P UPI Reference
+      '',                                           // Q Helper Assigned
+      'New',                                        // R Booking Status
+    ]
+    const sheetRes = await appendToGoogleSheet(settings.google_sheet_id, settings.google_sheet_tab || 'Bookings', row)
     if (!sheetRes.ok) {
       await supabase.from('tn_audit_log').insert({
         user_id: userId, actor_id: userId, entity_type: 'google_sheet_append',
         entity_id: booking.id, action: 'failed',
-        after: { error: sheetRes.error || sheetRes.raw, status: sheetRes.status || null },
+        after: { error: sheetRes.error || sheetRes.raw, status: sheetRes.status || null, row, payload: d },
       })
     }
   }
@@ -337,7 +386,7 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
     `👤 ${d.name || '-'}\n` +
     `📞 ${d.phone || '-'}\n` +
     `📅 ${d.date || '-'} • ${d.time || d.preferred_time || '-'}\n` +
-    `🚉 ${d.transport_mode || '-'} ${d.transport_details ? '• ' + d.transport_details : ''}\n` +
+    `🚉 ${d.transport_mode || '-'}${d.service_info ? ' • ' + d.service_info : (d.transport_details ? ' • ' + d.transport_details : '')}\n` +
     `📍 ${d.address || '-'}${d.landmark ? `\n🏷️ ${d.landmark}` : ''}\n` +
     (addons.length ? `➕ ${addons.join(', ')}\n` : '') +
     `\n💰 Estimated: ₹${price}\n` +
@@ -474,7 +523,7 @@ Deno.serve(async (req) => {
         const parsed = parseHelpText(text)
         const svcCode = parsed.service ? String(parsed.service) : null
         const svc = svcCode ? SERVICE_PRICES[svcCode] : null
-        const advance = Number(parsed.advance || settings?.advance_amount || 50)
+        const advance = Number(parsed.advance || settings?.advance_amount || 200)
 
         // 1) Create a draft booking row prefilled from parsed text
         const { data: cust } = await supabase
