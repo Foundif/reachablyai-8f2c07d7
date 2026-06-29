@@ -22,112 +22,144 @@ const loadRazorpay = () => new Promise<boolean>((resolve) => {
   document.body.appendChild(s);
 });
 
-type PlanId = 'starter' | 'growth' | 'professional' | 'enterprise';
+type PlanId = 'starter' | 'growth' | 'pro';
 
-const PLANS: {
+interface Plan {
   id: PlanId;
   name: string;
   tagline: string;
-  monthly: number | null;
-  yearly: number | null;
+  setupFee: number;
+  monthly: number;
+  yearly: number;
+  firstMonthTotal: number;
+  badge?: string;
+  badgeIcon?: any;
   icon: any;
   popular?: boolean;
-  highlight?: string;
-  features: string[];
-  cta: string;
-}[] = [
+  features: { label: string; included: boolean }[];
+}
+
+const PLANS: Plan[] = [
   {
     id: 'starter',
     name: 'Starter',
-    tagline: 'For new travel desks getting started on WhatsApp',
-    monthly: 2100,
-    yearly: 21000,
+    tagline: 'Solo operators, single WhatsApp number, basic booking flow + sheet sync',
+    setupFee: 4500,
+    monthly: 2999,
+    yearly: 29999,
+    firstMonthTotal: 7499,
+    badge: 'Your launch price',
+    badgeIcon: Star,
     icon: Zap,
     features: [
-      '1 WhatsApp Business number',
-      'Basic automation flows',
-      'Lead capture forms',
-      'Auto replies (business hours)',
-      'Customer database',
-      'Booking enquiry tracking',
-      'Basic analytics',
-      'Email support',
+      { label: 'WhatsApp Flow (5 screens)', included: true },
+      { label: 'Google Sheets sync (21 columns)', included: true },
+      { label: 'IST timestamp + Booking ID', included: true },
+      { label: 'Audit log — no data loss', included: true },
+      { label: '1 Meta Flow deployment', included: true },
+      { label: '1 flow edit / month', included: true },
+      { label: 'Email support (48 hrs)', included: true },
+      { label: 'WhatsApp summary to customer', included: false },
+      { label: 'Admin booking alerts', included: false },
+      { label: 'Admin dashboard', included: false },
     ],
-    cta: 'Start 7-day free trial',
   },
   {
     id: 'growth',
     name: 'Growth',
-    tagline: 'Most loved by tour operators & taxi services',
-    monthly: 4500,
-    yearly: 45000,
+    tagline: 'Growing services, daily bookings, WhatsApp automation for customer + admin',
+    setupFee: 7500,
+    monthly: 4999,
+    yearly: 49999,
+    firstMonthTotal: 12499,
+    badge: 'Most popular',
+    badgeIcon: Crown,
     icon: Star,
     popular: true,
-    highlight: 'Most Popular',
     features: [
-      'Everything in Starter',
-      'Unlimited automation flows',
-      'Lead pipeline CRM',
-      'Follow-up automation',
-      'Team access (3 users)',
-      'Broadcast campaigns',
-      'Advanced analytics',
-      'Priority support',
+      { label: 'Everything in Starter', included: true },
+      { label: 'WhatsApp summary to customer', included: true },
+      { label: 'Admin alert on every booking', included: true },
+      { label: 'Payment status tracking', included: true },
+      { label: '3 flow edits / month', included: true },
+      { label: 'WhatsApp priority support (12 hrs)', included: true },
+      { label: 'Admin dashboard', included: false },
+      { label: 'Helper assignment alerts', included: false },
+      { label: 'Multi-number support', included: false },
     ],
-    cta: 'Start 7-day free trial',
   },
   {
-    id: 'professional',
-    name: 'Professional',
-    tagline: 'For multi-branch agencies & DMC operators',
-    monthly: 8500,
-    yearly: 85000,
+    id: 'pro',
+    name: 'Pro',
+    tagline: 'High-volume, multiple helpers, full admin control + booking status automation',
+    setupFee: 15000,
+    monthly: 9999,
+    yearly: 99999,
+    firstMonthTotal: 24999,
+    badge: 'Full operations',
+    badgeIcon: Crown,
     icon: Crown,
     features: [
-      'Everything in Growth',
-      'AI-powered responses',
-      'Multi-agent shared inbox',
-      'Custom workflow builder',
-      'API integrations',
-      'Unlimited contacts',
-      'White-label support',
-      'Dedicated success manager',
+      { label: 'Everything in Growth', included: true },
+      { label: 'Admin web dashboard', included: true },
+      { label: 'Helper assignment from dashboard', included: true },
+      { label: 'Booking status updates to customer', included: true },
+      { label: 'Multi-number / multi-location', included: true },
+      { label: 'Unlimited flow edits', included: true },
+      { label: 'Monthly analytics report', included: true },
+      { label: 'Dedicated account manager (4 hrs)', included: true },
     ],
-    cta: 'Start 7-day free trial',
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    tagline: 'Custom infrastructure for OTAs & travel chains',
-    monthly: null,
-    yearly: null,
-    icon: Building2,
-    features: [
-      'Custom development',
-      'Custom integrations',
-      'Dedicated infrastructure',
-      'SLA-backed uptime',
-      'Account manager',
-      'Onboarding & training',
-    ],
-    cta: 'Book a demo',
   },
 ];
 
-const COMPARE_ROWS: { label: string; values: (string | boolean)[] }[] = [
-  { label: 'WhatsApp Business numbers', values: ['1', '2', '5', 'Unlimited'] },
-  { label: 'Automation flows', values: ['Basic', 'Unlimited', 'Unlimited', 'Unlimited'] },
-  { label: 'Team members', values: ['1', '3', '10', 'Unlimited'] },
-  { label: 'Contacts', values: ['2,000', '10,000', 'Unlimited', 'Unlimited'] },
-  { label: 'Lead pipeline CRM', values: [false, true, true, true] },
-  { label: 'Broadcast campaigns', values: [false, true, true, true] },
-  { label: 'AI-powered responses', values: [false, false, true, true] },
-  { label: 'Custom workflow builder', values: [false, false, true, true] },
-  { label: 'API access', values: [false, false, true, true] },
-  { label: 'White-label', values: [false, false, true, true] },
-  { label: 'Priority support', values: [false, true, true, true] },
-  { label: 'Dedicated manager', values: [false, false, true, true] },
-  { label: 'SLA & uptime guarantee', values: [false, false, false, true] },
+const COMPARE_SECTIONS: { title: string; rows: { label: string; values: (string | boolean)[] }[] }[] = [
+  {
+    title: 'Pricing breakdown',
+    rows: [
+      { label: 'One-time setup fee', values: ['₹4,500', '₹7,500', '₹15,000'] },
+      { label: 'Monthly retainer', values: ['₹2,999', '₹4,999', '₹9,999'] },
+      { label: 'Annual retainer (save ~2 months)', values: ['₹29,999', '₹49,999', '₹99,999'] },
+      { label: 'First month all-in', values: ['₹7,499', '₹12,499', '₹24,999'] },
+    ],
+  },
+  {
+    title: 'WhatsApp Flow',
+    rows: [
+      { label: '5-screen booking flow', values: [true, true, true] },
+      { label: 'Service category dropdown', values: [true, true, true] },
+      { label: 'Add-ons (wheelchair, porter)', values: [true, true, true] },
+      { label: 'Flow edits per month', values: ['1', '3', 'Unlimited'] },
+      { label: 'Meta Flow deployment', values: ['1 number', '1 number', 'Multi-number'] },
+    ],
+  },
+  {
+    title: 'Google Sheets data',
+    rows: [
+      { label: 'Auto sync on booking submit', values: [true, true, true] },
+      { label: '21-column data capture', values: [true, true, true] },
+      { label: 'IST timestamp + auto Booking ID', values: [true, true, true] },
+      { label: 'Audit log — zero data loss', values: [true, true, true] },
+      { label: 'Payment status column', values: ['Manual', 'Manual', 'Auto-update'] },
+    ],
+  },
+  {
+    title: 'WhatsApp automation',
+    rows: [
+      { label: 'Booking summary to customer', values: [false, true, true] },
+      { label: 'Admin alert on new booking', values: [false, true, true] },
+      { label: 'Helper assigned notification', values: [false, false, true] },
+      { label: 'Booking status updates to customer', values: [false, false, true] },
+    ],
+  },
+  {
+    title: 'Support',
+    rows: [
+      { label: 'Support channel', values: ['Email', 'WhatsApp', 'Dedicated manager'] },
+      { label: 'Response time', values: ['48 hrs', '12 hrs', '4 hrs'] },
+      { label: 'Admin dashboard', values: [false, false, true] },
+      { label: 'Monthly analytics report', values: [false, false, true] },
+    ],
+  },
 ];
 
 const formatINR = (n: number) => `₹${n.toLocaleString('en-IN')}`;
