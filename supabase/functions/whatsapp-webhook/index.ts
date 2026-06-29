@@ -354,6 +354,15 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
 
 
   const advance = Number(settings?.advance_amount || 200)
+  const balance = Math.max(0, price - advance)
+
+  // Compute a stable, human-readable booking code shared by WhatsApp + Google Sheet
+  const todayStart = new Date(); todayStart.setUTCHours(0,0,0,0)
+  const { count: todayCount } = await supabase
+    .from('tn_bookings').select('*', { count: 'exact', head: true })
+    .eq('user_id', userId).gte('created_at', todayStart.toISOString())
+  const bookingCode = bookingIdFor((todayCount || 0) + 1)
+
   const { data: booking, error: bErr } = await supabase.from('tn_bookings').insert({
     user_id: userId,
     customer_id: customer?.id,
@@ -374,9 +383,10 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
     details: { ...d, service_info: d.service_info || null },
     status: 'awaiting_payment',
     advance_amount: advance,
-    balance_amount: Math.max(0, price - advance),
+    balance_amount: balance,
     source: 'whatsapp_flow',
     flow_token: d.flow_token || null,
+    booking_code: bookingCode,
   }).select().single()
 
   if (bErr) {
@@ -393,20 +403,13 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
     screenshot_url: rzp.ok ? rzp.link : null,
   })
 
-  // 2) Append to Google Sheet — 18 columns, exact mapping
+  // 2) Append to Google Sheet — 21 columns, same booking code as WhatsApp summary
   if (settings?.google_sheet_enabled && settings?.google_sheet_id) {
-    // Daily incrementing 4-digit counter per user
-    const todayStart = new Date(); todayStart.setUTCHours(0,0,0,0)
-    const { count } = await supabase
-      .from('tn_bookings').select('*', { count: 'exact', head: true })
-      .eq('user_id', userId).gte('created_at', todayStart.toISOString())
-    const bookingId = bookingIdFor(count || 1)
-
     const addonText = (addons && addons.length) ? addons.join(', ') : 'None'
     const row = [
       istTimestamp(),                              // A Timestamp
-      bookingId,                                    // B Booking ID
-      svcCode || '',                                // C Service Selected
+      bookingCode,                                  // B Booking ID (same as WhatsApp)
+      svc.name || svcCode || '',                    // C Service Selected
       d.name || '',                                 // D Customer Name
       d.phone || waId || '',                        // E Phone Number
       d.transport_mode || '',                       // F Transport Mode
@@ -418,10 +421,13 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
       d.time || d.preferred_time || '',             // L Reporting Time
       d.hours || '',                                // M Expected Hrs/Days
       addonText,                                    // N Add-ons Selected
-      `Advance Pending ₹${advance}`,                // O Payment Status
-      '',                                           // P UPI Reference
-      '',                                           // Q Helper Assigned
-      'New',                                        // R Booking Status
+      `₹${price}`,                                  // O Estimate
+      `₹${advance}`,                                // P Advance
+      `₹${balance}`,                                // Q Balance
+      `Advance Pending ₹${advance}`,                // R Payment Status
+      '',                                           // S UPI Reference
+      '',                                           // T Helper Assigned
+      'New',                                        // U Booking Status
     ]
     const sheetRes = await appendToGoogleSheet(settings.google_sheet_id, settings.google_sheet_tab || 'Bookings', row)
     if (!sheetRes.ok) {
