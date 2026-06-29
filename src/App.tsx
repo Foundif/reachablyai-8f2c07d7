@@ -54,19 +54,6 @@ import BookingDetail from "./pages/BookingDetail";
 
 const queryClient = new QueryClient();
 
-const ALLOWED_WHEN_EXPIRED = new Set(['/pricing', '/profile', '/billing', '/privacy', '/terms']);
-
-const isTrialExpired = (profile: any): boolean => {
-  if (!profile) return false;
-  const status = profile.subscription_status;
-  if (status && ['pro', 'growth', 'professional', 'enterprise', 'active'].includes(status)) return false;
-  const end = profile.trial_end_date
-    ? new Date(profile.trial_end_date).getTime()
-    : (profile.created_at ? new Date(profile.created_at).getTime() + 7 * 86400000 : null);
-  if (!end) return false;
-  return Date.now() >= end;
-};
-
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, profile } = useAuth();
   if (loading) {
@@ -78,9 +65,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
   if (!user) return <Navigate to="/auth" replace />;
   if (profile && !profile.onboarding_completed) return <Navigate to="/onboarding" replace />;
-  if (isTrialExpired(profile) && !ALLOWED_WHEN_EXPIRED.has(window.location.pathname)) {
-    return <Navigate to="/pricing" replace />;
-  }
+  // No trial redirect — non-subscribed users see the read-only Upgrade modal everywhere.
   return (<><TrialExpiredModal />{children}</>);
 };
 

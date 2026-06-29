@@ -113,7 +113,7 @@ const AppSidebar = () => {
           ))}
         </nav>
 
-        {/* Trial / Upgrade CTA */}
+        {/* Upgrade CTA */}
         {!collapsed && (
           <div className="relative mx-3 mb-2 mt-1">
             <TrialCard />

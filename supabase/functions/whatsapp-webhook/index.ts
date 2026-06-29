@@ -226,8 +226,10 @@ const SHEET_HEADERS = [
   'Timestamp','Booking ID','Service Selected','Customer Name','Phone Number',
   'Transport Mode','Service Category','Service Info','Reporting Address',
   'Nearest Landmark','Date of Service','Reporting Time','Expected Hrs/Days',
-  'Add-ons Selected','Payment Status','UPI Reference','Helper Assigned','Booking Status',
+  'Add-ons Selected','Estimate ₹','Advance ₹','Balance ₹',
+  'Payment Status','UPI Reference','Helper Assigned','Booking Status',
 ]
+// 21 columns -> A:U
 
 function istTimestamp() {
   // IST = UTC + 5:30
@@ -278,13 +280,13 @@ async function ensureSheetHeader(sheetId: string, tab: string) {
   const safeTab = cleanSheetTitle(tab)
   const exists = await ensureSheetExists(sheetId, safeTab)
   if (!exists.ok) return exists
-  const range = `${a1Sheet(safeTab)}!A1:R1`
+  const range = `${a1Sheet(safeTab)}!A1:U1`
   const getUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}`
   const r = await sheetsFetch(getUrl, { method: 'GET' })
   if (!r.ok) return r
   const firstRow = r.json?.values?.[0] || []
   if (firstRow.length >= SHEET_HEADERS.length) return { ok: true, status: 200, json: { header: 'exists' } }
-  // Write header at A1:R1
+  // Write/overwrite header at A1:U1
   const putUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}?valueInputOption=USER_ENTERED`
   return await sheetsFetch(putUrl, { method: 'PUT', body: JSON.stringify({ values: [SHEET_HEADERS] }) })
 }
@@ -294,7 +296,7 @@ async function appendToGoogleSheet(sheetId: string, tab: string, row: (string | 
     const safeTab = cleanSheetTitle(tab)
     const header = await ensureSheetHeader(sheetId, safeTab)
     if (!header?.ok) return { ok: false, status: header?.status || 0, raw: header?.json || header }
-    const range = `${a1Sheet(safeTab)}!A:R`
+    const range = `${a1Sheet(safeTab)}!A:U`
     const url = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`
     const r = await sheetsFetch(url, { method: 'POST', body: JSON.stringify({ values: [row] }) })
     if (!r.ok) console.error('sheets append failed', r.status, JSON.stringify(r.json).slice(0, 600))
@@ -352,6 +354,15 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
 
 
   const advance = Number(settings?.advance_amount || 200)
+  const balance = Math.max(0, price - advance)
+
+  // Compute a stable, human-readable booking code shared by WhatsApp + Google Sheet
+  const todayStart = new Date(); todayStart.setUTCHours(0,0,0,0)
+  const { count: todayCount } = await supabase
+    .from('tn_bookings').select('*', { count: 'exact', head: true })
+    .eq('user_id', userId).gte('created_at', todayStart.toISOString())
+  const bookingCode = bookingIdFor((todayCount || 0) + 1)
+
   const { data: booking, error: bErr } = await supabase.from('tn_bookings').insert({
     user_id: userId,
     customer_id: customer?.id,
@@ -372,9 +383,10 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
     details: { ...d, service_info: d.service_info || null },
     status: 'awaiting_payment',
     advance_amount: advance,
-    balance_amount: Math.max(0, price - advance),
+    balance_amount: balance,
     source: 'whatsapp_flow',
     flow_token: d.flow_token || null,
+    booking_code: bookingCode,
   }).select().single()
 
   if (bErr) {
@@ -391,20 +403,13 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
     screenshot_url: rzp.ok ? rzp.link : null,
   })
 
-  // 2) Append to Google Sheet — 18 columns, exact mapping
+  // 2) Append to Google Sheet — 21 columns, same booking code as WhatsApp summary
   if (settings?.google_sheet_enabled && settings?.google_sheet_id) {
-    // Daily incrementing 4-digit counter per user
-    const todayStart = new Date(); todayStart.setUTCHours(0,0,0,0)
-    const { count } = await supabase
-      .from('tn_bookings').select('*', { count: 'exact', head: true })
-      .eq('user_id', userId).gte('created_at', todayStart.toISOString())
-    const bookingId = bookingIdFor(count || 1)
-
     const addonText = (addons && addons.length) ? addons.join(', ') : 'None'
     const row = [
       istTimestamp(),                              // A Timestamp
-      bookingId,                                    // B Booking ID
-      svcCode || '',                                // C Service Selected
+      bookingCode,                                  // B Booking ID (same as WhatsApp)
+      svc.name || svcCode || '',                    // C Service Selected
       d.name || '',                                 // D Customer Name
       d.phone || waId || '',                        // E Phone Number
       d.transport_mode || '',                       // F Transport Mode
@@ -416,10 +421,13 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
       d.time || d.preferred_time || '',             // L Reporting Time
       d.hours || '',                                // M Expected Hrs/Days
       addonText,                                    // N Add-ons Selected
-      `Advance Pending ₹${advance}`,                // O Payment Status
-      '',                                           // P UPI Reference
-      '',                                           // Q Helper Assigned
-      'New',                                        // R Booking Status
+      `₹${price}`,                                  // O Estimate
+      `₹${advance}`,                                // P Advance
+      `₹${balance}`,                                // Q Balance
+      `Advance Pending ₹${advance}`,                // R Payment Status
+      '',                                           // S UPI Reference
+      '',                                           // T Helper Assigned
+      'New',                                        // U Booking Status
     ]
     const sheetRes = await appendToGoogleSheet(settings.google_sheet_id, settings.google_sheet_tab || 'Bookings', row)
     if (!sheetRes.ok) {
@@ -432,7 +440,7 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
   }
 
   const summary = `✅ *Booking Received!*\n\n` +
-    `🆔 TN45-${booking.id.slice(0,8)}\n` +
+    `🆔 ${bookingCode}\n` +
     `🧾 ${svc.name}\n` +
     `👤 ${d.name || '-'}\n` +
     `📞 ${d.phone || '-'}\n` +
@@ -440,11 +448,12 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
     `🚉 ${d.transport_mode || '-'}${d.service_info ? ' • ' + d.service_info : (d.transport_details ? ' • ' + d.transport_details : '')}\n` +
     `📍 ${d.address || '-'}${d.landmark ? `\n🏷️ ${d.landmark}` : ''}\n` +
     (addons.length ? `➕ ${addons.join(', ')}\n` : '') +
-    `\n💰 Estimated: ₹${price}\n` +
-    `💳 Pay Advance: *₹${advance}*\n` +
+    `\n💰 Estimated Total: ₹${price}\n` +
+    `💳 Advance to Pay: *₹${advance}*\n` +
+    `🧮 Balance at Service: ₹${balance}\n` +
     (rzp.ok
-      ? `🔗 Razorpay link: ${rzp.link}\n(UPI / Card / Netbanking — secure)`
-      : `⚠️ Payment link unavailable right now. Our team will contact you.`)
+      ? `\n🔗 Razorpay link: ${rzp.link}\n(UPI / Card / Netbanking — secure)`
+      : `\n⚠️ Payment link unavailable right now. Our team will contact you.`)
   await sendWhatsApp(phoneNumberId, token, textMsg(waId, summary))
 }
 
@@ -601,9 +610,10 @@ Deno.serve(async (req) => {
           details: { trigger: matchedKeyword, raw_text: text, message_id: msg.id, parsed },
         }).select().single()
 
-        // 2) Send the configured published Flow directly inside the 24-hour customer service window.
-        // This avoids old Meta templates opening an older Flow version that only returns status + flow_token.
-        const out = settings?.meta_flow_id ? flowMsg(waId, settings, flowToken) : templateMsg(waId, settings, flowToken)
+        // Always send the approved Meta template (tn45_whatsapp_automation by default).
+        // The template's Flow button carries the published flow — this is the format Meta requires
+        // outside the 24h window and also works inside it.
+        const out = templateMsg(waId, settings, flowToken)
         const { ok: sendOk, status: sendStatus, result: res } = await sendWhatsApp(phoneNumberId, token, out)
 
         // 3) Audit log of the entire Help trigger attempt
@@ -616,9 +626,7 @@ Deno.serve(async (req) => {
             action: sendOk && !res?.error ? 'template_sent' : 'template_failed',
             before: { wa_id: waId, keyword: matchedKeyword, raw_text: text, parsed },
             after: {
-              request: settings?.meta_flow_id
-                ? { mode: 'direct_flow', flow_id: settings.meta_flow_id, flow_token: flowToken }
-                : { mode: 'template_flow', template: configuredTemplateName(settings), language: configuredTemplateLanguage(settings), flow_token: flowToken },
+              request: { mode: 'template_flow', template: configuredTemplateName(settings), language: configuredTemplateLanguage(settings), flow_token: flowToken },
               response: { http_status: sendStatus, ok: sendOk, body: res },
               booking_id: draftBooking?.id || null,
               booking_status: sendOk && !res?.error ? 'awaiting_payment' : 'send_failed',
