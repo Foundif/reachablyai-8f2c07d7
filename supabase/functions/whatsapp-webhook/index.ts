@@ -226,8 +226,10 @@ const SHEET_HEADERS = [
   'Timestamp','Booking ID','Service Selected','Customer Name','Phone Number',
   'Transport Mode','Service Category','Service Info','Reporting Address',
   'Nearest Landmark','Date of Service','Reporting Time','Expected Hrs/Days',
-  'Add-ons Selected','Payment Status','UPI Reference','Helper Assigned','Booking Status',
+  'Add-ons Selected','Estimate ₹','Advance ₹','Balance ₹',
+  'Payment Status','UPI Reference','Helper Assigned','Booking Status',
 ]
+// 21 columns -> A:U
 
 function istTimestamp() {
   // IST = UTC + 5:30
