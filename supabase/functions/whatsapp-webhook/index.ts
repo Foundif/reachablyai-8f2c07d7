@@ -260,45 +260,67 @@ async function sheetsFetch(url: string, init: RequestInit) {
   return { ok: res.ok, status: res.status, json }
 }
 
-const cleanSheetTitle = (tab?: string) => String(tab || 'Bookings').trim() || 'Bookings'
+const cleanSheetTitle = (tab?: string) => String(tab || 'Sheet1').trim() || 'Sheet1'
 const a1Sheet = (tab: string) => /^[A-Za-z0-9_]+$/.test(tab) ? tab : `'${tab.replace(/'/g, "''")}'`
 
-async function ensureSheetExists(sheetId: string, tab: string) {
+// Cache: skip metadata + header GETs once verified (per function instance).
+// This prevents hitting the Sheets read quota (1500/min) on every booking append.
+const sheetReadyCache = new Set<string>()
+
+async function ensureSheetTabAndHeader(sheetId: string, tab: string) {
+  const key = `${sheetId}|${tab}`
+  if (sheetReadyCache.has(key)) return { ok: true, status: 200, json: { cached: true } }
+
   const metaUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}?fields=sheets.properties.title`
   const meta = await sheetsFetch(metaUrl, { method: 'GET' })
   if (!meta.ok) return meta
   const titles = (meta.json?.sheets || []).map((s: any) => s?.properties?.title).filter(Boolean)
-  if (titles.includes(tab)) return { ok: true, status: 200, json: { tab } }
-  const batchUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}:batchUpdate`
-  return await sheetsFetch(batchUrl, {
-    method: 'POST',
-    body: JSON.stringify({ requests: [{ addSheet: { properties: { title: tab } } }] }),
-  })
-}
+  if (!titles.includes(tab)) {
+    const batchUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}:batchUpdate`
+    const add = await sheetsFetch(batchUrl, {
+      method: 'POST',
+      body: JSON.stringify({ requests: [{ addSheet: { properties: { title: tab } } }] }),
+    })
+    if (!add.ok) return add
+  }
 
-async function ensureSheetHeader(sheetId: string, tab: string) {
-  const safeTab = cleanSheetTitle(tab)
-  const exists = await ensureSheetExists(sheetId, safeTab)
-  if (!exists.ok) return exists
-  const range = `${a1Sheet(safeTab)}!A1:U1`
+  const range = `${a1Sheet(tab)}!A1:U1`
   const getUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}`
   const r = await sheetsFetch(getUrl, { method: 'GET' })
   if (!r.ok) return r
   const firstRow = r.json?.values?.[0] || []
-  if (firstRow.length >= SHEET_HEADERS.length) return { ok: true, status: 200, json: { header: 'exists' } }
-  // Write/overwrite header at A1:U1
-  const putUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}?valueInputOption=USER_ENTERED`
-  return await sheetsFetch(putUrl, { method: 'PUT', body: JSON.stringify({ values: [SHEET_HEADERS] }) })
+  if (firstRow.length < SHEET_HEADERS.length) {
+    const putUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}?valueInputOption=USER_ENTERED`
+    const put = await sheetsFetch(putUrl, { method: 'PUT', body: JSON.stringify({ values: [SHEET_HEADERS] }) })
+    if (!put.ok) return put
+  }
+
+  sheetReadyCache.add(key)
+  return { ok: true, status: 200, json: { ensured: true } }
 }
 
 async function appendToGoogleSheet(sheetId: string, tab: string, row: (string | number)[]) {
   try {
     const safeTab = cleanSheetTitle(tab)
-    const header = await ensureSheetHeader(sheetId, safeTab)
-    if (!header?.ok) return { ok: false, status: header?.status || 0, raw: header?.json || header }
     const range = `${a1Sheet(safeTab)}!A:U`
     const url = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`
-    const r = await sheetsFetch(url, { method: 'POST', body: JSON.stringify({ values: [row] }) })
+
+    // Append-first strategy: skip pre-flight reads to stay under the Sheets read quota.
+    let r = await sheetsFetch(url, { method: 'POST', body: JSON.stringify({ values: [row] }) })
+
+    // If the tab/header isn't ready (400 parse-range or 404), ensure once and retry.
+    if (!r.ok && (r.status === 400 || r.status === 404)) {
+      const ensured = await ensureSheetTabAndHeader(sheetId, safeTab)
+      if (!ensured.ok) return { ok: false, status: ensured.status || 0, raw: ensured.json || ensured }
+      r = await sheetsFetch(url, { method: 'POST', body: JSON.stringify({ values: [row] }) })
+    }
+
+    // On read-quota 429 the append itself may still succeed on retry after a short pause.
+    if (!r.ok && r.status === 429) {
+      await new Promise((res) => setTimeout(res, 1200))
+      r = await sheetsFetch(url, { method: 'POST', body: JSON.stringify({ values: [row] }) })
+    }
+
     if (!r.ok) console.error('sheets append failed', r.status, JSON.stringify(r.json).slice(0, 600))
     return { ok: r.ok, status: r.status, raw: r.json }
   } catch (e: any) {
