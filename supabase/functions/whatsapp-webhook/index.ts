@@ -626,9 +626,7 @@ Deno.serve(async (req) => {
             action: sendOk && !res?.error ? 'template_sent' : 'template_failed',
             before: { wa_id: waId, keyword: matchedKeyword, raw_text: text, parsed },
             after: {
-              request: settings?.meta_flow_id
-                ? { mode: 'direct_flow', flow_id: settings.meta_flow_id, flow_token: flowToken }
-                : { mode: 'template_flow', template: configuredTemplateName(settings), language: configuredTemplateLanguage(settings), flow_token: flowToken },
+              request: { mode: 'template_flow', template: configuredTemplateName(settings), language: configuredTemplateLanguage(settings), flow_token: flowToken },
               response: { http_status: sendStatus, ok: sendOk, body: res },
               booking_id: draftBooking?.id || null,
               booking_status: sendOk && !res?.error ? 'awaiting_payment' : 'send_failed',
