@@ -440,7 +440,7 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
   }
 
   const summary = `✅ *Booking Received!*\n\n` +
-    `🆔 TN45-${booking.id.slice(0,8)}\n` +
+    `🆔 ${bookingCode}\n` +
     `🧾 ${svc.name}\n` +
     `👤 ${d.name || '-'}\n` +
     `📞 ${d.phone || '-'}\n` +
@@ -448,11 +448,12 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
     `🚉 ${d.transport_mode || '-'}${d.service_info ? ' • ' + d.service_info : (d.transport_details ? ' • ' + d.transport_details : '')}\n` +
     `📍 ${d.address || '-'}${d.landmark ? `\n🏷️ ${d.landmark}` : ''}\n` +
     (addons.length ? `➕ ${addons.join(', ')}\n` : '') +
-    `\n💰 Estimated: ₹${price}\n` +
-    `💳 Pay Advance: *₹${advance}*\n` +
+    `\n💰 Estimated Total: ₹${price}\n` +
+    `💳 Advance to Pay: *₹${advance}*\n` +
+    `🧮 Balance at Service: ₹${balance}\n` +
     (rzp.ok
-      ? `🔗 Razorpay link: ${rzp.link}\n(UPI / Card / Netbanking — secure)`
-      : `⚠️ Payment link unavailable right now. Our team will contact you.`)
+      ? `\n🔗 Razorpay link: ${rzp.link}\n(UPI / Card / Netbanking — secure)`
+      : `\n⚠️ Payment link unavailable right now. Our team will contact you.`)
   await sendWhatsApp(phoneNumberId, token, textMsg(waId, summary))
 }
 
