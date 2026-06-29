@@ -280,13 +280,13 @@ async function ensureSheetHeader(sheetId: string, tab: string) {
   const safeTab = cleanSheetTitle(tab)
   const exists = await ensureSheetExists(sheetId, safeTab)
   if (!exists.ok) return exists
-  const range = `${a1Sheet(safeTab)}!A1:R1`
+  const range = `${a1Sheet(safeTab)}!A1:U1`
   const getUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}`
   const r = await sheetsFetch(getUrl, { method: 'GET' })
   if (!r.ok) return r
   const firstRow = r.json?.values?.[0] || []
   if (firstRow.length >= SHEET_HEADERS.length) return { ok: true, status: 200, json: { header: 'exists' } }
-  // Write header at A1:R1
+  // Write/overwrite header at A1:U1
   const putUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}?valueInputOption=USER_ENTERED`
   return await sheetsFetch(putUrl, { method: 'PUT', body: JSON.stringify({ values: [SHEET_HEADERS] }) })
 }
@@ -296,7 +296,7 @@ async function appendToGoogleSheet(sheetId: string, tab: string, row: (string | 
     const safeTab = cleanSheetTitle(tab)
     const header = await ensureSheetHeader(sheetId, safeTab)
     if (!header?.ok) return { ok: false, status: header?.status || 0, raw: header?.json || header }
-    const range = `${a1Sheet(safeTab)}!A:R`
+    const range = `${a1Sheet(safeTab)}!A:U`
     const url = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`
     const r = await sheetsFetch(url, { method: 'POST', body: JSON.stringify({ values: [row] }) })
     if (!r.ok) console.error('sheets append failed', r.status, JSON.stringify(r.json).slice(0, 600))
