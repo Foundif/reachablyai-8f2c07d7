@@ -5,7 +5,7 @@ import AppLayout from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import {
   Check, Crown, Sparkles, ArrowRight, Shield, Users, MessageCircle,
-  Headphones, Building2, Zap, Star, ArrowLeft, Phone, Loader2,
+  Headphones, Building2, Zap, Star, ArrowLeft, Phone, Loader2, X,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
