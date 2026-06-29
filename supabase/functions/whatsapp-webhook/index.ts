@@ -610,9 +610,10 @@ Deno.serve(async (req) => {
           details: { trigger: matchedKeyword, raw_text: text, message_id: msg.id, parsed },
         }).select().single()
 
-        // 2) Send the configured published Flow directly inside the 24-hour customer service window.
-        // This avoids old Meta templates opening an older Flow version that only returns status + flow_token.
-        const out = settings?.meta_flow_id ? flowMsg(waId, settings, flowToken) : templateMsg(waId, settings, flowToken)
+        // Always send the approved Meta template (tn45_whatsapp_automation by default).
+        // The template's Flow button carries the published flow — this is the format Meta requires
+        // outside the 24h window and also works inside it.
+        const out = templateMsg(waId, settings, flowToken)
         const { ok: sendOk, status: sendStatus, result: res } = await sendWhatsApp(phoneNumberId, token, out)
 
         // 3) Audit log of the entire Help trigger attempt
