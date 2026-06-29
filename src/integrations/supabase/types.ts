@@ -1187,6 +1187,7 @@ export type Database = {
           address: string | null
           advance_amount: number
           balance_amount: number
+          booking_code: string | null
           booking_date: string | null
           booking_time: string | null
           created_at: string
@@ -1216,6 +1217,7 @@ export type Database = {
           address?: string | null
           advance_amount?: number
           balance_amount?: number
+          booking_code?: string | null
           booking_date?: string | null
           booking_time?: string | null
           created_at?: string
@@ -1245,6 +1247,7 @@ export type Database = {
           address?: string | null
           advance_amount?: number
           balance_amount?: number
+          booking_code?: string | null
           booking_date?: string | null
           booking_time?: string | null
           created_at?: string
