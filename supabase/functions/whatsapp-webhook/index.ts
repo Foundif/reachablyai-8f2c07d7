@@ -194,12 +194,13 @@ function parseHelpText(text: string): Record<string, any> {
 }
 
 
-async function createRazorpayLink(amount: number, booking: any, customerName: string, customerPhone: string) {
+async function createRazorpayLink(amount: number, booking: any, customerName: string, customerPhone: string, bookingCode?: string) {
   const keyId = Deno.env.get('RAZORPAY_KEY_ID')
   const keySecret = Deno.env.get('RAZORPAY_KEY_SECRET')
   if (!keyId || !keySecret) return { ok: false, error: 'Razorpay keys not configured' }
   try {
     const auth = btoa(`${keyId}:${keySecret}`)
+    const code = bookingCode || `TN45-${booking.id.slice(0,8)}`
     const res = await fetch('https://api.razorpay.com/v1/payment_links', {
       method: 'POST',
       headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/json' },
@@ -207,11 +208,11 @@ async function createRazorpayLink(amount: number, booking: any, customerName: st
         amount: Math.round(amount * 100),
         currency: 'INR',
         accept_partial: false,
-        description: `TN45-${booking.id.slice(0,8)} ${booking.service_name || 'Travel Aid'} advance`,
+        description: `TN45 Advance Payment - ${code}`,
         customer: { name: customerName || 'Customer', contact: customerPhone || undefined },
         notify: { sms: false, email: false },
         reminder_enable: true,
-        notes: { booking_id: booking.id, wa_id: booking.wa_id },
+        notes: { booking_id: booking.id, booking_code: code, wa_id: booking.wa_id, user_id: booking.user_id },
         callback_method: 'get',
       }),
     })
