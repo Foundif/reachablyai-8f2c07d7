@@ -54,8 +54,14 @@ const SheetsViewer = () => {
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${tab}-${Date.now()}.csv`; a.click();
   };
 
-  const header = rows[0] || [];
-  const body = rows.slice(1).filter(r => !filter || r.some(c => String(c ?? '').toLowerCase().includes(filter.toLowerCase())));
+  const maxCols = rows.reduce((m, r) => Math.max(m, r?.length || 0), 0);
+  const rawHeader = rows[0] || [];
+  const headerLooksLikeData = rawHeader.some(c => /^\d/.test(String(c ?? '').trim())) || rawHeader.length < maxCols / 2;
+  const header: string[] = headerLooksLikeData
+    ? Array.from({ length: maxCols }, (_, i) => `Col ${i + 1}`)
+    : Array.from({ length: maxCols }, (_, i) => String(rawHeader[i] ?? `Col ${i + 1}`));
+  const dataRows = headerLooksLikeData ? rows : rows.slice(1);
+  const body = dataRows.filter(r => !filter || r.some(c => String(c ?? '').toLowerCase().includes(filter.toLowerCase())));
 
   return (
     <AppLayout>
@@ -100,24 +106,24 @@ const SheetsViewer = () => {
           </div>
         </Card>
 
-        <Card className="overflow-auto">
+        <Card className="overflow-auto max-h-[70vh]">
           {!sheetId ? (
             <div className="p-10 text-center text-muted-foreground text-sm">Paste your Google Sheet ID above to view bookings.</div>
           ) : loading ? (
             <div className="p-10 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
-          ) : rows.length === 0 ? (
+          ) : maxCols === 0 ? (
             <div className="p-10 text-center text-muted-foreground text-sm">No rows in <b>{tab}</b>. Make sure the tab name matches.</div>
           ) : (
             <table className="w-full text-xs">
-              <thead className="bg-muted/40 sticky top-0">
+              <thead className="bg-muted sticky top-0 z-10">
                 <tr>
-                  {header.map((h, i) => <th key={i} className="text-left p-2 font-semibold whitespace-nowrap">{h}</th>)}
+                  {header.map((h, i) => <th key={i} className="text-left p-2 font-semibold whitespace-nowrap border-b">{h}</th>)}
                 </tr>
               </thead>
               <tbody>
                 {body.map((r, i) => (
                   <tr key={i} className="border-t hover:bg-muted/30">
-                    {header.map((_, j) => <td key={j} className="p-2 whitespace-nowrap">{r[j] ?? ''}</td>)}
+                    {header.map((_, j) => <td key={j} className="p-2 whitespace-nowrap max-w-[280px] truncate" title={String(r[j] ?? '')}>{r[j] ?? ''}</td>)}
                   </tr>
                 ))}
               </tbody>
@@ -125,7 +131,8 @@ const SheetsViewer = () => {
           )}
         </Card>
 
-        <p className="text-xs text-muted-foreground">Showing {body.length} of {Math.max(0, rows.length - 1)} rows</p>
+        <p className="text-xs text-muted-foreground">Showing {body.length} of {dataRows.length} rows · {maxCols} columns</p>
+
       </div>
     </AppLayout>
   );

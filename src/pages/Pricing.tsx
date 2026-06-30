@@ -22,7 +22,7 @@ const loadRazorpay = () => new Promise<boolean>((resolve) => {
   document.body.appendChild(s);
 });
 
-type PlanId = 'starter' | 'growth' | 'pro';
+type PlanId = 'basic' | 'growth' | 'business';
 
 interface Plan {
   id: PlanId;
@@ -31,7 +31,7 @@ interface Plan {
   setupFee: number;
   monthly: number;
   yearly: number;
-  firstMonthTotal: number;
+  yearlySave: number;
   badge?: string;
   badgeIcon?: any;
   icon: any;
@@ -39,75 +39,78 @@ interface Plan {
   features: { label: string; included: boolean }[];
 }
 
+const SETUP_FEE = 7500;
+
 const PLANS: Plan[] = [
   {
-    id: 'starter',
-    name: 'Starter',
-    tagline: 'Solo operators, single WhatsApp number, basic booking flow + sheet sync',
-    setupFee: 4500,
-    monthly: 2999,
-    yearly: 29999,
-    firstMonthTotal: 7499,
-    badge: 'Your launch price',
+    id: 'basic',
+    name: 'Basic',
+    tagline: 'Small businesses, single WhatsApp number, booking flow live and running',
+    setupFee: SETUP_FEE,
+    monthly: 2100,
+    yearly: 21000,
+    yearlySave: 4200,
+    badge: 'Starter',
     badgeIcon: Star,
     icon: Zap,
     features: [
       { label: 'WhatsApp Flow (5 screens)', included: true },
-      { label: 'Google Sheets sync (21 columns)', included: true },
-      { label: 'IST timestamp + Booking ID', included: true },
-      { label: 'Audit log — no data loss', included: true },
-      { label: '1 Meta Flow deployment', included: true },
-      { label: '1 flow edit / month', included: true },
-      { label: 'Email support (48 hrs)', included: true },
+      { label: 'Google Sheets auto sync', included: true },
+      { label: '18-column booking data', included: true },
+      { label: 'Auto Booking ID + IST timestamp', included: true },
+      { label: 'Audit log — zero data loss', included: true },
+      { label: '1 flow edit per month', included: true },
+      { label: 'Email support — 48 hrs', included: true },
       { label: 'WhatsApp summary to customer', included: false },
       { label: 'Admin booking alerts', included: false },
-      { label: 'Admin dashboard', included: false },
+      { label: 'Priority support', included: false },
     ],
   },
   {
     id: 'growth',
     name: 'Growth',
-    tagline: 'Growing services, daily bookings, WhatsApp automation for customer + admin',
-    setupFee: 7500,
+    tagline: 'Growing businesses, daily bookings, automated WhatsApp messages to customer and admin',
+    setupFee: SETUP_FEE,
     monthly: 4999,
     yearly: 49999,
-    firstMonthTotal: 12499,
+    yearlySave: 9989,
     badge: 'Most popular',
     badgeIcon: Crown,
     icon: Star,
     popular: true,
     features: [
-      { label: 'Everything in Starter', included: true },
-      { label: 'WhatsApp summary to customer', included: true },
-      { label: 'Admin alert on every booking', included: true },
-      { label: 'Payment status tracking', included: true },
-      { label: '3 flow edits / month', included: true },
-      { label: 'WhatsApp priority support (12 hrs)', included: true },
+      { label: 'Everything in Basic', included: true },
+      { label: 'WhatsApp booking summary to customer', included: true },
+      { label: 'Admin alert on every new booking', included: true },
+      { label: 'Payment status tracking in sheet', included: true },
+      { label: '3 flow edits per month', included: true },
+      { label: 'WhatsApp support — 12 hrs', included: true },
+      { label: 'Monthly booking report', included: true },
       { label: 'Admin dashboard', included: false },
-      { label: 'Helper assignment alerts', included: false },
+      { label: 'Helper assignment system', included: false },
       { label: 'Multi-number support', included: false },
     ],
   },
   {
-    id: 'pro',
-    name: 'Pro',
-    tagline: 'High-volume, multiple helpers, full admin control + booking status automation',
-    setupFee: 15000,
+    id: 'business',
+    name: 'Business',
+    tagline: 'High volume, multiple helpers, full admin control and booking automation end to end',
+    setupFee: SETUP_FEE,
     monthly: 9999,
     yearly: 99999,
-    firstMonthTotal: 24999,
-    badge: 'Full operations',
+    yearlySave: 19989,
+    badge: 'Pro',
     badgeIcon: Crown,
     icon: Crown,
     features: [
       { label: 'Everything in Growth', included: true },
       { label: 'Admin web dashboard', included: true },
-      { label: 'Helper assignment from dashboard', included: true },
+      { label: 'Helper assignment and tracking', included: true },
       { label: 'Booking status updates to customer', included: true },
       { label: 'Multi-number / multi-location', included: true },
       { label: 'Unlimited flow edits', included: true },
-      { label: 'Monthly analytics report', included: true },
-      { label: 'Dedicated account manager (4 hrs)', included: true },
+      { label: 'Dedicated account manager', included: true },
+      { label: '4 hr priority response', included: true },
     ],
   },
 ];
@@ -116,10 +119,10 @@ const COMPARE_SECTIONS: { title: string; rows: { label: string; values: (string 
   {
     title: 'Pricing breakdown',
     rows: [
-      { label: 'One-time setup fee', values: ['₹4,500', '₹7,500', '₹15,000'] },
-      { label: 'Monthly retainer', values: ['₹2,999', '₹4,999', '₹9,999'] },
-      { label: 'Annual retainer (save ~2 months)', values: ['₹29,999', '₹49,999', '₹99,999'] },
-      { label: 'First month all-in', values: ['₹7,499', '₹12,499', '₹24,999'] },
+      { label: 'One-time setup fee', values: ['₹7,500', '₹7,500', '₹7,500'] },
+      { label: 'Monthly retainer', values: ['₹2,100', '₹4,999', '₹9,999'] },
+      { label: 'Annual retainer', values: ['₹21,000', '₹49,999', '₹99,999'] },
+      { label: 'Annual savings', values: ['₹4,200', '₹9,989', '₹19,989'] },
     ],
   },
   {
@@ -136,10 +139,10 @@ const COMPARE_SECTIONS: { title: string; rows: { label: string; values: (string 
     title: 'Google Sheets data',
     rows: [
       { label: 'Auto sync on booking submit', values: [true, true, true] },
-      { label: '21-column data capture', values: [true, true, true] },
+      { label: '18-column data capture', values: [true, true, true] },
       { label: 'IST timestamp + auto Booking ID', values: [true, true, true] },
       { label: 'Audit log — zero data loss', values: [true, true, true] },
-      { label: 'Payment status column', values: ['Manual', 'Manual', 'Auto-update'] },
+      { label: 'Payment status column', values: ['Manual', 'Auto-update', 'Auto-update'] },
     ],
   },
   {
@@ -156,11 +159,12 @@ const COMPARE_SECTIONS: { title: string; rows: { label: string; values: (string 
     rows: [
       { label: 'Support channel', values: ['Email', 'WhatsApp', 'Dedicated manager'] },
       { label: 'Response time', values: ['48 hrs', '12 hrs', '4 hrs'] },
-      { label: 'Admin dashboard', values: [false, false, true] },
-      { label: 'Monthly analytics report', values: [false, false, true] },
+      { label: 'Admin dashboard', values: [false, true, true] },
+      { label: 'Monthly analytics report', values: [false, true, true] },
     ],
   },
 ];
+
 
 const formatINR = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
@@ -248,9 +252,25 @@ const PricingContent = () => {
 
       {/* Plans */}
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pb-12">
+        {/* One-time setup banner */}
+        <div className="mb-6 rounded-2xl border border-border bg-card/80 backdrop-blur p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-sm font-bold">One-time setup fee — all plans</div>
+              <div className="text-xs text-muted-foreground">Meta template + WhatsApp Flow + Google Sheets integration + webhook backend</div>
+            </div>
+          </div>
+          <div className="text-right">
+            <span className="text-2xl font-bold">₹7,500</span>
+            <span className="text-xs text-muted-foreground ml-1">one-time</span>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {PLANS.map((plan, i) => {
-            const price = priceFor(plan);
             const BadgeIcon = plan.badgeIcon || Sparkles;
             return (
               <motion.div
@@ -269,29 +289,17 @@ const PricingContent = () => {
                     <BadgeIcon className="w-3 h-3" />{plan.badge}
                   </div>
                 )}
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={cn('w-11 h-11 rounded-2xl flex items-center justify-center',
-                    plan.popular ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground')}>
-                    <plan.icon className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-xl font-bold">{plan.name}</h3>
-                </div>
-                <p className="text-xs text-muted-foreground mb-5 min-h-[40px]">{plan.tagline}</p>
+                <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
+                <p className="text-xs text-muted-foreground mb-5 min-h-[56px]">{plan.tagline}</p>
 
-                <div className="rounded-2xl border border-border bg-muted/30 p-4 mb-5 space-y-2">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">One-time setup</span>
-                    <span className="font-semibold">{formatINR(plan.setupFee)}</span>
+                <div className="mb-5">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-bold">{formatINR(plan.monthly)}</span>
+                    <span className="text-sm text-muted-foreground">/month</span>
                   </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">{billing === 'yearly' ? 'Annual retainer' : 'Monthly retainer'}</span>
-                    <span className="font-semibold text-primary">
-                      {formatINR(price)}<span className="text-muted-foreground font-normal"> /{billing === 'yearly' ? 'yr' : 'mo'}</span>
-                    </span>
-                  </div>
-                  <div className="border-t border-border pt-2 flex justify-between text-sm">
-                    <span className="font-semibold">First {billing === 'yearly' ? 'year' : 'month'} total</span>
-                    <span className="font-bold text-foreground">{formatINR(plan.setupFee + price)}</span>
+                  <div className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    <span>🏷</span>
+                    <span>{formatINR(plan.yearly)}/year — save {formatINR(plan.yearlySave)}</span>
                   </div>
                 </div>
 
@@ -300,7 +308,7 @@ const PricingContent = () => {
                     <li key={idx} className={cn('flex items-start gap-2.5 text-xs',
                       f.included ? 'text-foreground' : 'text-muted-foreground/60')}>
                       {f.included
-                        ? <Check className={cn('w-4 h-4 mt-0.5 shrink-0', plan.popular ? 'text-primary' : 'text-foreground/70')} />
+                        ? <Check className={cn('w-4 h-4 mt-0.5 shrink-0', 'text-emerald-500')} />
                         : <X className="w-4 h-4 mt-0.5 shrink-0 text-muted-foreground/40" />}
                       <span>{f.label}</span>
                     </li>
@@ -319,6 +327,7 @@ const PricingContent = () => {
             );
           })}
         </div>
+
 
         <div className="mt-12 grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
