@@ -11,11 +11,13 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const KEY_ID = Deno.env.get("RAZORPAY_KEY_ID");
-    const KEY_SECRET = Deno.env.get("RAZORPAY_KEY_SECRET");
+    // Subscription checkout uses the Chatarly platform Razorpay account
+    // (separate from the per-tenant WhatsApp booking-advance Razorpay account)
+    const KEY_ID = Deno.env.get("CHATARLY_RAZORPAY_KEY_ID") || Deno.env.get("RAZORPAY_KEY_ID");
+    const KEY_SECRET = Deno.env.get("CHATARLY_RAZORPAY_KEY_SECRET") || Deno.env.get("RAZORPAY_KEY_SECRET");
     if (!KEY_ID || !KEY_SECRET) {
       return new Response(
-        JSON.stringify({ error: "Razorpay not configured. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET secrets." }),
+        JSON.stringify({ error: "Chatarly Razorpay not configured. Add CHATARLY_RAZORPAY_KEY_ID and CHATARLY_RAZORPAY_KEY_SECRET secrets." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
