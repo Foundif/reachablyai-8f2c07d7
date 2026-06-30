@@ -2,3 +2,7 @@ project_id = "mjugiurxitfdsfdscpte"
 
 [functions.razorpay-create-order]
 verify_jwt = false
+
+[functions.razorpay-webhook]
+verify_jwt = false
+

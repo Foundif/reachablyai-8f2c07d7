@@ -194,12 +194,13 @@ function parseHelpText(text: string): Record<string, any> {
 }
 
 
-async function createRazorpayLink(amount: number, booking: any, customerName: string, customerPhone: string) {
+async function createRazorpayLink(amount: number, booking: any, customerName: string, customerPhone: string, bookingCode?: string) {
   const keyId = Deno.env.get('RAZORPAY_KEY_ID')
   const keySecret = Deno.env.get('RAZORPAY_KEY_SECRET')
   if (!keyId || !keySecret) return { ok: false, error: 'Razorpay keys not configured' }
   try {
     const auth = btoa(`${keyId}:${keySecret}`)
+    const code = bookingCode || `TN45-${booking.id.slice(0,8)}`
     const res = await fetch('https://api.razorpay.com/v1/payment_links', {
       method: 'POST',
       headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/json' },
@@ -207,11 +208,11 @@ async function createRazorpayLink(amount: number, booking: any, customerName: st
         amount: Math.round(amount * 100),
         currency: 'INR',
         accept_partial: false,
-        description: `TN45-${booking.id.slice(0,8)} ${booking.service_name || 'Travel Aid'} advance`,
+        description: `TN45 Advance Payment - ${code}`,
         customer: { name: customerName || 'Customer', contact: customerPhone || undefined },
         notify: { sms: false, email: false },
         reminder_enable: true,
-        notes: { booking_id: booking.id, wa_id: booking.wa_id },
+        notes: { booking_id: booking.id, booking_code: code, wa_id: booking.wa_id, user_id: booking.user_id },
         callback_method: 'get',
       }),
     })
@@ -417,7 +418,7 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
   }
 
   // 1) Razorpay payment link
-  const rzp = await createRazorpayLink(advance, booking, d.name || '', d.phone || waId)
+  const rzp = await createRazorpayLink(advance, booking, d.name || '', d.phone || waId, bookingCode)
   await supabase.from('tn_payments').insert({
     user_id: userId, booking_id: booking?.id, amount: advance,
     method: rzp.ok ? 'razorpay' : 'manual',
@@ -477,6 +478,16 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
       ? `\n🔗 Razorpay link: ${rzp.link}\n(UPI / Card / Netbanking — secure)`
       : `\n⚠️ Payment link unavailable right now. Our team will contact you.`)
   await sendWhatsApp(phoneNumberId, token, textMsg(waId, summary))
+
+  // Dedicated follow-up payment-link message
+  if (rzp.ok && rzp.link) {
+    const payMsg =
+      `💳 *Pay ₹${advance} Advance to Confirm*\n\n` +
+      `Booking: ${bookingCode}\n` +
+      `Secure Razorpay link (UPI / Card / Netbanking):\n${rzp.link}\n\n` +
+      `Your booking will be confirmed automatically once payment is received. ✅`
+    await sendWhatsApp(phoneNumberId, token, textMsg(waId, payMsg))
+  }
 }
 
 Deno.serve(async (req) => {
