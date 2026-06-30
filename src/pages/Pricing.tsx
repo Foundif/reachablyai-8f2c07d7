@@ -321,14 +321,29 @@ const PricingContent = () => {
                   ))}
                 </ul>
 
-                <Button
-                  onClick={() => handleSelect(plan)}
-                  disabled={payingId === plan.id}
-                  variant={plan.popular ? 'default' : 'outline'}
-                  className={cn('w-full rounded-full', plan.popular && 'bg-primary hover:bg-primary/90')}
-                >
-                  {payingId === plan.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Pay & activate {plan.name}<ArrowRight className="w-4 h-4" /></>}
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    onClick={() => handleSelect(plan, 'plan')}
+                    disabled={payingId === `${plan.id}:plan`}
+                    variant={plan.popular ? 'default' : 'outline'}
+                    className={cn('w-full rounded-full', plan.popular && 'bg-primary hover:bg-primary/90')}
+                  >
+                    {payingId === `${plan.id}:plan` ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Pay {formatINR(billing === 'yearly' ? plan.yearly : plan.monthly)} {billing === 'yearly' ? '/year' : '/month'} <ArrowRight className="w-4 h-4" /></>}
+                  </Button>
+                  <Button
+                    onClick={() => handleSelect(plan, 'setup')}
+                    disabled={payingId === `${plan.id}:setup`}
+                    variant="outline"
+                    className="w-full rounded-full border-dashed"
+                  >
+                    {payingId === `${plan.id}:setup` ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Pay setup {formatINR(plan.setupFee)} separately</>}
+                  </Button>
+                  <p className="text-[10px] text-center text-muted-foreground">Setup fee billed once · plan billed {billing}</p>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
               </motion.div>
             );
           })}
