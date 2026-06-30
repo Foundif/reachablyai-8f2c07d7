@@ -344,10 +344,6 @@ const PricingContent = () => {
             );
           })}
         </div>
-              </motion.div>
-            );
-          })}
-        </div>
 
 
         <div className="mt-12 grid grid-cols-2 sm:grid-cols-4 gap-4">
