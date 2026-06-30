@@ -10,21 +10,13 @@ import { ThemeProvider } from "@/hooks/useTheme";
 import { LanguageProvider } from "@/hooks/useLanguage";
 import TNDashboard from "./pages/TNDashboard";
 import TNBookings from "./pages/TNBookings";
-// payments tab removed
 import TNCustomers from "./pages/TNCustomers";
 import TNServices from "./pages/TNServices";
 import TNWhatsAppSettings from "./pages/TNWhatsAppSettings";
-import TNFlow from "./pages/TNFlow";
 import Inbox from "./pages/Inbox";
 import ComingSoon from "./pages/ComingSoon";
 import Analytics from "./pages/Analytics";
-import AIStudio from "./pages/AIStudio";
-import FlowBuilder from "./pages/FlowBuilder";
-import FlowEditor from "./pages/FlowEditor";
-import FlowTemplates from "./pages/FlowTemplates";
 import { PermissionLoader } from "@/hooks/usePermissionOverrides";
-import Campaigns from "./pages/Campaigns";
-import CampaignAnalytics from "./pages/CampaignAnalytics";
 import Profile from "./pages/Profile";
 import ShopInfo from "./pages/ShopInfo";
 import Guide from "./pages/Guide";
@@ -36,21 +28,14 @@ import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import TeamManagement from "./pages/TeamManagement";
 import RolesPermissions from "./pages/RolesPermissions";
-import Integrations from "./pages/Integrations";
-import ApiConsole from "./pages/ApiConsole";
-import Webhooks from "./pages/Webhooks";
 import AuditLogs from "./pages/AuditLogs";
-import Billing from "./pages/Billing";
-
-import KnowledgeBase from "./pages/KnowledgeBase";
-import Catalog from "./pages/Catalog";
-import Orders from "./pages/Orders";
-import AICopilot from "./pages/AICopilot";
 import Accounting from "./pages/Accounting";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import RazorpaySettings from "./pages/RazorpaySettings";
 import BookingDetail from "./pages/BookingDetail";
+import FlowEditorPage from "./pages/FlowEditorPage";
+import SheetsViewer from "./pages/SheetsViewer";
 
 const queryClient = new QueryClient();
 
@@ -65,11 +50,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
   if (!user) return <Navigate to="/auth" replace />;
   if (profile && !profile.onboarding_completed) return <Navigate to="/onboarding" replace />;
-  // No trial redirect — non-subscribed users see the read-only Upgrade modal everywhere.
   return (<><TrialExpiredModal />{children}</>);
 };
-
-const comingSoonRoutes: string[] = [];
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -100,35 +82,35 @@ const App = () => (
                 <Route path="/customers" element={<ProtectedRoute><TNCustomers /></ProtectedRoute>} />
                 <Route path="/services" element={<ProtectedRoute><TNServices /></ProtectedRoute>} />
                 <Route path="/whatsapp-settings" element={<ProtectedRoute><TNWhatsAppSettings /></ProtectedRoute>} />
-                <Route path="/tn-flow" element={<ProtectedRoute><TNFlow /></ProtectedRoute>} />
+                <Route path="/flow-editor" element={<ProtectedRoute><FlowEditorPage /></ProtectedRoute>} />
+                <Route path="/sheets" element={<ProtectedRoute><SheetsViewer /></ProtectedRoute>} />
                 <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-                <Route path="/ai-studio" element={<ProtectedRoute><AIStudio /></ProtectedRoute>} />
-                <Route path="/flows" element={<ProtectedRoute><FlowBuilder /></ProtectedRoute>} />
-                <Route path="/flows/templates" element={<ProtectedRoute><FlowTemplates /></ProtectedRoute>} />
-                <Route path="/flows/:id" element={<ProtectedRoute><FlowEditor /></ProtectedRoute>} />
-                <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
-                <Route path="/campaigns/:id/analytics" element={<ProtectedRoute><CampaignAnalytics /></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                 <Route path="/shop-info" element={<ProtectedRoute><ShopInfo /></ProtectedRoute>} />
                 <Route path="/guide" element={<ProtectedRoute><Guide /></ProtectedRoute>} />
                 <Route path="/team" element={<ProtectedRoute><TeamManagement /></ProtectedRoute>} />
                 <Route path="/roles" element={<ProtectedRoute><RolesPermissions /></ProtectedRoute>} />
-                <Route path="/integrations" element={<ProtectedRoute><Integrations /></ProtectedRoute>} />
-                <Route path="/api" element={<ProtectedRoute><ApiConsole /></ProtectedRoute>} />
-                <Route path="/webhooks" element={<ProtectedRoute><Webhooks /></ProtectedRoute>} />
                 <Route path="/audit" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
-                <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
-                <Route path="/white-label" element={<Navigate to="/profile" replace />} />
-                <Route path="/knowledge" element={<ProtectedRoute><KnowledgeBase /></ProtectedRoute>} />
-                <Route path="/catalog" element={<ProtectedRoute><Catalog /></ProtectedRoute>} />
-                <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-                <Route path="/copilot" element={<ProtectedRoute><AICopilot /></ProtectedRoute>} />
                 <Route path="/accounting" element={<ProtectedRoute><Accounting /></ProtectedRoute>} />
                 <Route path="/razorpay" element={<ProtectedRoute><RazorpaySettings /></ProtectedRoute>} />
 
-                {comingSoonRoutes.filter(r => r !== '/messages').map((r) => (
-                  <Route key={r} path={r} element={<ProtectedRoute><ComingSoon /></ProtectedRoute>} />
-                ))}
+                {/* Legacy routes redirect to active pages */}
+                <Route path="/tn-flow" element={<Navigate to="/flow-editor" replace />} />
+                <Route path="/flows" element={<Navigate to="/flow-editor" replace />} />
+                <Route path="/flows/templates" element={<Navigate to="/flow-editor" replace />} />
+                <Route path="/flows/:id" element={<Navigate to="/flow-editor" replace />} />
+                <Route path="/campaigns" element={<Navigate to="/" replace />} />
+                <Route path="/campaigns/:id/analytics" element={<Navigate to="/analytics" replace />} />
+                <Route path="/ai-studio" element={<Navigate to="/" replace />} />
+                <Route path="/copilot" element={<Navigate to="/" replace />} />
+                <Route path="/knowledge" element={<Navigate to="/" replace />} />
+                <Route path="/catalog" element={<Navigate to="/services" replace />} />
+                <Route path="/orders" element={<Navigate to="/bookings" replace />} />
+                <Route path="/integrations" element={<Navigate to="/whatsapp-settings" replace />} />
+                <Route path="/api" element={<Navigate to="/whatsapp-settings" replace />} />
+                <Route path="/webhooks" element={<Navigate to="/whatsapp-settings" replace />} />
+                <Route path="/billing" element={<Navigate to="/pricing" replace />} />
+                <Route path="/white-label" element={<Navigate to="/profile" replace />} />
 
                 <Route path="*" element={<NotFound />} />
               </Routes>

@@ -1,7 +1,7 @@
 import {
   Inbox, Users, CalendarDays,
   UserCog, Shield, FileText, Settings, UserCircle, CreditCard,
-  LayoutDashboard, Briefcase, BarChart3, Wallet,
+  LayoutDashboard, Briefcase, BarChart3, Wallet, Workflow, Sheet,
 } from 'lucide-react';
 
 export type ModuleItem = {
@@ -14,9 +14,6 @@ export type ModuleItem = {
 
 export type ModuleGroup = { label: string; items: ModuleItem[] };
 
-// Travel-services focused navigation. Campaigns / Flow Builder / Templates /
-// AI Studio / AI Copilot / Knowledge Base routes still exist but are hidden
-// from the sidebar (phase 2). Accounting is now a first-class module.
 export const MODULE_GROUPS: ModuleGroup[] = [
   {
     label: 'Overview',
@@ -38,12 +35,19 @@ export const MODULE_GROUPS: ModuleGroup[] = [
     items: [
       { to: '/accounting', icon: Wallet, label: 'Accounting', status: 'live' },
       { to: '/analytics', icon: BarChart3, label: 'Analytics', status: 'live' },
+      { to: '/sheets', icon: Sheet, label: 'Bookings Sheet', status: 'live' },
+    ],
+  },
+  {
+    label: 'WhatsApp',
+    items: [
+      { to: '/flow-editor', icon: Workflow, label: 'Flow Editor', status: 'live' },
+      { to: '/whatsapp-settings', icon: Settings, label: 'WhatsApp', status: 'live' },
     ],
   },
   {
     label: 'Settings',
     items: [
-      { to: '/whatsapp-settings', icon: Settings, label: 'WhatsApp', status: 'live' },
       { to: '/razorpay', icon: CreditCard, label: 'Razorpay', status: 'live' },
       { to: '/profile', icon: UserCircle, label: 'Profile', status: 'live' },
       { to: '/team', icon: UserCog, label: 'Team', status: 'live' },
