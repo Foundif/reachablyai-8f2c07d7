@@ -418,7 +418,7 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
   }
 
   // 1) Razorpay payment link
-  const rzp = await createRazorpayLink(advance, booking, d.name || '', d.phone || waId)
+  const rzp = await createRazorpayLink(advance, booking, d.name || '', d.phone || waId, bookingCode)
   await supabase.from('tn_payments').insert({
     user_id: userId, booking_id: booking?.id, amount: advance,
     method: rzp.ok ? 'razorpay' : 'manual',
