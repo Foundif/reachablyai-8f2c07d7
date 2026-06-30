@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,6 @@ const FlowEditorPage = () => {
   const [busy, setBusy] = useState<'save' | 'publish' | 'validate' | null>(null);
   const [meta, setMeta] = useState<any>(null);
   const [text, setText] = useState<string>(JSON.stringify(TN45_FLOW_JSON, null, 2));
-  const [parseError, setParseError] = useState<string | null>(null);
 
   const refresh = async () => {
     setLoading(true);
@@ -31,10 +30,10 @@ const FlowEditorPage = () => {
 
   useEffect(() => { refresh(); /* eslint-disable-next-line */ }, []);
 
-  const parsed = (() => {
-    try { const v = JSON.parse(text); setParseError(null); return v; }
-    catch (e: any) { setParseError(e.message); return null; }
-  })();
+  const { parsed, parseError } = useMemo(() => {
+    try { return { parsed: JSON.parse(text), parseError: null as string | null }; }
+    catch (e: any) { return { parsed: null, parseError: e.message as string }; }
+  }, [text]);
 
   const save = async () => {
     if (!parsed) return toast.error('Fix JSON syntax first');
