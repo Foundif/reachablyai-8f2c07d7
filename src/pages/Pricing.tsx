@@ -252,9 +252,25 @@ const PricingContent = () => {
 
       {/* Plans */}
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pb-12">
+        {/* One-time setup banner */}
+        <div className="mb-6 rounded-2xl border border-border bg-card/80 backdrop-blur p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-sm font-bold">One-time setup fee — all plans</div>
+              <div className="text-xs text-muted-foreground">Meta template + WhatsApp Flow + Google Sheets integration + webhook backend</div>
+            </div>
+          </div>
+          <div className="text-right">
+            <span className="text-2xl font-bold">₹7,500</span>
+            <span className="text-xs text-muted-foreground ml-1">one-time</span>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {PLANS.map((plan, i) => {
-            const price = priceFor(plan);
             const BadgeIcon = plan.badgeIcon || Sparkles;
             return (
               <motion.div
@@ -273,29 +289,17 @@ const PricingContent = () => {
                     <BadgeIcon className="w-3 h-3" />{plan.badge}
                   </div>
                 )}
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={cn('w-11 h-11 rounded-2xl flex items-center justify-center',
-                    plan.popular ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground')}>
-                    <plan.icon className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-xl font-bold">{plan.name}</h3>
-                </div>
-                <p className="text-xs text-muted-foreground mb-5 min-h-[40px]">{plan.tagline}</p>
+                <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
+                <p className="text-xs text-muted-foreground mb-5 min-h-[56px]">{plan.tagline}</p>
 
-                <div className="rounded-2xl border border-border bg-muted/30 p-4 mb-5 space-y-2">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">One-time setup</span>
-                    <span className="font-semibold">{formatINR(plan.setupFee)}</span>
+                <div className="mb-5">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-bold">{formatINR(plan.monthly)}</span>
+                    <span className="text-sm text-muted-foreground">/month</span>
                   </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">{billing === 'yearly' ? 'Annual retainer' : 'Monthly retainer'}</span>
-                    <span className="font-semibold text-primary">
-                      {formatINR(price)}<span className="text-muted-foreground font-normal"> /{billing === 'yearly' ? 'yr' : 'mo'}</span>
-                    </span>
-                  </div>
-                  <div className="border-t border-border pt-2 flex justify-between text-sm">
-                    <span className="font-semibold">First {billing === 'yearly' ? 'year' : 'month'} total</span>
-                    <span className="font-bold text-foreground">{formatINR(plan.setupFee + price)}</span>
+                  <div className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    <span>🏷</span>
+                    <span>{formatINR(plan.yearly)}/year — save {formatINR(plan.yearlySave)}</span>
                   </div>
                 </div>
 
@@ -304,7 +308,7 @@ const PricingContent = () => {
                     <li key={idx} className={cn('flex items-start gap-2.5 text-xs',
                       f.included ? 'text-foreground' : 'text-muted-foreground/60')}>
                       {f.included
-                        ? <Check className={cn('w-4 h-4 mt-0.5 shrink-0', plan.popular ? 'text-primary' : 'text-foreground/70')} />
+                        ? <Check className={cn('w-4 h-4 mt-0.5 shrink-0', 'text-emerald-500')} />
                         : <X className="w-4 h-4 mt-0.5 shrink-0 text-muted-foreground/40" />}
                       <span>{f.label}</span>
                     </li>
@@ -323,6 +327,7 @@ const PricingContent = () => {
             );
           })}
         </div>
+
 
         <div className="mt-12 grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
