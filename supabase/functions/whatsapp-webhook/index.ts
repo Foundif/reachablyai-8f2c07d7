@@ -478,6 +478,16 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
       ? `\n🔗 Razorpay link: ${rzp.link}\n(UPI / Card / Netbanking — secure)`
       : `\n⚠️ Payment link unavailable right now. Our team will contact you.`)
   await sendWhatsApp(phoneNumberId, token, textMsg(waId, summary))
+
+  // Dedicated follow-up payment-link message
+  if (rzp.ok && rzp.link) {
+    const payMsg =
+      `💳 *Pay ₹${advance} Advance to Confirm*\n\n` +
+      `Booking: ${bookingCode}\n` +
+      `Secure Razorpay link (UPI / Card / Netbanking):\n${rzp.link}\n\n` +
+      `Your booking will be confirmed automatically once payment is received. ✅`
+    await sendWhatsApp(phoneNumberId, token, textMsg(waId, payMsg))
+  }
 }
 
 Deno.serve(async (req) => {
