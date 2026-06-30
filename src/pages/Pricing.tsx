@@ -174,15 +174,21 @@ const PricingContent = () => {
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
   const [payingId, setPayingId] = useState<string | null>(null);
 
-  const handleSelect = async (plan: Plan) => {
+  const handleSelect = async (plan: Plan, kind: 'setup' | 'plan') => {
     if (!user) { navigate('/auth'); return; }
-    const amount = billing === 'yearly' ? plan.setupFee + plan.yearly : plan.setupFee + plan.monthly;
-    setPayingId(plan.id);
+    const amount = kind === 'setup'
+      ? plan.setupFee
+      : (billing === 'yearly' ? plan.yearly : plan.monthly);
+    const label = kind === 'setup'
+      ? `${plan.name} — One-time setup`
+      : `${plan.name} — ${billing === 'yearly' ? 'Annual' : 'Monthly'} retainer`;
+    const payKey = `${plan.id}:${kind}`;
+    setPayingId(payKey);
     try {
       const ok = await loadRazorpay();
       if (!ok) throw new Error('Failed to load Razorpay checkout');
       const { data, error } = await supabase.functions.invoke('razorpay-create-order', {
-        body: { amount, currency: 'INR', plan_id: plan.id, billing_period: billing, user_id: user.id },
+        body: { amount, currency: 'INR', plan_id: plan.id, billing_period: kind === 'setup' ? 'setup' : billing, user_id: user.id },
       });
       if (error || (data as any)?.error) throw new Error((data as any)?.error || error?.message || 'Order failed');
       const { order, key_id } = data as any;
@@ -192,10 +198,10 @@ const PricingContent = () => {
         currency: order.currency,
         order_id: order.id,
         name: 'Chatarly',
-        description: `${plan.name} plan — setup + ${billing}`,
+        description: label,
         prefill: { email: user.email || '', name: (profile as any)?.full_name || '' },
         theme: { color: '#6366f1' },
-        handler: () => { toast.success('Payment successful! Your plan will activate shortly.'); },
+        handler: () => { toast.success(`${label} — payment successful!`); },
         modal: { ondismiss: () => setPayingId(null) },
       });
       rzp.open();
