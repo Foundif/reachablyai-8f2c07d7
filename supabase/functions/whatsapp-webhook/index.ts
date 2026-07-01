@@ -386,11 +386,13 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
   const advance = Number(settings?.advance_amount || 200)
   const balance = Math.max(0, price - advance)
 
-  // Compute a stable, human-readable booking code shared by WhatsApp + Google Sheet
-  const todayStart = new Date(); todayStart.setUTCHours(0,0,0,0)
+  // Shared, per-day IST counter (shared between WhatsApp flow + website form)
+  // IST midnight boundary → UTC = previous day 18:30
+  const istNow = new Date(Date.now() + 5.5 * 60 * 60 * 1000)
+  const istMidnightUtc = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate()) - 5.5 * 60 * 60 * 1000)
   const { count: todayCount } = await supabase
     .from('tn_bookings').select('*', { count: 'exact', head: true })
-    .eq('user_id', userId).gte('created_at', todayStart.toISOString())
+    .eq('user_id', userId).gte('created_at', istMidnightUtc.toISOString())
   const bookingCode = bookingIdFor((todayCount || 0) + 1)
 
   const { data: booking, error: bErr } = await supabase.from('tn_bookings').insert({
