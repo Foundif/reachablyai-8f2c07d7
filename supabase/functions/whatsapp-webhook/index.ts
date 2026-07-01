@@ -227,21 +227,28 @@ const SHEET_HEADERS = [
   'Timestamp','Booking ID','Service Selected','Customer Name','Phone Number',
   'Transport Mode','Service Category','Service Info','Reporting Address',
   'Nearest Landmark','Date of Service','Reporting Time','Expected Hrs/Days',
-  'Add-ons Selected','Estimate ₹','Advance ₹','Balance ₹',
-  'Payment Status','UPI Reference','Helper Assigned','Booking Status',
+  'Add-ons','Payment Status','UPI Reference','Helper Assigned','Booking Status',
+  'Source','Booking For','Passenger Name','Passenger Phone',
 ]
-// 21 columns -> A:U
+// 22 columns -> A:V
 
-function istTimestamp() {
-  // IST = UTC + 5:30
+function istParts() {
   const d = new Date(Date.now() + 5.5 * 60 * 60 * 1000)
-  return d.toISOString().replace('T', ' ').slice(0, 19) + ' IST'
+  return {
+    dd: String(d.getUTCDate()).padStart(2, '0'),
+    mm: String(d.getUTCMonth() + 1).padStart(2, '0'),
+    d,
+  }
 }
 
+function istTimestamp() {
+  return istParts().d.toISOString().replace('T', ' ').slice(0, 19) + ' IST'
+}
+
+// New format: TN45-DDMM-XXX  (e.g. TN45-2606-001)  — 3-digit daily counter, IST
 function bookingIdFor(seq: number) {
-  const d = new Date(Date.now() + 5.5 * 60 * 60 * 1000)
-  const ymd = `${d.getUTCFullYear()}${String(d.getUTCMonth()+1).padStart(2,'0')}${String(d.getUTCDate()).padStart(2,'0')}`
-  return `TN45-${ymd}-${String(seq).padStart(4,'0')}`
+  const { dd, mm } = istParts()
+  return `TN45-${dd}${mm}-${String(seq).padStart(3, '0')}`
 }
 
 async function sheetsFetch(url: string, init: RequestInit) {
