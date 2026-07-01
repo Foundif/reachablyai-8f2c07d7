@@ -292,7 +292,7 @@ async function ensureSheetTabAndHeader(sheetId: string, tab: string) {
     if (!add.ok) return add
   }
 
-  const range = `${a1Sheet(tab)}!A1:U1`
+  const range = `${a1Sheet(tab)}!A1:V1`
   const getUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}`
   const r = await sheetsFetch(getUrl, { method: 'GET' })
   if (!r.ok) return r
