@@ -310,7 +310,7 @@ async function ensureSheetTabAndHeader(sheetId: string, tab: string) {
 async function appendToGoogleSheet(sheetId: string, tab: string, row: (string | number)[]) {
   try {
     const safeTab = cleanSheetTitle(tab)
-    const range = `${a1Sheet(safeTab)}!A:U`
+    const range = `${a1Sheet(safeTab)}!A:V`
     const url = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`
 
     // Append-first strategy: skip pre-flight reads to stay under the Sheets read quota.
