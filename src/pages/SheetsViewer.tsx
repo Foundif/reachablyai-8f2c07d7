@@ -108,7 +108,8 @@ const SheetsViewer = () => {
   const saveChanges = async () => {
     setSaving(true);
     const lastCol = colLetter(Math.max(0, maxCols - 1));
-    const range = `${tab}!A1:${lastCol}${rows.length}`;
+    const a1Tab = /^[A-Za-z0-9_]+$/.test(tab) ? tab : `'${tab.replace(/'/g, "''")}'`;
+    const range = `${a1Tab}!A1:${lastCol}${rows.length}`;
     const { data, error } = await supabase.functions.invoke('sheets-write', {
       body: { sheet_id: sheetId, tab, range, values: rows },
     });

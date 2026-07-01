@@ -38,7 +38,8 @@ Deno.serve(async (req) => {
     const sheetsKey = Deno.env.get('GOOGLE_SHEETS_API_KEY')
     if (!lovableKey || !sheetsKey) return json({ error: 'Google Sheets connector not linked.' }, 400)
 
-    const range = `${tab}!A1:Z1000`
+    const a1Tab = /^[A-Za-z0-9_]+$/.test(tab) ? tab : `'${String(tab).replace(/'/g, "''")}'`
+    const range = `${a1Tab}!A1:Z1000`
     const url = `${GATEWAY}/spreadsheets/${sheetId}/values/${range}`
     const res = await fetch(url, {
       headers: {

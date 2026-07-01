@@ -227,21 +227,28 @@ const SHEET_HEADERS = [
   'Timestamp','Booking ID','Service Selected','Customer Name','Phone Number',
   'Transport Mode','Service Category','Service Info','Reporting Address',
   'Nearest Landmark','Date of Service','Reporting Time','Expected Hrs/Days',
-  'Add-ons Selected','Estimate ₹','Advance ₹','Balance ₹',
-  'Payment Status','UPI Reference','Helper Assigned','Booking Status',
+  'Add-ons','Payment Status','UPI Reference','Helper Assigned','Booking Status',
+  'Source','Booking For','Passenger Name','Passenger Phone',
 ]
-// 21 columns -> A:U
+// 22 columns -> A:V
 
-function istTimestamp() {
-  // IST = UTC + 5:30
+function istParts() {
   const d = new Date(Date.now() + 5.5 * 60 * 60 * 1000)
-  return d.toISOString().replace('T', ' ').slice(0, 19) + ' IST'
+  return {
+    dd: String(d.getUTCDate()).padStart(2, '0'),
+    mm: String(d.getUTCMonth() + 1).padStart(2, '0'),
+    d,
+  }
 }
 
+function istTimestamp() {
+  return istParts().d.toISOString().replace('T', ' ').slice(0, 19) + ' IST'
+}
+
+// New format: TN45-DDMM-XXX  (e.g. TN45-2606-001)  — 3-digit daily counter, IST
 function bookingIdFor(seq: number) {
-  const d = new Date(Date.now() + 5.5 * 60 * 60 * 1000)
-  const ymd = `${d.getUTCFullYear()}${String(d.getUTCMonth()+1).padStart(2,'0')}${String(d.getUTCDate()).padStart(2,'0')}`
-  return `TN45-${ymd}-${String(seq).padStart(4,'0')}`
+  const { dd, mm } = istParts()
+  return `TN45-${dd}${mm}-${String(seq).padStart(3, '0')}`
 }
 
 async function sheetsFetch(url: string, init: RequestInit) {
@@ -285,7 +292,7 @@ async function ensureSheetTabAndHeader(sheetId: string, tab: string) {
     if (!add.ok) return add
   }
 
-  const range = `${a1Sheet(tab)}!A1:U1`
+  const range = `${a1Sheet(tab)}!A1:V1`
   const getUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}`
   const r = await sheetsFetch(getUrl, { method: 'GET' })
   if (!r.ok) return r
@@ -303,7 +310,7 @@ async function ensureSheetTabAndHeader(sheetId: string, tab: string) {
 async function appendToGoogleSheet(sheetId: string, tab: string, row: (string | number)[]) {
   try {
     const safeTab = cleanSheetTitle(tab)
-    const range = `${a1Sheet(safeTab)}!A:U`
+    const range = `${a1Sheet(safeTab)}!A:V`
     const url = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`
 
     // Append-first strategy: skip pre-flight reads to stay under the Sheets read quota.
@@ -379,11 +386,13 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
   const advance = Number(settings?.advance_amount || 200)
   const balance = Math.max(0, price - advance)
 
-  // Compute a stable, human-readable booking code shared by WhatsApp + Google Sheet
-  const todayStart = new Date(); todayStart.setUTCHours(0,0,0,0)
+  // Shared, per-day IST counter (shared between WhatsApp flow + website form)
+  // IST midnight boundary → UTC = previous day 18:30
+  const istNow = new Date(Date.now() + 5.5 * 60 * 60 * 1000)
+  const istMidnightUtc = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate()) - 5.5 * 60 * 60 * 1000)
   const { count: todayCount } = await supabase
     .from('tn_bookings').select('*', { count: 'exact', head: true })
-    .eq('user_id', userId).gte('created_at', todayStart.toISOString())
+    .eq('user_id', userId).gte('created_at', istMidnightUtc.toISOString())
   const bookingCode = bookingIdFor((todayCount || 0) + 1)
 
   const { data: booking, error: bErr } = await supabase.from('tn_bookings').insert({
@@ -426,15 +435,17 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
     screenshot_url: rzp.ok ? rzp.link : null,
   })
 
-  // 2) Append to Google Sheet — 21 columns, same booking code as WhatsApp summary
+  // 2) Append to Google Sheet — 22 columns (A:V), same booking code as WhatsApp summary
   if (settings?.google_sheet_enabled && settings?.google_sheet_id) {
     const addonText = (addons && addons.length) ? addons.join(', ') : 'None'
+    const bookingFor = String(d.booking_for || 'myself').toLowerCase()
+    const isSomeoneElse = bookingFor === 'someone_else'
     const row = [
       istTimestamp(),                              // A Timestamp
-      bookingCode,                                  // B Booking ID (same as WhatsApp)
+      bookingCode,                                  // B Booking ID (TN45-DDMM-XXX)
       svc.name || svcCode || '',                    // C Service Selected
-      d.name || '',                                 // D Customer Name
-      d.phone || waId || '',                        // E Phone Number
+      d.name || '',                                 // D Customer Name (booker)
+      d.phone || waId || '',                        // E Phone Number (booker)
       d.transport_mode || '',                       // F Transport Mode
       d.transport_details || '',                    // G Service Category
       d.service_info || '',                         // H Service Info
@@ -443,14 +454,15 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
       d.date || '',                                 // K Date of Service
       d.time || d.preferred_time || '',             // L Reporting Time
       d.hours || '',                                // M Expected Hrs/Days
-      addonText,                                    // N Add-ons Selected
-      `₹${price}`,                                  // O Estimate
-      `₹${advance}`,                                // P Advance
-      `₹${balance}`,                                // Q Balance
-      `Advance Pending ₹${advance}`,                // R Payment Status
-      '',                                           // S UPI Reference
-      '',                                           // T Helper Assigned
-      'New',                                        // U Booking Status
+      addonText,                                    // N Add-ons
+      `Advance Pending ₹${advance}`,                // O Payment Status
+      '',                                           // P UPI Reference
+      '',                                           // Q Helper Assigned
+      'New',                                        // R Booking Status
+      'WhatsApp Flow',                              // S Source
+      bookingFor,                                   // T Booking For (myself/someone_else)
+      isSomeoneElse ? (d.passenger_name || '') : '', // U Passenger Name
+      isSomeoneElse ? (d.passenger_phone || '') : '',// V Passenger Phone
     ]
     const sheetRes = await appendToGoogleSheet(settings.google_sheet_id, settings.google_sheet_tab || 'Bookings', row)
     if (!sheetRes.ok) {
