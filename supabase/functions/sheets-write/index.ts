@@ -41,13 +41,14 @@ Deno.serve(async (req) => {
       'Content-Type': 'application/json',
     }
 
+    const a1Tab = /^[A-Za-z0-9_]+$/.test(tab) ? tab : `'${String(tab).replace(/'/g, "''")}'`
     let url: string
     let method: 'PUT' | 'POST' = 'PUT'
     if (body.append) {
-      url = `${GATEWAY}/spreadsheets/${sheetId}/values/${tab}!A1:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`
+      url = `${GATEWAY}/spreadsheets/${sheetId}/values/${a1Tab}!A1:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`
       method = 'POST'
     } else {
-      const range = body.range || `${tab}!A1`
+      const range = body.range || `${a1Tab}!A1`
       url = `${GATEWAY}/spreadsheets/${sheetId}/values/${range}?valueInputOption=USER_ENTERED`
     }
 
