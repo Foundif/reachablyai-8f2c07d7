@@ -106,7 +106,6 @@ const SheetsViewer = () => {
   const deleteRow = (i: number) => setRows(prev => prev.filter((_, idx) => idx !== i));
 
   const saveChanges = async () => {
-  const saveChanges = async () => {
     setSaving(true);
     const lastCol = colLetter(Math.max(0, maxCols - 1));
     const a1Tab = /^[A-Za-z0-9_]+$/.test(tab) ? tab : `'${tab.replace(/'/g, "''")}'`;
