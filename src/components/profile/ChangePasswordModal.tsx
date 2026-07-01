@@ -65,10 +65,22 @@ const ChangePasswordModal = ({ open, onOpenChange }: ChangePasswordModalProps) =
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: formData.newPassword,
+      // 1) Verify current password by re-authenticating
+      const { data: userData } = await supabase.auth.getUser();
+      const email = userData.user?.email;
+      if (!email) throw new Error('Not signed in');
+      const { error: verifyErr } = await supabase.auth.signInWithPassword({
+        email,
+        password: formData.currentPassword,
       });
+      if (verifyErr) {
+        setErrors({ currentPassword: 'Current password is incorrect' });
+        setLoading(false);
+        return;
+      }
 
+      // 2) Update to the new password
+      const { error } = await supabase.auth.updateUser({ password: formData.newPassword });
       if (error) throw error;
 
       toast.success('Password updated successfully!');
