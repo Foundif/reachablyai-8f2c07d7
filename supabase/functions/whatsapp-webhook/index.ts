@@ -235,20 +235,22 @@ const SHEET_HEADERS = [
 function istParts() {
   const d = new Date(Date.now() + 5.5 * 60 * 60 * 1000)
   return {
-    dd: String(d.getUTCDate()).padStart(2, '0'),
+    yy: String(d.getUTCFullYear()).slice(-2),
     mm: String(d.getUTCMonth() + 1).padStart(2, '0'),
+    dd: String(d.getUTCDate()).padStart(2, '0'),
     d,
   }
 }
 
 function istTimestamp() {
+  // Force text-friendly format so Google Sheets keeps it as a string, not a serial number
   return istParts().d.toISOString().replace('T', ' ').slice(0, 19) + ' IST'
 }
 
-// New format: TN45-DDMM-XXX  (e.g. TN45-2606-001)  — 3-digit daily counter, IST
+// Format: TN45-YYMM-XXX  (e.g. TN45-2607-008) — monthly counter, IST-based
 function bookingIdFor(seq: number) {
-  const { dd, mm } = istParts()
-  return `TN45-${dd}${mm}-${String(seq).padStart(3, '0')}`
+  const { yy, mm } = istParts()
+  return `TN45-${yy}${mm}-${String(seq).padStart(3, '0')}`
 }
 
 async function sheetsFetch(url: string, init: RequestInit) {
@@ -386,14 +388,13 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
   const advance = Number(settings?.advance_amount || 200)
   const balance = Math.max(0, price - advance)
 
-  // Shared, per-day IST counter (shared between WhatsApp flow + website form)
-  // IST midnight boundary → UTC = previous day 18:30
+  // Monthly IST counter for TN45-YYMM-XXX (shared across WhatsApp + manual bookings)
   const istNow = new Date(Date.now() + 5.5 * 60 * 60 * 1000)
-  const istMidnightUtc = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate()) - 5.5 * 60 * 60 * 1000)
-  const { count: todayCount } = await supabase
+  const istMonthStartUtc = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), 1) - 5.5 * 60 * 60 * 1000)
+  const { count: monthCount } = await supabase
     .from('tn_bookings').select('*', { count: 'exact', head: true })
-    .eq('user_id', userId).gte('created_at', istMidnightUtc.toISOString())
-  const bookingCode = bookingIdFor((todayCount || 0) + 1)
+    .eq('user_id', userId).gte('created_at', istMonthStartUtc.toISOString())
+  const bookingCode = bookingIdFor((monthCount || 0) + 1)
 
   const { data: booking, error: bErr } = await supabase.from('tn_bookings').insert({
     user_id: userId,
