@@ -476,30 +476,48 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
     }
   }
 
-  const summary = `✅ *Booking Received!*\n\n` +
-    `🆔 ${bookingCode}\n` +
-    `🧾 ${svc.name}\n` +
-    `👤 ${d.name || '-'}\n` +
-    `📞 ${d.phone || '-'}\n` +
-    `📅 ${d.date || '-'} • ${d.time || d.preferred_time || '-'}\n` +
-    `🚉 ${d.transport_mode || '-'}${d.service_info ? ' • ' + d.service_info : (d.transport_details ? ' • ' + d.transport_details : '')}\n` +
-    `📍 ${d.address || '-'}${d.landmark ? `\n🏷️ ${d.landmark}` : ''}\n` +
-    (addons.length ? `➕ ${addons.join(', ')}\n` : '') +
-    `\n💰 Estimated Total: ₹${price}\n` +
-    `💳 Advance to Pay: *₹${advance}*\n` +
-    `🧮 Balance at Service: ₹${balance}\n` +
+  // Customer-facing messages — respect user-defined templates when provided
+  const vars: Record<string, string> = {
+    booking_id: bookingCode,
+    service: svc.name || '',
+    name: d.name || '-',
+    phone: d.phone || waId || '-',
+    date: d.date || '-',
+    time: d.time || d.preferred_time || '-',
+    transport: d.transport_mode || '-',
+    transport_details: d.transport_details || d.service_info || '',
+    address: d.address || '-',
+    landmark: d.landmark || '',
+    addons: addons.length ? addons.join(', ') : 'None',
+    total: String(price),
+    advance: String(advance),
+    balance: String(balance),
+    razorpay_link: rzp.ok ? (rzp.link || '') : '',
+    booking_for: String(d.booking_for || 'myself'),
+    passenger_name: d.passenger_name || '',
+    passenger_phone: d.passenger_phone || '',
+  }
+  const renderTpl = (tpl: string) => tpl.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '')
+
+  const defaultSummary = `✅ *Booking Received!*\n\n` +
+    `🆔 {booking_id}\n🧾 {service}\n👤 {name}\n📞 {phone}\n📅 {date} • {time}\n` +
+    `🚉 {transport}${d.service_info || d.transport_details ? ' • {transport_details}' : ''}\n` +
+    `📍 {address}${d.landmark ? '\n🏷️ {landmark}' : ''}\n` +
+    (addons.length ? `➕ {addons}\n` : '') +
+    `\n💰 Estimated Total: ₹{total}\n💳 Advance to Pay: *₹{advance}*\n🧮 Balance at Service: ₹{balance}\n` +
     (rzp.ok
-      ? `\n🔗 Razorpay link: ${rzp.link}\n(UPI / Card / Netbanking — secure)`
+      ? `\n🔗 Razorpay link: {razorpay_link}\n(UPI / Card / Netbanking — secure)`
       : `\n⚠️ Payment link unavailable right now. Our team will contact you.`)
+  const summary = renderTpl(settings?.tpl_booking_received || defaultSummary)
   await sendWhatsApp(phoneNumberId, token, textMsg(waId, summary))
 
   // Dedicated follow-up payment-link message
   if (rzp.ok && rzp.link) {
-    const payMsg =
-      `💳 *Pay ₹${advance} Advance to Confirm*\n\n` +
-      `Booking: ${bookingCode}\n` +
-      `Secure Razorpay link (UPI / Card / Netbanking):\n${rzp.link}\n\n` +
+    const defaultPay =
+      `💳 *Pay ₹{advance} Advance to Confirm*\n\nBooking: {booking_id}\n` +
+      `Secure Razorpay link (UPI / Card / Netbanking):\n{razorpay_link}\n\n` +
       `Your booking will be confirmed automatically once payment is received. ✅`
+    const payMsg = renderTpl(settings?.tpl_payment_reminder || defaultPay)
     await sendWhatsApp(phoneNumberId, token, textMsg(waId, payMsg))
   }
 }
