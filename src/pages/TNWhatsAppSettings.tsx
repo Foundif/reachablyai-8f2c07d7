@@ -336,6 +336,34 @@ const TNWhatsAppSettings = () => {
           </label>
         </Card>
 
+        {/* Customer message templates */}
+        <Card className="p-5 space-y-4">
+          <div>
+            <h2 className="font-semibold text-lg">Customer Message Templates</h2>
+            <p className="text-xs text-muted-foreground">
+              Fully editable. Available placeholders: <code>{'{booking_id} {service} {name} {phone} {date} {time} {transport} {address} {landmark} {addons} {total} {advance} {balance} {razorpay_link} {passenger_name} {passenger_phone}'}</code>.
+              Leave blank to use Chatarly defaults.
+            </p>
+          </div>
+
+          {[
+            { key: 'tpl_booking_received', label: 'Booking Received (sent after flow submit)', ph: '✅ Booking Received!\n🆔 {booking_id}\n🧾 {service}\n👤 {name}\n💰 Total ₹{total} · Advance ₹{advance}' },
+            { key: 'tpl_payment_reminder', label: 'Payment Reminder (sent with Razorpay link)', ph: '💳 Pay ₹{advance} to confirm {booking_id}\n{razorpay_link}' },
+            { key: 'tpl_payment_confirmed', label: 'Payment Confirmed (sent after Razorpay success)', ph: '✅ Payment received for {booking_id}. Amount ₹{amount}. Thank you!' },
+          ].map(t => (
+            <div key={t.key}>
+              <Label className="text-xs">{t.label}</Label>
+              <textarea
+                rows={4}
+                value={s[t.key] || ''}
+                onChange={e => setS({ ...s, [t.key]: e.target.value })}
+                placeholder={t.ph}
+                className="mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono resize-y"
+              />
+            </div>
+          ))}
+        </Card>
+
         <Button onClick={save} className="w-full md:w-auto">Save Settings</Button>
       </div>
     </AppLayout>
