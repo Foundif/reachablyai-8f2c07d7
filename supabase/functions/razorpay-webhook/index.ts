@@ -149,13 +149,22 @@ Deno.serve(async (req) => {
     }
   }
 
-  // 3) WhatsApp confirmation
+  // 3) WhatsApp confirmation (customizable template)
   if (settings?.meta_phone_number_id && settings?.meta_access_token && booking.wa_id) {
-    const msg =
-      `✅ *Payment Received!*\n\n` +
-      `Booking ${bookingCode || ''} is now *fully confirmed*.\n` +
-      `Amount: ₹${amount || booking.advance_amount || 200}\n\n` +
+    const paid = amount || booking.advance_amount || 200
+    const vars: Record<string, string> = {
+      booking_id: bookingCode || '',
+      amount: String(paid),
+      name: booking.name || '-',
+      service: booking.service_name || '',
+      balance: String(booking.balance_amount || 0),
+    }
+    const defaultTpl =
+      `✅ *Payment Received!*\n\nBooking {booking_id} is now *fully confirmed*.\n` +
+      `Amount: ₹{amount}\nBalance at service: ₹{balance}\n\n` +
       `Our team will contact you shortly with helper assignment details. Thank you! 🙏`
+    const tpl = (settings.tpl_payment_confirmed || defaultTpl)
+    const msg = tpl.replace(/\{(\w+)\}/g, (_: string, k: string) => vars[k] ?? '')
     await sendWhatsAppText(settings.meta_phone_number_id, settings.meta_access_token, booking.wa_id, msg)
   }
 
