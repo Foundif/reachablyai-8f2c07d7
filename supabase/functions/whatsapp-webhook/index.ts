@@ -313,7 +313,8 @@ async function appendToGoogleSheet(sheetId: string, tab: string, row: (string | 
   try {
     const safeTab = cleanSheetTitle(tab)
     const range = `${a1Sheet(safeTab)}!A:V`
-    const url = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`
+    // RAW keeps times like "8Am" / "8:00" as literal text so Sheets never converts them into decimals.
+    const url = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`
 
     // Append-first strategy: skip pre-flight reads to stay under the Sheets read quota.
     let r = await sheetsFetch(url, { method: 'POST', body: JSON.stringify({ values: [row] }) })
