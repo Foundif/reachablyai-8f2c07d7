@@ -177,6 +177,32 @@ const BookingDetail = () => {
               </div>
             </Card>
 
+            {String(details.booking_for || '').toLowerCase() === 'someone_else' && (
+              <Card className="p-5 border-2 border-amber-400/60 bg-amber-500/10 dark:bg-amber-500/5">
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <h2 className="text-sm font-semibold flex items-center gap-2">🧳 Booking for someone else — Passenger Details</h2>
+                  <Badge className="bg-amber-500 text-white">Passenger info</Badge>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3 rounded-lg bg-background/80 border border-amber-400/40">
+                    <p className="text-[10px] uppercase text-muted-foreground">Passenger Name</p>
+                    <p className="text-base font-semibold">{details.passenger_name || '—'}</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-background/80 border border-amber-400/40">
+                    <p className="text-[10px] uppercase text-muted-foreground">Passenger Phone</p>
+                    {details.passenger_phone ? (
+                      <a href={`tel:${details.passenger_phone}`} className="text-base font-semibold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1.5">
+                        <Phone className="w-4 h-4" /> {details.passenger_phone}
+                      </a>
+                    ) : <p className="text-base font-semibold">—</p>}
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-3">
+                  The customer above ({b.name}) booked this service on behalf of the passenger. Contact the passenger for on-ground coordination.
+                </p>
+              </Card>
+            )}
+
             <Card className="p-5">
               <h2 className="text-sm font-semibold flex items-center gap-2 mb-3">📅 Schedule & Location</h2>
               <div className="grid grid-cols-2 gap-3">
