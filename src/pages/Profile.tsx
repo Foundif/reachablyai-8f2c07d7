@@ -192,18 +192,33 @@ const Profile = () => {
 };
 
 const EditProfileCard = ({ onClose }: { onClose: () => void }) => {
-  const { profile, updateProfile } = useAuth();
+  const { user, profile, updateProfile } = useAuth();
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [storeName, setStoreName] = useState(profile?.store_name || '');
   const [country, setCountry] = useState(profile?.country || 'India');
   const [currency, setCurrency] = useState(profile?.currency || 'INR');
+  const [email, setEmail] = useState(user?.email || '');
   const [saving, setSaving] = useState(false);
+  const [emailSaving, setEmailSaving] = useState(false);
 
   const save = async () => {
     setSaving(true);
     const { error } = await updateProfile({ full_name: fullName, store_name: storeName, country, currency });
     setSaving(false);
     if (error) toast.error(error.message); else { toast.success('Profile updated'); onClose(); }
+  };
+
+  const changeEmail = async () => {
+    const next = email.trim().toLowerCase();
+    if (!next || next === (user?.email || '').toLowerCase()) return toast.error('Enter a new email');
+    setEmailSaving(true);
+    const { supabase } = await import('@/integrations/supabase/client');
+    const { error } = await supabase.auth.updateUser({ email: next });
+    setEmailSaving(false);
+    if (error) toast.error(error.message);
+    else toast.success('Confirmation link sent', {
+      description: `Open ${next} and click the link. Also confirm from your old address if asked. Your login email will change once both links are clicked.`,
+    });
   };
 
   return (
@@ -219,6 +234,20 @@ const EditProfileCard = ({ onClose }: { onClose: () => void }) => {
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4" />Save</>}
         </Button>
         <Button variant="outline" onClick={onClose}>Cancel</Button>
+      </div>
+
+      <div className="pt-4 mt-2 border-t border-border space-y-2">
+        <Label className="text-xs">Login email</Label>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="new@example.com" />
+          <Button variant="outline" onClick={changeEmail} disabled={emailSaving}>
+            {emailSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Send confirmation'}
+          </Button>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          A confirmation link is sent to the new address. Your login email switches only after you click it.
+          If your provider requires it, also click the confirmation on the old address.
+        </p>
       </div>
     </div>
   );

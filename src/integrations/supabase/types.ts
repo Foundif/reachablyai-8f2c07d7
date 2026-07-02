@@ -1821,6 +1821,9 @@ export type Database = {
           razorpay_key_id: string | null
           razorpay_key_secret: string | null
           razorpay_webhook_secret: string | null
+          tpl_booking_received: string | null
+          tpl_payment_confirmed: string | null
+          tpl_payment_reminder: string | null
           updated_at: string
           upi_id: string | null
           user_id: string
@@ -1851,6 +1854,9 @@ export type Database = {
           razorpay_key_id?: string | null
           razorpay_key_secret?: string | null
           razorpay_webhook_secret?: string | null
+          tpl_booking_received?: string | null
+          tpl_payment_confirmed?: string | null
+          tpl_payment_reminder?: string | null
           updated_at?: string
           upi_id?: string | null
           user_id: string
@@ -1881,6 +1887,9 @@ export type Database = {
           razorpay_key_id?: string | null
           razorpay_key_secret?: string | null
           razorpay_webhook_secret?: string | null
+          tpl_booking_received?: string | null
+          tpl_payment_confirmed?: string | null
+          tpl_payment_reminder?: string | null
           updated_at?: string
           upi_id?: string | null
           user_id?: string

@@ -235,20 +235,22 @@ const SHEET_HEADERS = [
 function istParts() {
   const d = new Date(Date.now() + 5.5 * 60 * 60 * 1000)
   return {
-    dd: String(d.getUTCDate()).padStart(2, '0'),
+    yy: String(d.getUTCFullYear()).slice(-2),
     mm: String(d.getUTCMonth() + 1).padStart(2, '0'),
+    dd: String(d.getUTCDate()).padStart(2, '0'),
     d,
   }
 }
 
 function istTimestamp() {
+  // Force text-friendly format so Google Sheets keeps it as a string, not a serial number
   return istParts().d.toISOString().replace('T', ' ').slice(0, 19) + ' IST'
 }
 
-// New format: TN45-DDMM-XXX  (e.g. TN45-2606-001)  — 3-digit daily counter, IST
+// Format: TN45-YYMM-XXX  (e.g. TN45-2607-008) — monthly counter, IST-based
 function bookingIdFor(seq: number) {
-  const { dd, mm } = istParts()
-  return `TN45-${dd}${mm}-${String(seq).padStart(3, '0')}`
+  const { yy, mm } = istParts()
+  return `TN45-${yy}${mm}-${String(seq).padStart(3, '0')}`
 }
 
 async function sheetsFetch(url: string, init: RequestInit) {
@@ -311,7 +313,8 @@ async function appendToGoogleSheet(sheetId: string, tab: string, row: (string | 
   try {
     const safeTab = cleanSheetTitle(tab)
     const range = `${a1Sheet(safeTab)}!A:V`
-    const url = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`
+    // RAW keeps times like "8Am" / "8:00" as literal text so Sheets never converts them into decimals.
+    const url = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`
 
     // Append-first strategy: skip pre-flight reads to stay under the Sheets read quota.
     let r = await sheetsFetch(url, { method: 'POST', body: JSON.stringify({ values: [row] }) })
@@ -386,14 +389,13 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
   const advance = Number(settings?.advance_amount || 200)
   const balance = Math.max(0, price - advance)
 
-  // Shared, per-day IST counter (shared between WhatsApp flow + website form)
-  // IST midnight boundary → UTC = previous day 18:30
+  // Monthly IST counter for TN45-YYMM-XXX (shared across WhatsApp + manual bookings)
   const istNow = new Date(Date.now() + 5.5 * 60 * 60 * 1000)
-  const istMidnightUtc = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate()) - 5.5 * 60 * 60 * 1000)
-  const { count: todayCount } = await supabase
+  const istMonthStartUtc = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), 1) - 5.5 * 60 * 60 * 1000)
+  const { count: monthCount } = await supabase
     .from('tn_bookings').select('*', { count: 'exact', head: true })
-    .eq('user_id', userId).gte('created_at', istMidnightUtc.toISOString())
-  const bookingCode = bookingIdFor((todayCount || 0) + 1)
+    .eq('user_id', userId).gte('created_at', istMonthStartUtc.toISOString())
+  const bookingCode = bookingIdFor((monthCount || 0) + 1)
 
   const { data: booking, error: bErr } = await supabase.from('tn_bookings').insert({
     user_id: userId,
@@ -474,30 +476,48 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
     }
   }
 
-  const summary = `✅ *Booking Received!*\n\n` +
-    `🆔 ${bookingCode}\n` +
-    `🧾 ${svc.name}\n` +
-    `👤 ${d.name || '-'}\n` +
-    `📞 ${d.phone || '-'}\n` +
-    `📅 ${d.date || '-'} • ${d.time || d.preferred_time || '-'}\n` +
-    `🚉 ${d.transport_mode || '-'}${d.service_info ? ' • ' + d.service_info : (d.transport_details ? ' • ' + d.transport_details : '')}\n` +
-    `📍 ${d.address || '-'}${d.landmark ? `\n🏷️ ${d.landmark}` : ''}\n` +
-    (addons.length ? `➕ ${addons.join(', ')}\n` : '') +
-    `\n💰 Estimated Total: ₹${price}\n` +
-    `💳 Advance to Pay: *₹${advance}*\n` +
-    `🧮 Balance at Service: ₹${balance}\n` +
+  // Customer-facing messages — respect user-defined templates when provided
+  const vars: Record<string, string> = {
+    booking_id: bookingCode,
+    service: svc.name || '',
+    name: d.name || '-',
+    phone: d.phone || waId || '-',
+    date: d.date || '-',
+    time: d.time || d.preferred_time || '-',
+    transport: d.transport_mode || '-',
+    transport_details: d.transport_details || d.service_info || '',
+    address: d.address || '-',
+    landmark: d.landmark || '',
+    addons: addons.length ? addons.join(', ') : 'None',
+    total: String(price),
+    advance: String(advance),
+    balance: String(balance),
+    razorpay_link: rzp.ok ? (rzp.link || '') : '',
+    booking_for: String(d.booking_for || 'myself'),
+    passenger_name: d.passenger_name || '',
+    passenger_phone: d.passenger_phone || '',
+  }
+  const renderTpl = (tpl: string) => tpl.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '')
+
+  const defaultSummary = `✅ *Booking Received!*\n\n` +
+    `🆔 {booking_id}\n🧾 {service}\n👤 {name}\n📞 {phone}\n📅 {date} • {time}\n` +
+    `🚉 {transport}${d.service_info || d.transport_details ? ' • {transport_details}' : ''}\n` +
+    `📍 {address}${d.landmark ? '\n🏷️ {landmark}' : ''}\n` +
+    (addons.length ? `➕ {addons}\n` : '') +
+    `\n💰 Estimated Total: ₹{total}\n💳 Advance to Pay: *₹{advance}*\n🧮 Balance at Service: ₹{balance}\n` +
     (rzp.ok
-      ? `\n🔗 Razorpay link: ${rzp.link}\n(UPI / Card / Netbanking — secure)`
+      ? `\n🔗 Razorpay link: {razorpay_link}\n(UPI / Card / Netbanking — secure)`
       : `\n⚠️ Payment link unavailable right now. Our team will contact you.`)
+  const summary = renderTpl(settings?.tpl_booking_received || defaultSummary)
   await sendWhatsApp(phoneNumberId, token, textMsg(waId, summary))
 
   // Dedicated follow-up payment-link message
   if (rzp.ok && rzp.link) {
-    const payMsg =
-      `💳 *Pay ₹${advance} Advance to Confirm*\n\n` +
-      `Booking: ${bookingCode}\n` +
-      `Secure Razorpay link (UPI / Card / Netbanking):\n${rzp.link}\n\n` +
+    const defaultPay =
+      `💳 *Pay ₹{advance} Advance to Confirm*\n\nBooking: {booking_id}\n` +
+      `Secure Razorpay link (UPI / Card / Netbanking):\n{razorpay_link}\n\n` +
       `Your booking will be confirmed automatically once payment is received. ✅`
+    const payMsg = renderTpl(settings?.tpl_payment_reminder || defaultPay)
     await sendWhatsApp(phoneNumberId, token, textMsg(waId, payMsg))
   }
 }
