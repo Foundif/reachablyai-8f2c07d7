@@ -227,8 +227,8 @@ const SheetsViewer = () => {
                 </thead>
                 <tbody>
                   {filteredIdx.map((absIdx, i) => (
-                    <tr key={absIdx} className="group hover:bg-muted/30">
-                      <td className="p-2 border-b border-r text-muted-foreground font-mono text-[10px] text-center">{i + 1}</td>
+                    <tr key={absIdx} className={`group ${i % 2 === 0 ? 'bg-background' : 'bg-muted/20'} hover:bg-primary/5`}>
+                      <td className="p-2 border-b border-r text-muted-foreground font-mono text-[10px] text-center sticky left-0 bg-inherit z-[1]">{i + 1}</td>
                       {header.map((_, j) => {
                         const val = rows[absIdx]?.[j] ?? '';
                         return (
