@@ -257,7 +257,8 @@ const SheetsViewer = () => {
                         </td>
                       )}
                     </tr>
-                  ))}
+                  );
+                  })}
                 </tbody>
               </table>
             </div>
