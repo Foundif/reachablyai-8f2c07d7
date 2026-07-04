@@ -281,17 +281,19 @@ async function ensureSheetTabAndHeader(sheetId: string, tab: string) {
   const key = `${sheetId}|${tab}`
   if (sheetReadyCache.has(key)) return { ok: true, status: 200, json: { cached: true } }
 
-  const metaUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}?fields=sheets.properties.title`
+  const metaUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}?fields=sheets.properties`
   const meta = await sheetsFetch(metaUrl, { method: 'GET' })
   if (!meta.ok) return meta
-  const titles = (meta.json?.sheets || []).map((s: any) => s?.properties?.title).filter(Boolean)
-  if (!titles.includes(tab)) {
+  const sheetsMeta = meta.json?.sheets || []
+  let sheetProps = sheetsMeta.find((s: any) => s?.properties?.title === tab)?.properties
+  if (!sheetProps) {
     const batchUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}:batchUpdate`
     const add = await sheetsFetch(batchUrl, {
       method: 'POST',
-      body: JSON.stringify({ requests: [{ addSheet: { properties: { title: tab } } }] }),
+      body: JSON.stringify({ requests: [{ addSheet: { properties: { title: tab, gridProperties: { columnCount: 26, frozenRowCount: 1 } } } }] }),
     })
     if (!add.ok) return add
+    sheetProps = add.json?.replies?.[0]?.addSheet?.properties
   }
 
   const range = `${a1Sheet(tab)}!A1:V1`
@@ -303,6 +305,38 @@ async function ensureSheetTabAndHeader(sheetId: string, tab: string) {
     const putUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}?valueInputOption=USER_ENTERED`
     const put = await sheetsFetch(putUrl, { method: 'PUT', body: JSON.stringify({ values: [SHEET_HEADERS] }) })
     if (!put.ok) return put
+  }
+
+  // Style header row: purple bg, white bold, frozen, and force column L (Reporting Time) as plain text
+  const sheetGid = sheetProps?.sheetId
+  if (typeof sheetGid === 'number') {
+    const styleUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}:batchUpdate`
+    await sheetsFetch(styleUrl, {
+      method: 'POST',
+      body: JSON.stringify({
+        requests: [
+          {
+            repeatCell: {
+              range: { sheetId: sheetGid, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: SHEET_HEADERS.length },
+              cell: { userEnteredFormat: {
+                backgroundColor: { red: 0.42, green: 0.23, blue: 0.72 },
+                textFormat: { foregroundColor: { red: 1, green: 1, blue: 1 }, bold: true, fontSize: 11 },
+                horizontalAlignment: 'CENTER', verticalAlignment: 'MIDDLE',
+              }},
+              fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment)',
+            },
+          },
+          { updateSheetProperties: { properties: { sheetId: sheetGid, gridProperties: { frozenRowCount: 1 } }, fields: 'gridProperties.frozenRowCount' } },
+          {
+            repeatCell: {
+              range: { sheetId: sheetGid, startRowIndex: 1, startColumnIndex: 10, endColumnIndex: 12 },
+              cell: { userEnteredFormat: { numberFormat: { type: 'TEXT' } } },
+              fields: 'userEnteredFormat.numberFormat',
+            },
+          },
+        ],
+      }),
+    })
   }
 
   sheetReadyCache.add(key)
