@@ -346,11 +346,12 @@ async function ensureSheetTabAndHeader(sheetId: string, tab: string) {
 async function appendToGoogleSheet(sheetId: string, tab: string, row: (string | number)[]) {
   try {
     const safeTab = cleanSheetTitle(tab)
+    // Ensure tab + styled header exist (cached after first call per instance)
+    const ensured = await ensureSheetTabAndHeader(sheetId, safeTab)
+    if (!ensured.ok) return { ok: false, status: ensured.status || 0, raw: ensured.json || ensured }
     const range = `${a1Sheet(safeTab)}!A:V`
     // RAW keeps times like "8Am" / "8:00" as literal text so Sheets never converts them into decimals.
     const url = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`
-
-    // Append-first strategy: skip pre-flight reads to stay under the Sheets read quota.
     let r = await sheetsFetch(url, { method: 'POST', body: JSON.stringify({ values: [row] }) })
 
     // If the tab/header isn't ready (400 parse-range or 404), ensure once and retry.
