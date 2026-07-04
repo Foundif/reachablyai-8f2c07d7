@@ -49,10 +49,12 @@ const TNWhatsAppSettings = () => {
     setFlows(f.data || []);
   };
 
+  const loadedRef = useRef(false);
   useEffect(() => { (async () => {
-    if (!user) return;
+    if (!user || loadedRef.current) return;
+    loadedRef.current = true;
     const { data } = await supabase.from('tn_settings').select('*').eq('user_id', user.id).maybeSingle();
-    if (data) setS(data);
+    if (data) setS((prev: any) => ({ ...prev, ...data }));
     loadEvents();
     loadMetaLibrary();
   })(); }, [user]);
