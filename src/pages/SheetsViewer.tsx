@@ -226,9 +226,13 @@ const SheetsViewer = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredIdx.map((absIdx, i) => (
-                    <tr key={absIdx} className={`group ${i % 2 === 0 ? 'bg-background' : 'bg-muted/20'} hover:bg-primary/5`}>
-                      <td className="p-2 border-b border-r text-muted-foreground font-mono text-[10px] text-center sticky left-0 bg-inherit z-[1]">{i + 1}</td>
+                  {filteredIdx.map((absIdx, i) => {
+                    const row = rows[absIdx] || [];
+                    const nonEmpty = row.filter(c => String(c ?? '').trim() !== '').length;
+                    const misaligned = nonEmpty > maxCols || (nonEmpty > 0 && nonEmpty < Math.min(3, maxCols) && header.length >= 5);
+                    return (
+                    <tr key={absIdx} className={`group ${misaligned ? 'bg-amber-500/10 hover:bg-amber-500/20' : i % 2 === 0 ? 'bg-background' : 'bg-muted/20'} hover:bg-primary/5`}>
+                      <td className="p-2 border-b border-r text-muted-foreground font-mono text-[10px] text-center sticky left-0 bg-inherit z-[1]">{i + 1}{misaligned && <span className="ml-0.5 text-amber-600" title="Row does not match template columns">⚠</span>}</td>
                       {header.map((_, j) => {
                         const val = rows[absIdx]?.[j] ?? '';
                         return (
@@ -253,7 +257,8 @@ const SheetsViewer = () => {
                         </td>
                       )}
                     </tr>
-                  ))}
+                  );
+                  })}
                 </tbody>
               </table>
             </div>

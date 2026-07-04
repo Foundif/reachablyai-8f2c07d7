@@ -281,17 +281,19 @@ async function ensureSheetTabAndHeader(sheetId: string, tab: string) {
   const key = `${sheetId}|${tab}`
   if (sheetReadyCache.has(key)) return { ok: true, status: 200, json: { cached: true } }
 
-  const metaUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}?fields=sheets.properties.title`
+  const metaUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}?fields=sheets.properties`
   const meta = await sheetsFetch(metaUrl, { method: 'GET' })
   if (!meta.ok) return meta
-  const titles = (meta.json?.sheets || []).map((s: any) => s?.properties?.title).filter(Boolean)
-  if (!titles.includes(tab)) {
+  const sheetsMeta = meta.json?.sheets || []
+  let sheetProps = sheetsMeta.find((s: any) => s?.properties?.title === tab)?.properties
+  if (!sheetProps) {
     const batchUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}:batchUpdate`
     const add = await sheetsFetch(batchUrl, {
       method: 'POST',
-      body: JSON.stringify({ requests: [{ addSheet: { properties: { title: tab } } }] }),
+      body: JSON.stringify({ requests: [{ addSheet: { properties: { title: tab, gridProperties: { columnCount: 26, frozenRowCount: 1 } } } }] }),
     })
     if (!add.ok) return add
+    sheetProps = add.json?.replies?.[0]?.addSheet?.properties
   }
 
   const range = `${a1Sheet(tab)}!A1:V1`
@@ -305,6 +307,38 @@ async function ensureSheetTabAndHeader(sheetId: string, tab: string) {
     if (!put.ok) return put
   }
 
+  // Style header row: purple bg, white bold, frozen, and force column L (Reporting Time) as plain text
+  const sheetGid = sheetProps?.sheetId
+  if (typeof sheetGid === 'number') {
+    const styleUrl = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}:batchUpdate`
+    await sheetsFetch(styleUrl, {
+      method: 'POST',
+      body: JSON.stringify({
+        requests: [
+          {
+            repeatCell: {
+              range: { sheetId: sheetGid, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: SHEET_HEADERS.length },
+              cell: { userEnteredFormat: {
+                backgroundColor: { red: 0.42, green: 0.23, blue: 0.72 },
+                textFormat: { foregroundColor: { red: 1, green: 1, blue: 1 }, bold: true, fontSize: 11 },
+                horizontalAlignment: 'CENTER', verticalAlignment: 'MIDDLE',
+              }},
+              fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment)',
+            },
+          },
+          { updateSheetProperties: { properties: { sheetId: sheetGid, gridProperties: { frozenRowCount: 1 } }, fields: 'gridProperties.frozenRowCount' } },
+          {
+            repeatCell: {
+              range: { sheetId: sheetGid, startRowIndex: 1, startColumnIndex: 10, endColumnIndex: 12 },
+              cell: { userEnteredFormat: { numberFormat: { type: 'TEXT' } } },
+              fields: 'userEnteredFormat.numberFormat',
+            },
+          },
+        ],
+      }),
+    })
+  }
+
   sheetReadyCache.add(key)
   return { ok: true, status: 200, json: { ensured: true } }
 }
@@ -312,11 +346,12 @@ async function ensureSheetTabAndHeader(sheetId: string, tab: string) {
 async function appendToGoogleSheet(sheetId: string, tab: string, row: (string | number)[]) {
   try {
     const safeTab = cleanSheetTitle(tab)
+    // Ensure tab + styled header exist (cached after first call per instance)
+    const ensured = await ensureSheetTabAndHeader(sheetId, safeTab)
+    if (!ensured.ok) return { ok: false, status: ensured.status || 0, raw: ensured.json || ensured }
     const range = `${a1Sheet(safeTab)}!A:V`
     // RAW keeps times like "8Am" / "8:00" as literal text so Sheets never converts them into decimals.
     const url = `https://connector-gateway.lovable.dev/google_sheets/v4/spreadsheets/${sheetId}/values/${range}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`
-
-    // Append-first strategy: skip pre-flight reads to stay under the Sheets read quota.
     let r = await sheetsFetch(url, { method: 'POST', body: JSON.stringify({ values: [row] }) })
 
     // If the tab/header isn't ready (400 parse-range or 404), ensure once and retry.
