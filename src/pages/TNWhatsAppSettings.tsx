@@ -352,6 +352,7 @@ const TNWhatsAppSettings = () => {
             { key: 'tpl_booking_received', label: 'Booking Received (sent after flow submit)', ph: '✅ Booking Received!\n🆔 {booking_id}\n🧾 {service}\n👤 {name}\n💰 Total ₹{total} · Advance ₹{advance}' },
             { key: 'tpl_payment_reminder', label: 'Payment Reminder (sent with Razorpay link)', ph: '💳 Pay ₹{advance} to confirm {booking_id}\n{razorpay_link}' },
             { key: 'tpl_payment_confirmed', label: 'Payment Confirmed (sent after Razorpay success)', ph: '✅ Payment received for {booking_id}. Amount ₹{amount}. Thank you!' },
+            { key: 'tpl_final_collection', label: 'Final Balance Collection (sent after advance confirmed, includes UPI + QR)', ph: '💰 Balance Collection\nBooking {booking_id}\nRemaining: ₹{balance}\n\n📱 UPI: {upi_id}\n👤 {payee_name}\n\nShare screenshot after payment. Thank you!' },
           ].map(t => (
             <div key={t.key}>
               <Label className="text-xs">{t.label}</Label>
