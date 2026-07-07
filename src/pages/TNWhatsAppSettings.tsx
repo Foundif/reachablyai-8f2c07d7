@@ -343,7 +343,7 @@ const TNWhatsAppSettings = () => {
           <div>
             <h2 className="font-semibold text-lg">Customer Message Templates</h2>
             <p className="text-xs text-muted-foreground">
-              Fully editable. Available placeholders: <code>{'{booking_id} {service} {name} {phone} {date} {time} {transport} {address} {landmark} {addons} {total} {advance} {balance} {razorpay_link} {passenger_name} {passenger_phone}'}</code>.
+              Fully editable. Available placeholders: <code>{'{booking_id} {service} {name} {phone} {date} {time} {transport} {address} {landmark} {addons} {total} {advance} {balance} {amount} {razorpay_link} {passenger_name} {passenger_phone} {upi_id} {payee_name} {qr_image_url}'}</code>. If a QR image is uploaded, the Final Balance Collection message is sent as a WhatsApp image with the template text as its caption.
               Leave blank to use Chatarly defaults.
             </p>
           </div>
