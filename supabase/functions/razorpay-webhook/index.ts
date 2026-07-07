@@ -71,6 +71,16 @@ async function sendWhatsAppText(phoneNumberId: string, token: string, to: string
   return { ok: res.ok, status: res.status, raw: await res.text() }
 }
 
+async function sendWhatsAppImage(phoneNumberId: string, token: string, to: string, imageUrl: string, caption: string) {
+  const url = `https://graph.facebook.com/v20.0/${phoneNumberId}/messages`
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'image', image: { link: imageUrl, caption } }),
+  })
+  return { ok: res.ok, status: res.status, raw: await res.text() }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: corsHeaders })
