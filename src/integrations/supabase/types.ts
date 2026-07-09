@@ -1822,7 +1822,6 @@ export type Database = {
           razorpay_key_secret: string | null
           razorpay_webhook_secret: string | null
           tpl_booking_received: string | null
-          tpl_final_collection: string | null
           tpl_payment_confirmed: string | null
           tpl_payment_reminder: string | null
           updated_at: string
@@ -1856,7 +1855,6 @@ export type Database = {
           razorpay_key_secret?: string | null
           razorpay_webhook_secret?: string | null
           tpl_booking_received?: string | null
-          tpl_final_collection?: string | null
           tpl_payment_confirmed?: string | null
           tpl_payment_reminder?: string | null
           updated_at?: string
@@ -1890,7 +1888,6 @@ export type Database = {
           razorpay_key_secret?: string | null
           razorpay_webhook_secret?: string | null
           tpl_booking_received?: string | null
-          tpl_final_collection?: string | null
           tpl_payment_confirmed?: string | null
           tpl_payment_reminder?: string | null
           updated_at?: string
@@ -1906,7 +1903,6 @@ export type Database = {
     }
     Functions: {
       tn_consume_ai_credit: { Args: { _user_id: string }; Returns: Json }
-      tn_shared_access: { Args: { _row_user: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

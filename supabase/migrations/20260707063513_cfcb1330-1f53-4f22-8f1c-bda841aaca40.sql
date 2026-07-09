@@ -1,1 +1,0 @@
-ALTER TABLE public.tn_settings ADD COLUMN IF NOT EXISTS tpl_final_collection TEXT;
