@@ -472,17 +472,30 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
     screenshot_url: rzp.ok ? rzp.link : null,
   })
 
-  // 2) Append to Google Sheet — 22 columns (A:V), same booking code as WhatsApp summary
+  // Phone validation — strip +, spaces, dashes, parens, then require all digits & >=10
+  const validatePhone = (raw: any): boolean => {
+    const s = String(raw ?? '').replace(/[\s\-\+()]/g, '')
+    return /^\d+$/.test(s) && s.length >= 10
+  }
+  const bookingFor = String(d.booking_for || 'myself').toLowerCase()
+  const isSomeoneElse = bookingFor === 'someone_else'
+  const bookerPhoneRaw = d.phone || waId || ''
+  const bookerPhoneValid = validatePhone(bookerPhoneRaw)
+  const passengerPhoneRaw = isSomeoneElse ? (d.passenger_phone || '') : ''
+  const passengerPhoneValid = isSomeoneElse ? validatePhone(passengerPhoneRaw) : true
+  const phoneInvalid = !bookerPhoneValid || !passengerPhoneValid
+  const paymentStatus = phoneInvalid
+    ? `Invalid Phone — Advance Pending ₹${advance}`
+    : `Advance Pending ₹${advance}`
+
   if (settings?.google_sheet_enabled && settings?.google_sheet_id) {
     const addonText = (addons && addons.length) ? addons.join(', ') : 'None'
-    const bookingFor = String(d.booking_for || 'myself').toLowerCase()
-    const isSomeoneElse = bookingFor === 'someone_else'
     const row = [
       istTimestamp(),                              // A Timestamp
       bookingCode,                                  // B Booking ID (TN45-DDMM-XXX)
       svc.name || svcCode || '',                    // C Service Selected
       d.name || '',                                 // D Customer Name (booker)
-      d.phone || waId || '',                        // E Phone Number (booker)
+      bookerPhoneRaw,                               // E Phone Number (booker)
       d.transport_mode || '',                       // F Transport Mode
       d.transport_details || '',                    // G Service Category
       d.service_info || '',                         // H Service Info
@@ -492,15 +505,16 @@ async function handleFlowSubmission(supabase: any, userId: string, waId: string,
       d.time || d.preferred_time || '',             // L Reporting Time
       d.hours || '',                                // M Expected Hrs/Days
       addonText,                                    // N Add-ons
-      `Advance Pending ₹${advance}`,                // O Payment Status
+      paymentStatus,                                // O Payment Status (flagged if invalid phone)
       '',                                           // P UPI Reference
       '',                                           // Q Helper Assigned
       'New',                                        // R Booking Status
       'WhatsApp Flow',                              // S Source
       bookingFor,                                   // T Booking For (myself/someone_else)
       isSomeoneElse ? (d.passenger_name || '') : '', // U Passenger Name
-      isSomeoneElse ? (d.passenger_phone || '') : '',// V Passenger Phone
+      passengerPhoneRaw,                            // V Passenger Phone
     ]
+
     const sheetRes = await appendToGoogleSheet(settings.google_sheet_id, settings.google_sheet_tab || 'Bookings', row)
     if (!sheetRes.ok) {
       await supabase.from('tn_audit_log').insert({

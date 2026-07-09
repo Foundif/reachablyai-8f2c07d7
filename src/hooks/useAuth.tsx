@@ -114,14 +114,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     }, 8000);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    // Demo user impersonates main client so both accounts view/manage the same data
+    const DEMO_ID = '8cdb08f1-d5d3-496e-8c1d-4a80563ac03b';
+    const MAIN_ID = 'cb5032b9-add1-464e-8035-655e0a163e6f';
+    const applyImpersonation = (u: User | null): User | null => {
+      if (u && u.id === DEMO_ID) {
+        return { ...u, id: MAIN_ID } as User;
+      }
+      return u;
+    };
 
-      if (session?.user) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const effUser = applyImpersonation(session?.user ?? null);
+      setSession(session);
+      setUser(effUser);
+
+      if (effUser) {
         // Use setTimeout to avoid Supabase deadlock on auth state change
         setTimeout(async () => {
-          await fetchProfile(session.user.id);
+          await fetchProfile(effUser.id);
           setLoading(false);
           initialized.current = true;
         }, 0);
@@ -135,10 +146,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Also get initial session as fallback
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!initialized.current) {
+        const effUser = applyImpersonation(session?.user ?? null);
         setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await fetchProfile(session.user.id);
+        setUser(effUser);
+        if (effUser) {
+          await fetchProfile(effUser.id);
         }
         setLoading(false);
         initialized.current = true;
@@ -147,6 +159,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
       initialized.current = true;
     });
+
 
     return () => {
       clearTimeout(timeout);
