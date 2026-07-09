@@ -1906,7 +1906,6 @@ export type Database = {
     }
     Functions: {
       tn_consume_ai_credit: { Args: { _user_id: string }; Returns: Json }
-      tn_shared_access: { Args: { _row_user: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
