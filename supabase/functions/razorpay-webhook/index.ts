@@ -71,6 +71,16 @@ async function sendWhatsAppText(phoneNumberId: string, token: string, to: string
   return { ok: res.ok, status: res.status, raw: await res.text() }
 }
 
+async function sendWhatsAppImage(phoneNumberId: string, token: string, to: string, imageUrl: string, caption: string) {
+  const url = `https://graph.facebook.com/v20.0/${phoneNumberId}/messages`
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'image', image: { link: imageUrl, caption } }),
+  })
+  return { ok: res.ok, status: res.status, raw: await res.text() }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: corsHeaders })
@@ -150,22 +160,50 @@ Deno.serve(async (req) => {
   }
 
   // 3) WhatsApp confirmation (customizable template)
-  if (settings?.meta_phone_number_id && settings?.meta_access_token && booking.wa_id) {
+  const metaToken = settings?.meta_access_token || Deno.env.get('META_ACCESS_TOKEN')
+  if (settings?.meta_phone_number_id && metaToken && booking.wa_id) {
     const paid = amount || booking.advance_amount || 200
+    const balance = Number(booking.balance_amount || 0)
     const vars: Record<string, string> = {
       booking_id: bookingCode || '',
       amount: String(paid),
       name: booking.name || '-',
       service: booking.service_name || '',
-      balance: String(booking.balance_amount || 0),
+      balance: String(balance),
+      total: String(booking.total_amount || 0),
+      advance: String(booking.advance_amount || paid),
+      upi_id: settings?.upi_id || '',
+      payee_name: settings?.payee_name || '',
+      qr_image_url: settings?.qr_image_url || '',
     }
+    const render = (tpl: string) => tpl.replace(/\{(\w+)\}/g, (_: string, k: string) => vars[k] ?? '')
+
     const defaultTpl =
       `✅ *Payment Received!*\n\nBooking {booking_id} is now *fully confirmed*.\n` +
       `Amount: ₹{amount}\nBalance at service: ₹{balance}\n\n` +
       `Our team will contact you shortly with helper assignment details. Thank you! 🙏`
-    const tpl = (settings.tpl_payment_confirmed || defaultTpl)
-    const msg = tpl.replace(/\{(\w+)\}/g, (_: string, k: string) => vars[k] ?? '')
-    await sendWhatsAppText(settings.meta_phone_number_id, settings.meta_access_token, booking.wa_id, msg)
+    const tpl = settings.tpl_payment_confirmed || defaultTpl
+    await sendWhatsAppText(settings.meta_phone_number_id, metaToken, booking.wa_id, render(tpl))
+
+    // 4) Final balance collection message (only if there's a balance remaining)
+    if (balance > 0) {
+      const defaultFinal =
+        `💰 *Balance Collection*\n\nBooking {booking_id}\nRemaining Balance: *₹{balance}*\n\n` +
+        `Please pay the remaining amount using:\n` +
+        `📱 UPI ID: *{upi_id}*\n👤 Payee: {payee_name}\n\n` +
+        `After payment, please share the screenshot here. Thank you! 🙏`
+      const finalTpl = settings.tpl_final_collection || defaultFinal
+      const finalMsg = render(finalTpl)
+      if (settings?.qr_image_url) {
+        const imgRes = await sendWhatsAppImage(settings.meta_phone_number_id, metaToken, booking.wa_id, settings.qr_image_url, finalMsg)
+        if (!imgRes.ok) {
+          // fallback to text if image fails
+          await sendWhatsAppText(settings.meta_phone_number_id, metaToken, booking.wa_id, finalMsg)
+        }
+      } else {
+        await sendWhatsAppText(settings.meta_phone_number_id, metaToken, booking.wa_id, finalMsg)
+      }
+    }
   }
 
   await supabase.from('tn_audit_log').insert({
