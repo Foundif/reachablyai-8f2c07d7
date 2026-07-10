@@ -1181,6 +1181,30 @@ export type Database = {
         }
         Relationships: []
       }
+      tn_booking_idempotency: {
+        Row: {
+          booking_id: string | null
+          created_at: string
+          id: string
+          idempotency_key: string
+          user_id: string
+        }
+        Insert: {
+          booking_id?: string | null
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          user_id: string
+        }
+        Update: {
+          booking_id?: string | null
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       tn_bookings: {
         Row: {
           addons: Json | null
@@ -1816,6 +1840,8 @@ export type Database = {
           meta_template_name: string | null
           meta_waba_id: string | null
           payee_name: string | null
+          public_booking_api_key: string | null
+          public_booking_enabled: boolean
           qr_image_url: string | null
           razorpay_enabled: boolean
           razorpay_key_id: string | null
@@ -1850,6 +1876,8 @@ export type Database = {
           meta_template_name?: string | null
           meta_waba_id?: string | null
           payee_name?: string | null
+          public_booking_api_key?: string | null
+          public_booking_enabled?: boolean
           qr_image_url?: string | null
           razorpay_enabled?: boolean
           razorpay_key_id?: string | null
@@ -1884,6 +1912,8 @@ export type Database = {
           meta_template_name?: string | null
           meta_waba_id?: string | null
           payee_name?: string | null
+          public_booking_api_key?: string | null
+          public_booking_enabled?: boolean
           qr_image_url?: string | null
           razorpay_enabled?: boolean
           razorpay_key_id?: string | null
@@ -1906,6 +1936,7 @@ export type Database = {
     }
     Functions: {
       tn_consume_ai_credit: { Args: { _user_id: string }; Returns: Json }
+      tn_shared_access: { Args: { _row_user: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
