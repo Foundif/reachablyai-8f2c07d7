@@ -15,7 +15,7 @@ const AppSidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, canAccess } = useAuth();
   const inboxUnread = useInboxUnreadCount();
   const storeName = profile?.store_name?.trim() || 'My Workspace';
   const tagline = (profile as any)?.tagline || 'WhatsApp Cloud';
@@ -46,7 +46,10 @@ const AppSidebar = () => {
 
         {/* Nav */}
         <nav className="relative flex-1 px-2 py-3 overflow-y-auto custom-scrollbar">
-          {MODULE_GROUPS.map((group) => (
+          {MODULE_GROUPS.map((group) => {
+            const items = group.items.filter((i) => canAccess(i.to));
+            if (items.length === 0) return null;
+            return (
             <div key={group.label} className="mb-3">
               {!collapsed && (
                 <div className="px-3 pt-2 pb-1.5">
@@ -55,7 +58,7 @@ const AppSidebar = () => {
               )}
               {collapsed && <div className="h-px mx-2 my-2 bg-border/50" />}
               <div className="space-y-0.5">
-                {group.items.map((item) => {
+                {items.map((item) => {
                   const Icon = item.icon;
                   const isActive = pathname === item.to;
                   const badge = item.to === '/inbox' ? inboxUnread : 0;
@@ -110,7 +113,8 @@ const AppSidebar = () => {
                 })}
               </div>
             </div>
-          ))}
+            );
+          })}
         </nav>
 
         {/* Upgrade CTA */}

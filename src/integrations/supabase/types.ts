@@ -477,6 +477,7 @@ export type Database = {
       profiles: {
         Row: {
           address: string | null
+          allowed_modules: string[]
           business_type: string | null
           country: string | null
           created_at: string
@@ -484,10 +485,12 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          is_staff: boolean
           language: string | null
           logo_url: string | null
           notification_sound_enabled: boolean
           onboarding_completed: boolean | null
+          owner_id: string | null
           phone: string | null
           price_list_url: string | null
           role: string | null
@@ -502,6 +505,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          allowed_modules?: string[]
           business_type?: string | null
           country?: string | null
           created_at?: string
@@ -509,10 +513,12 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          is_staff?: boolean
           language?: string | null
           logo_url?: string | null
           notification_sound_enabled?: boolean
           onboarding_completed?: boolean | null
+          owner_id?: string | null
           phone?: string | null
           price_list_url?: string | null
           role?: string | null
@@ -527,6 +533,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          allowed_modules?: string[]
           business_type?: string | null
           country?: string | null
           created_at?: string
@@ -534,10 +541,12 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          is_staff?: boolean
           language?: string | null
           logo_url?: string | null
           notification_sound_enabled?: boolean
           onboarding_completed?: boolean | null
+          owner_id?: string | null
           phone?: string | null
           price_list_url?: string | null
           role?: string | null
@@ -1936,7 +1945,9 @@ export type Database = {
     }
     Functions: {
       tn_consume_ai_credit: { Args: { _user_id: string }; Returns: Json }
+      tn_owner_of: { Args: { _uid: string }; Returns: string }
       tn_shared_access: { Args: { _row_user: string }; Returns: boolean }
+      tn_team_can: { Args: { _row_user: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
