@@ -35,11 +35,8 @@ const TopBar = () => {
                 {(profile?.store_name?.[0] || 'W').toUpperCase()}
               </div>
             )}
-            <span className="text-sm font-semibold tracking-tight max-w-[160px] truncate">
+            <span className="text-sm font-semibold tracking-tight max-w-[200px] truncate">
               {profile?.store_name || 'My Workspace'}
-            </span>
-            <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-foreground/10 text-foreground border border-border">
-              Live
             </span>
           </button>
 
