@@ -15,7 +15,7 @@ const AppSidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, canAccess } = useAuth();
   const inboxUnread = useInboxUnreadCount();
   const storeName = profile?.store_name?.trim() || 'My Workspace';
   const tagline = (profile as any)?.tagline || 'WhatsApp Cloud';
