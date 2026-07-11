@@ -9,9 +9,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { enableNotificationSound, playNotificationSound } from '@/hooks/useNotifications';
 import { toast } from 'sonner';
-import { AlertCircle, CheckCircle2, Copy, RefreshCw, Radio, Send, GitBranch } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Copy, RefreshCw, Radio, Send, GitBranch, Globe, KeyRound } from 'lucide-react';
 
 const WEBHOOK_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-webhook`;
+const BOOKING_API_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/booking-api`;
 
 const TNWhatsAppSettings = () => {
   const { user } = useAuth();
@@ -119,6 +120,26 @@ const TNWhatsAppSettings = () => {
     if (error) toast.error(error.message); else toast.success(`${flow.name} saved as the published Flow`);
   };
 
+  const togglePublicBooking = async (enabled: boolean) => {
+    if (!user) return;
+    let key = s.public_booking_api_key;
+    if (enabled && !key) key = 'pk_live_' + crypto.randomUUID().replace(/-/g, '');
+    const next = { ...s, public_booking_enabled: enabled, public_booking_api_key: key };
+    setS(next);
+    const { error } = await supabase.from('tn_settings').upsert({ ...next, user_id: user.id }, { onConflict: 'user_id' });
+    if (error) toast.error(error.message); else toast.success(enabled ? 'Public Booking API enabled' : 'Public Booking API disabled');
+  };
+
+  const regenerateApiKey = async () => {
+    if (!user) return;
+    if (!confirm('Regenerate API key? The old key will stop working immediately.')) return;
+    const key = 'pk_live_' + crypto.randomUUID().replace(/-/g, '');
+    const next = { ...s, public_booking_api_key: key, public_booking_enabled: true };
+    setS(next);
+    const { error } = await supabase.from('tn_settings').upsert({ ...next, user_id: user.id }, { onConflict: 'user_id' });
+    if (error) toast.error(error.message); else toast.success('New API key generated');
+  };
+
   const inbound = events.filter(e => e.direction === 'in');
   const lastInbound = inbound[0];
   const minutesAgo = lastInbound
@@ -148,6 +169,64 @@ const TNWhatsAppSettings = () => {
             </div>
           </div>
         </Card>
+
+        {/* Public Booking API */}
+        <Card className="p-5 space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Globe className="w-5 h-5 text-primary" />
+              <div>
+                <h2 className="font-semibold text-lg">Public Booking API</h2>
+                <p className="text-xs text-muted-foreground">Let your website / mobile app create bookings directly in this CRM.</p>
+              </div>
+            </div>
+            <label className="flex items-center gap-2 text-sm cursor-pointer shrink-0">
+              <input type="checkbox" checked={!!s.public_booking_enabled} onChange={(e) => togglePublicBooking(e.target.checked)} />
+              Enable
+            </label>
+          </div>
+
+          {s.public_booking_enabled && (
+            <>
+              <div>
+                <Label className="text-xs">Endpoint URL</Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <code className="flex-1 text-xs bg-muted/40 p-2 rounded break-all">{BOOKING_API_URL}</code>
+                  <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard.writeText(BOOKING_API_URL); toast.success('URL copied'); }}>
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs flex items-center gap-1"><KeyRound className="w-3 h-3" /> API Key (send as <code>x-api-key</code> header)</Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <code className="flex-1 text-xs bg-muted/40 p-2 rounded break-all font-mono">{s.public_booking_api_key || '—'}</code>
+                  <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard.writeText(s.public_booking_api_key || ''); toast.success('Key copied'); }}>
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={regenerateApiKey}><RefreshCw className="w-4 h-4" /></Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">🔒 Treat this like a password. Only paste it on your own server, never in browser JavaScript.</p>
+              </div>
+              <div className="text-xs bg-muted/40 p-3 rounded-lg space-y-2">
+                <p className="font-semibold">Quick test</p>
+                <pre className="overflow-x-auto text-[11px] font-mono">{`curl -X POST ${BOOKING_API_URL} \\
+  -H "Content-Type: application/json" \\
+  -H "x-api-key: ${s.public_booking_api_key || 'YOUR_KEY'}" \\
+  -d '{
+    "name": "Test Customer",
+    "phone": "919999999999",
+    "service": "Airport Pickup",
+    "date": "2026-08-01",
+    "time": "09:00",
+    "source": "website"
+  }'`}</pre>
+                <p className="text-muted-foreground">Returns <code>{`{ booking_code, razorpay_link }`}</code>. WhatsApp confirmation + Google Sheets sync run automatically.</p>
+              </div>
+            </>
+          )}
+        </Card>
+
 
         {/* Live diagnostics */}
         <Card className="p-5 space-y-4">
