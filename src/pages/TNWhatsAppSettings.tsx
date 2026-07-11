@@ -120,6 +120,26 @@ const TNWhatsAppSettings = () => {
     if (error) toast.error(error.message); else toast.success(`${flow.name} saved as the published Flow`);
   };
 
+  const togglePublicBooking = async (enabled: boolean) => {
+    if (!user) return;
+    let key = s.public_booking_api_key;
+    if (enabled && !key) key = 'pk_live_' + crypto.randomUUID().replace(/-/g, '');
+    const next = { ...s, public_booking_enabled: enabled, public_booking_api_key: key };
+    setS(next);
+    const { error } = await supabase.from('tn_settings').upsert({ ...next, user_id: user.id }, { onConflict: 'user_id' });
+    if (error) toast.error(error.message); else toast.success(enabled ? 'Public Booking API enabled' : 'Public Booking API disabled');
+  };
+
+  const regenerateApiKey = async () => {
+    if (!user) return;
+    if (!confirm('Regenerate API key? The old key will stop working immediately.')) return;
+    const key = 'pk_live_' + crypto.randomUUID().replace(/-/g, '');
+    const next = { ...s, public_booking_api_key: key, public_booking_enabled: true };
+    setS(next);
+    const { error } = await supabase.from('tn_settings').upsert({ ...next, user_id: user.id }, { onConflict: 'user_id' });
+    if (error) toast.error(error.message); else toast.success('New API key generated');
+  };
+
   const inbound = events.filter(e => e.direction === 'in');
   const lastInbound = inbound[0];
   const minutesAgo = lastInbound
