@@ -23,8 +23,12 @@ interface Profile {
   services_concept?: string | null;
   price_list_url?: string | null;
   business_type?: string | null;
+  business_type?: string | null;
   phone?: string | null;
   address?: string | null;
+  owner_id?: string | null;
+  is_staff?: boolean | null;
+  allowed_modules?: string[] | null;
 }
 
 // Role permission map
