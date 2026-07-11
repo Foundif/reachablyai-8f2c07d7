@@ -113,7 +113,8 @@ const AppSidebar = () => {
                 })}
               </div>
             </div>
-          ))}
+            );
+          })}
         </nav>
 
         {/* Upgrade CTA */}
