@@ -46,7 +46,10 @@ const AppSidebar = () => {
 
         {/* Nav */}
         <nav className="relative flex-1 px-2 py-3 overflow-y-auto custom-scrollbar">
-          {MODULE_GROUPS.map((group) => (
+          {MODULE_GROUPS.map((group) => {
+            const items = group.items.filter((i) => canAccess(i.to));
+            if (items.length === 0) return null;
+            return (
             <div key={group.label} className="mb-3">
               {!collapsed && (
                 <div className="px-3 pt-2 pb-1.5">
