@@ -55,7 +55,6 @@ const AppSidebar = () => {
                 <div className="px-3 pt-2 pb-1.5">
                   <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/80">{group.label}</span>
                 </div>
-              )}
               {collapsed && <div className="h-px mx-2 my-2 bg-border/50" />}
               <div className="space-y-0.5">
                 {group.items.map((item) => {
