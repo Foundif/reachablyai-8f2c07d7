@@ -322,6 +322,14 @@ Deno.serve(async (req) => {
         const msg = render(settings.tpl_booking_received || defaultSummary)
         const r = await sendWhatsAppText(phoneNumberId, token, waId, msg)
         waOk = r.ok
+        if (!r.ok) {
+          // Log Meta's exact error so we can debug 24h-window/template issues
+          await supabase.from('tn_audit_log').insert({
+            user_id: userId, actor_id: userId, entity_type: 'whatsapp_send',
+            entity_id: booking.id, action: 'failed',
+            after: { to: waId, status: r.status, error: r.json, hint: 'Website-created bookings fail plain-text sends outside the 24h customer-initiated window. Ask customer to WhatsApp you first, or use an approved template.' },
+          })
+        }
       }
 
       // Audit
