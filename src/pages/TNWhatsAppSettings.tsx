@@ -9,9 +9,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { enableNotificationSound, playNotificationSound } from '@/hooks/useNotifications';
 import { toast } from 'sonner';
-import { AlertCircle, CheckCircle2, Copy, RefreshCw, Radio, Send, GitBranch } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Copy, RefreshCw, Radio, Send, GitBranch, Globe, KeyRound } from 'lucide-react';
 
 const WEBHOOK_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-webhook`;
+const BOOKING_API_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/booking-api`;
 
 const TNWhatsAppSettings = () => {
   const { user } = useAuth();
