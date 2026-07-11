@@ -202,8 +202,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const canAccess = useCallback((route: string) => {
+    // Staff users: hard-restrict to their allowed_modules list.
+    // Non-staff (owners / admins): fall back to role-based defaults.
+    if (profile?.is_staff) {
+      const mods = profile?.allowed_modules || [];
+      // Always allow profile page so they can sign out / view account
+      if (route === '/profile') return true;
+      return mods.includes(route);
+    }
     return canAccessRoute(profile?.role as AppRole | null, route);
-  }, [profile?.role]);
+  }, [profile?.role, profile?.is_staff, profile?.allowed_modules]);
 
   return (
     <AuthContext.Provider value={{
