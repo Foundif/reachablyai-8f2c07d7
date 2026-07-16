@@ -308,27 +308,8 @@ const BookingDetail = () => {
                   );
                 })}
               </div>
-              <div className="mt-4 pt-3 border-t border-border">
-                <Button
-                  size="sm"
-                  className="w-full bg-emerald-600 hover:bg-emerald-700"
-                  disabled={saving || Number(b.balance_amount || 0) <= 0}
-                  onClick={() => sendBalanceFollowup(false)}
-                >
-                  <Send className="w-3.5 h-3.5 mr-1" />
-                  {b.balance_msg_sent_at ? 'Resend Balance Follow-up' : 'Send Balance Follow-up'}
-                </Button>
-                {b.balance_msg_sent_at ? (
-                  <p className="text-[10px] text-emerald-500 mt-1.5 text-center">
-                    ✅ Sent {new Date(b.balance_msg_sent_at).toLocaleString()}
-                  </p>
-                ) : (
-                  <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
-                    Sends UPI / QR balance-collection message once
-                  </p>
-                )}
-              </div>
             </Card>
+
 
 
             <Card className="p-5">
