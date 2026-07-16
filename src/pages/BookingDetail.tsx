@@ -118,6 +118,24 @@ const BookingDetail = () => {
     window.open(`https://wa.me/${wa}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
+  const sendBalanceFollowup = async (force = false) => {
+    if (!b.wa_id) { toast.error('No WhatsApp number on this booking'); return; }
+    if (Number(b.balance_amount || 0) <= 0) { toast.error('No balance remaining'); return; }
+    if (b.balance_msg_sent_at && !force) {
+      if (!confirm(`Balance message already sent on ${new Date(b.balance_msg_sent_at).toLocaleString()}. Send again?`)) return;
+      force = true;
+    }
+    setSaving(true);
+    const { data, error } = await supabase.functions.invoke('send-balance-followup', {
+      body: { booking_id: b.id, force },
+    });
+    setSaving(false);
+    if (error) { toast.error(error.message || 'Failed to send'); return; }
+    if ((data as any)?.ok) { toast.success('Payment follow-up sent'); load(); }
+    else toast.error((data as any)?.message || (data as any)?.error || 'Failed');
+  };
+
+
   const mapAddress = encodeURIComponent([b.address, b.landmark].filter(Boolean).join(', '));
 
   return (
