@@ -14,8 +14,9 @@ import { toast } from 'sonner';
 import {
   ArrowLeft, Edit3, Trash2, MessageCircle, Phone, MapPin, Train, Bus, Car, Clock,
   Accessibility, BatteryCharging, Luggage, Copy, ChevronDown, ChevronUp, CheckCircle2,
-  Circle, Loader2,
+  Circle, Loader2, Send,
 } from 'lucide-react';
+
 
 const STATUS_ORDER = ['draft', 'awaiting_payment', 'paid', 'confirmed', 'completed'];
 const statusColor: Record<string, string> = {
