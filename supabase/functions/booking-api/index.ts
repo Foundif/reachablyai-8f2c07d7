@@ -199,9 +199,52 @@ Deno.serve(async (req) => {
 
       const raw = await req.json().catch(() => null)
       if (!raw) return jsonResponse({ error: 'invalid_json' }, 400)
-      const parsed = BookingSchema.safeParse(raw)
+
+      // ---- Accept both naming styles from websites/mobile apps ----
+      // Website payloads often use: service, date, time, duration, estimate, address_full, etc.
+      // CRM canonical fields: service_name, booking_date, booking_time, expected_hours, price.
+      const normalized: Record<string, any> = { ...raw }
+      const alias = (from: string, to: string) => {
+        if (normalized[to] == null && raw[from] != null) normalized[to] = raw[from]
+      }
+      alias('service', 'service_name')
+      alias('service_id', 'service_code')
+      alias('date', 'booking_date')
+      alias('booking_date', 'booking_date')
+      alias('time', 'booking_time')
+      alias('booking_time', 'booking_time')
+      alias('duration', 'expected_hours')
+      alias('expected_hrs', 'expected_hours')
+      alias('estimate', 'price')
+      alias('total', 'price')
+      alias('amount', 'price')
+      alias('address_full', 'address')
+      alias('pickup_address', 'address')
+      alias('nearest_landmark', 'landmark')
+      alias('transport', 'transport_mode')
+      alias('service_details', 'service_info')
+      alias('service_category', 'service_info')
+      alias('customer_name', 'name')
+      alias('customer_phone', 'phone')
+      alias('mobile', 'phone')
+      alias('whatsapp', 'phone')
+      // addons can arrive as comma-separated string
+      if (typeof normalized.addons === 'string') {
+        normalized.addons = normalized.addons.split(',').map((s: string) => s.trim()).filter(Boolean)
+      }
+      // booking_for normalisation ("self" -> "myself")
+      if (normalized.booking_for === 'self') normalized.booking_for = 'myself'
+      if (normalized.booking_for === 'other') normalized.booking_for = 'someone_else'
+      // numeric coercion for price
+      if (typeof normalized.price === 'string') {
+        const n = Number(normalized.price.replace(/[^\d.]/g, ''))
+        if (!Number.isNaN(n)) normalized.price = n
+      }
+
+      const parsed = BookingSchema.safeParse(normalized)
       if (!parsed.success) return jsonResponse({ error: 'validation_failed', details: parsed.error.flatten().fieldErrors }, 400)
       const d = parsed.data
+
 
       // Idempotency
       const headerKey = req.headers.get('idempotency-key') || d.idempotency_key || ''

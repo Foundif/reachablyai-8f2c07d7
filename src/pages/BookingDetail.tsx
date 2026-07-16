@@ -14,8 +14,9 @@ import { toast } from 'sonner';
 import {
   ArrowLeft, Edit3, Trash2, MessageCircle, Phone, MapPin, Train, Bus, Car, Clock,
   Accessibility, BatteryCharging, Luggage, Copy, ChevronDown, ChevronUp, CheckCircle2,
-  Circle, Loader2,
+  Circle, Loader2, Send,
 } from 'lucide-react';
+
 
 const STATUS_ORDER = ['draft', 'awaiting_payment', 'paid', 'confirmed', 'completed'];
 const statusColor: Record<string, string> = {
@@ -116,6 +117,24 @@ const BookingDetail = () => {
     if (!wa) { toast.error('No WhatsApp number'); return; }
     window.open(`https://wa.me/${wa}?text=${encodeURIComponent(msg)}`, '_blank');
   };
+
+  const sendBalanceFollowup = async (force = false) => {
+    if (!b.wa_id) { toast.error('No WhatsApp number on this booking'); return; }
+    if (Number(b.balance_amount || 0) <= 0) { toast.error('No balance remaining'); return; }
+    if (b.balance_msg_sent_at && !force) {
+      if (!confirm(`Balance message already sent on ${new Date(b.balance_msg_sent_at).toLocaleString()}. Send again?`)) return;
+      force = true;
+    }
+    setSaving(true);
+    const { data, error } = await supabase.functions.invoke('send-balance-followup', {
+      body: { booking_id: b.id, force },
+    });
+    setSaving(false);
+    if (error) { toast.error(error.message || 'Failed to send'); return; }
+    if ((data as any)?.ok) { toast.success('Payment follow-up sent'); load(); }
+    else toast.error((data as any)?.message || (data as any)?.error || 'Failed');
+  };
+
 
   const mapAddress = encodeURIComponent([b.address, b.landmark].filter(Boolean).join(', '));
 
@@ -291,6 +310,8 @@ const BookingDetail = () => {
               </div>
             </Card>
 
+
+
             <Card className="p-5">
               <h2 className="text-sm font-semibold flex items-center gap-2 mb-3">💰 Payment Summary</h2>
               <div className="flex items-center gap-2 mb-3">
@@ -308,7 +329,28 @@ const BookingDetail = () => {
                   <Button size="sm" disabled={saving} onClick={() => saveDetailsPatch({ txn_id: txnId }, 'Saved')}>Save</Button>
                 </div>
               </div>
+              <div className="mt-4 pt-3 border-t border-border">
+                <Button
+                  size="sm"
+                  className="w-full bg-emerald-600 hover:bg-emerald-700"
+                  disabled={saving || Number(b.balance_amount || 0) <= 0}
+                  onClick={() => sendBalanceFollowup(false)}
+                >
+                  <Send className="w-3.5 h-3.5 mr-1" />
+                  {b.balance_msg_sent_at ? 'Resend Balance Follow-up' : 'Send Payment Follow-up'}
+                </Button>
+                {b.balance_msg_sent_at ? (
+                  <p className="text-[10px] text-emerald-500 mt-1.5 text-center">
+                    ✅ Sent {new Date(b.balance_msg_sent_at).toLocaleString()}
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
+                    Sends UPI ID + QR balance-collection message (once per booking)
+                  </p>
+                )}
+              </div>
             </Card>
+
 
             <Card className="p-5">
               <h2 className="text-sm font-semibold flex items-center gap-2 mb-3">👷 Helper Assignment</h2>
