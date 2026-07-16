@@ -185,8 +185,8 @@ Deno.serve(async (req) => {
     const tpl = settings.tpl_payment_confirmed || defaultTpl
     await sendWhatsAppText(settings.meta_phone_number_id, metaToken, booking.wa_id, render(tpl))
 
-    // 4) Final balance collection message (only if there's a balance remaining)
-    if (balance > 0) {
+    // 4) Final balance collection message — ONLY ONCE PER BOOKING
+    if (balance > 0 && !booking.balance_msg_sent_at) {
       const defaultFinal =
         `💰 *Balance Collection*\n\nBooking {booking_id}\nRemaining Balance: *₹{balance}*\n\n` +
         `Please pay the remaining amount using:\n` +
@@ -194,16 +194,26 @@ Deno.serve(async (req) => {
         `After payment, please share the screenshot here. Thank you! 🙏`
       const finalTpl = settings.tpl_final_collection || defaultFinal
       const finalMsg = render(finalTpl)
+      let sent = false
       if (settings?.qr_image_url) {
         const imgRes = await sendWhatsAppImage(settings.meta_phone_number_id, metaToken, booking.wa_id, settings.qr_image_url, finalMsg)
-        if (!imgRes.ok) {
-          // fallback to text if image fails
-          await sendWhatsAppText(settings.meta_phone_number_id, metaToken, booking.wa_id, finalMsg)
+        if (imgRes.ok) sent = true
+        else {
+          const t = await sendWhatsAppText(settings.meta_phone_number_id, metaToken, booking.wa_id, finalMsg)
+          sent = t.ok
         }
       } else {
-        await sendWhatsAppText(settings.meta_phone_number_id, metaToken, booking.wa_id, finalMsg)
+        const t = await sendWhatsAppText(settings.meta_phone_number_id, metaToken, booking.wa_id, finalMsg)
+        sent = t.ok
+      }
+      if (sent) {
+        await supabase.from('tn_bookings')
+          .update({ balance_msg_sent_at: new Date().toISOString() })
+          .eq('id', bookingId)
+          .is('balance_msg_sent_at', null)
       }
     }
+
   }
 
   await supabase.from('tn_audit_log').insert({
