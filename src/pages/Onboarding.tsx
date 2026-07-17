@@ -362,7 +362,7 @@ const Onboarding = () => {
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <Scissors className="w-5 h-5 text-foreground mt-0.5" />
+                <Plane className="w-5 h-5 text-foreground mt-0.5" />
                 <div>
                   <div className="font-medium text-foreground">Services, Billing & Inventory</div>
                   <div className="text-sm text-muted-foreground">Manage your tariff, take payments and track stock.</div>
