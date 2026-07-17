@@ -1,11 +1,11 @@
 {
-  "version": 1,
   "asset_id": "4f886a74-32f6-4fbf-a5af-ef6552baeab8",
-  "project_id": "90d88ae1-c412-43a8-8d1f-f47dfddb5099",
-  "url": "/__l5e/assets-v1/4f886a74-32f6-4fbf-a5af-ef6552baeab8/chatarly-message-alert.wav",
-  "r2_key": "a/v1/90d88ae1-c412-43a8-8d1f-f47dfddb5099/4f886a74-32f6-4fbf-a5af-ef6552baeab8/chatarly-message-alert.wav",
-  "original_filename": "chatarly-message-alert.wav",
-  "size": 301652,
   "content_type": "audio/wav",
-  "created_at": "2026-06-15T07:30:09Z"
+  "created_at": "2026-06-15T07:30:09Z",
+  "original_filename": "chatarly-message-alert.wav",
+  "project_id": "e86f96bf-d477-43da-9301-ac05f38db69a",
+  "r2_key": "a/v1/e86f96bf-d477-43da-9301-ac05f38db69a/4f886a74-32f6-4fbf-a5af-ef6552baeab8/chatarly-message-alert.wav",
+  "size": 301652,
+  "url": "/__l5e/assets-v1/4f886a74-32f6-4fbf-a5af-ef6552baeab8/chatarly-message-alert.wav",
+  "version": 1
 }

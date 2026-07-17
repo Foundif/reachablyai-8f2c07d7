@@ -1,11 +1,11 @@
 {
-  "version": 1,
   "asset_id": "5a4766a5-1006-478b-8645-ef2372653b84",
-  "project_id": "90d88ae1-c412-43a8-8d1f-f47dfddb5099",
-  "url": "/__l5e/assets-v1/5a4766a5-1006-478b-8645-ef2372653b84/chatarly-logo-dark.png",
-  "r2_key": "a/v1/90d88ae1-c412-43a8-8d1f-f47dfddb5099/5a4766a5-1006-478b-8645-ef2372653b84/chatarly-logo-dark.png",
-  "original_filename": "chatarly-logo-dark.png",
-  "size": 235133,
   "content_type": "image/png",
-  "created_at": "2026-06-18T09:16:07Z"
+  "created_at": "2026-06-18T09:16:07Z",
+  "original_filename": "chatarly-logo-dark.png",
+  "project_id": "e86f96bf-d477-43da-9301-ac05f38db69a",
+  "r2_key": "a/v1/e86f96bf-d477-43da-9301-ac05f38db69a/5a4766a5-1006-478b-8645-ef2372653b84/chatarly-logo-dark.png",
+  "size": 235133,
+  "url": "/__l5e/assets-v1/5a4766a5-1006-478b-8645-ef2372653b84/chatarly-logo-dark.png",
+  "version": 1
 }
