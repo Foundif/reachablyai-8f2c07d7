@@ -7,8 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
   ArrowRight, ArrowLeft, Briefcase, Building2, Users,
-  Globe, DollarSign, Check, Sparkles, Scissors,
-  CalendarDays, BarChart3, Stethoscope, Dumbbell, Store,
+  Globe, DollarSign, Check, Sparkles,
+  CalendarDays, BarChart3, Stethoscope, Dumbbell, Store, Plane,
   Upload, Type, ListPlus, FileText, X, Image as ImageIcon, Loader2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -18,7 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import logoAsset from '@/assets/chatarly-logo-light.png.asset.json';
 
 const BUSINESS_TYPES = [
-  { id: 'salon', label: 'Salon & Spa', icon: Scissors, desc: 'Hair, beauty & wellness' },
+  { id: 'travel', label: 'Travel Agency', icon: Plane, desc: 'Tours, bookings & transport' },
   { id: 'clinic', label: 'Clinic', icon: Stethoscope, desc: 'Medical & dental practice' },
   { id: 'gym', label: 'Gym & Fitness', icon: Dumbbell, desc: 'Fitness center or studio' },
   { id: 'general', label: 'Other Business', icon: Store, desc: 'Retail, services & more' },
@@ -362,7 +362,7 @@ const Onboarding = () => {
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <Scissors className="w-5 h-5 text-foreground mt-0.5" />
+                <Plane className="w-5 h-5 text-foreground mt-0.5" />
                 <div>
                   <div className="font-medium text-foreground">Services, Billing & Inventory</div>
                   <div className="text-sm text-muted-foreground">Manage your tariff, take payments and track stock.</div>

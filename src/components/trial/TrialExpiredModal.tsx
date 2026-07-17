@@ -17,6 +17,8 @@ const TrialExpiredModal = () => {
   const [dismissed, setDismissed] = useState(false);
 
   if (!profile) return null;
+  // Staff / admin sub-users inherit their owner's paid access — never show this modal.
+  if ((profile as any).is_staff) return null;
   if (ACTIVE_STATUSES.has(String((profile as any).subscription_status || ''))) return null;
   if (EXEMPT_ROUTES.has(pathname)) return null;
   if (dismissed) return null;

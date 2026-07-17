@@ -202,8 +202,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const canAccess = useCallback((route: string) => {
-    // Staff users: hard-restrict to their allowed_modules list.
-    // Non-staff (owners / admins): fall back to role-based defaults.
+    // Staff sub-users with admin role get full access (mirror of owner).
+    if (profile?.is_staff && profile?.role === 'admin') return true;
+    // Other staff: hard-restrict to their allowed_modules list.
     if (profile?.is_staff) {
       const mods = profile?.allowed_modules || [];
       // Always allow profile page so they can sign out / view account
