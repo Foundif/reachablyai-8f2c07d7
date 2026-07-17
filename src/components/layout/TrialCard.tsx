@@ -11,6 +11,8 @@ const TrialCard = ({ compact = false }: { compact?: boolean }) => {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const status = (profile as any)?.subscription_status;
+  // Staff / admin sub-users inherit their owner's plan — hide upgrade CTA.
+  if ((profile as any)?.is_staff) return null;
   if (status && ['active', 'starter', 'growth', 'pro', 'professional', 'enterprise'].includes(status)) return null;
 
   return (
