@@ -1,9 +1,8 @@
 import {
-  Inbox, Users, Contact,
+  Inbox, Contact, MessageSquareText,
   UserCog, Settings, UserCircle,
   LayoutDashboard, BarChart3, Wallet, Megaphone, Workflow,
 } from 'lucide-react';
-
 
 export type ModuleItem = {
   to: string;
@@ -20,23 +19,23 @@ export const MODULE_GROUPS: ModuleGroup[] = [
     label: 'Overview',
     items: [
       { to: '/', icon: LayoutDashboard, label: 'Dashboard', status: 'live' },
-      { to: '/inbox', icon: Inbox, label: 'Inbox', status: 'live' },
+      { to: '/inbox', icon: Inbox, label: 'Inbox', status: 'soon' },
       { to: '/leads', icon: Contact, label: 'Leads', status: 'live' },
     ],
   },
   {
     label: 'Growth',
     items: [
-      { to: '/campaigns', icon: Megaphone, label: 'Campaigns', status: 'soon' },
-      { to: '/automation', icon: Workflow, label: 'Automation', status: 'soon' },
-      { to: '/customers', icon: Users, label: 'Customers', status: 'live' },
+      { to: '/templates', icon: MessageSquareText, label: 'Templates', status: 'live' },
+      { to: '/campaigns', icon: Megaphone, label: 'Campaigns', status: 'live' },
+      { to: '/automation', icon: Workflow, label: 'Automation', status: 'live' },
     ],
   },
   {
     label: 'Insights',
     items: [
-      { to: '/analytics', icon: BarChart3, label: 'Analytics', status: 'live' },
-      { to: '/accounting', icon: Wallet, label: 'Accounting', status: 'live' },
+      { to: '/analytics', icon: BarChart3, label: 'Analytics', status: 'soon' },
+      { to: '/accounting', icon: Wallet, label: 'Accounting', status: 'soon' },
     ],
   },
   {
