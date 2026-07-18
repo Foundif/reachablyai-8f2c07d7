@@ -161,7 +161,7 @@ const Auth = () => {
             <>
               <div className="mb-8">
                 <h2 className="text-2xl font-bold text-foreground mb-2">{isLogin ? 'Welcome back' : 'Create your account'}</h2>
-                <p className="text-muted-foreground">{isLogin ? 'Sign in to manage your travel business' : 'Start automating your travel agency on WhatsApp'}</p>
+                <p className="text-muted-foreground">{isLogin ? 'Sign in to your Reachably workspace' : 'Start reaching customers on WhatsApp'}</p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
