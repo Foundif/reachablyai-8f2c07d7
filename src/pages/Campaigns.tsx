@@ -141,7 +141,7 @@ const CampaignsList = () => {
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
               <Megaphone className="w-6 h-6" /> Campaigns
             </h1>
-            <p className="text-muted-foreground text-sm">Send approved WhatsApp templates to segments of your leads.</p>
+            <p className="text-muted-foreground text-sm">Send approved WhatsApp templates in bulk to imported contacts (any lead with a phone number is eligible).</p>
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild><Button className="gap-2"><Plus className="w-4 h-4" /> New Campaign</Button></DialogTrigger>
