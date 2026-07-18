@@ -108,9 +108,11 @@ const App = () => (
                 <Route path="/flows/:id" element={<Navigate to="/flow-editor" replace />} />
                 <Route path="/campaigns" element={<Navigate to="/" replace />} />
                 <Route path="/campaigns/:id/analytics" element={<Navigate to="/analytics" replace />} />
+                <Route path="/campaigns/:id/analytics" element={<Navigate to="/analytics" replace />} />
                 <Route path="/ai-studio" element={<Navigate to="/" replace />} />
                 <Route path="/copilot" element={<Navigate to="/" replace />} />
                 <Route path="/knowledge" element={<Navigate to="/" replace />} />
+
                 <Route path="/catalog" element={<Navigate to="/services" replace />} />
                 <Route path="/orders" element={<Navigate to="/bookings" replace />} />
                 <Route path="/integrations" element={<Navigate to="/whatsapp-settings" replace />} />
