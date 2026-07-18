@@ -88,22 +88,22 @@ const Auth = () => {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-12">
             <div className="mb-8">
               <BrandMark variant="wordmark" size={72} />
-              <p className="text-sm text-muted-foreground uppercase tracking-wider mt-4">WhatsApp Automation for Travel</p>
+              <p className="text-sm text-muted-foreground uppercase tracking-wider mt-4">WhatsApp CRM · Leads · Campaigns</p>
             </div>
 
 
             <h2 className="text-4xl font-bold text-foreground mb-4">
-              Run your travel business.<br />
+              Reach every customer.<br />
               <span className="text-foreground/70">Smarter on WhatsApp.</span>
             </h2>
             <p className="text-lg text-muted-foreground max-w-md">
-              Enquiries, itineraries, bookings, follow-ups and customer communication — all automated from one inbox.
+              Leads, conversations, campaigns and automation — all in one inbox powered by the WhatsApp Cloud API.
             </p>
           </motion.div>
 
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3, duration: 0.6 }} className="grid grid-cols-3 gap-6">
             {[
-              { value: '1K+', label: 'Travel Agents' },
+              { value: 'Meta', label: 'Official Cloud API' },
               { value: '99%', label: 'Uptime' },
               { value: '50K+', label: 'Messages/Day' }
             ].map((stat, i) => (
