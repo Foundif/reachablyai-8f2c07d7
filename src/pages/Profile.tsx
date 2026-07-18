@@ -182,7 +182,7 @@ const Profile = () => {
         </Button>
 
         <p className="text-center text-[11px] text-muted-foreground pb-6">
-          © 2026 Foundif Innovations · Chatarly
+          © 2026 Reachably
         </p>
 
         <ChangePasswordModal open={passwordModalOpen} onOpenChange={setPasswordModalOpen} />
