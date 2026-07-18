@@ -61,10 +61,11 @@ const TNDashboard = () => {
         supabase.from('tn_bookings').select('status, price, advance_amount, balance_amount').eq('user_id', user.id),
         supabase.from('tn_payments').select('amount').eq('user_id', user.id).eq('status', 'verified'),
         supabase.from('tn_payments').select('amount').eq('user_id', user.id).eq('status', 'pending'),
-        supabase.from('leads').select('id', { count: 'exact', head: true }).gte('created_at', weekAgo).eq('status', 'new'),
-        supabase.from('tn_messages').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('direction', 'inbound').is('read_at' as any, null),
+        supabase.from('leads' as any).select('id', { count: 'exact', head: true }).gte('created_at', weekAgo).eq('status', 'new'),
+        supabase.from('tn_messages').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('direction', 'inbound').gte('created_at', today),
         supabase.from('tn_campaigns').select('id', { count: 'exact', head: true }).eq('user_id', user.id).gte('created_at', monthStart),
       ]);
+
 
 
       // Revenue = verified payments + advance from paid/completed bookings (whichever wired)
