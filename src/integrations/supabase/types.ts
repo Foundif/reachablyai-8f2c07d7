@@ -283,6 +283,76 @@ export type Database = {
           },
         ]
       }
+      finance_entries: {
+        Row: {
+          amount: number
+          campaign_id: string | null
+          category: string | null
+          cost: number
+          created_at: string
+          created_by: string | null
+          entry_date: string
+          id: string
+          lead_id: string | null
+          notes: string | null
+          type: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          amount?: number
+          campaign_id?: string | null
+          category?: string | null
+          cost?: number
+          created_at?: string
+          created_by?: string | null
+          entry_date?: string
+          id?: string
+          lead_id?: string | null
+          notes?: string | null
+          type: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          amount?: number
+          campaign_id?: string | null
+          category?: string | null
+          cost?: number
+          created_at?: string
+          created_by?: string | null
+          entry_date?: string
+          id?: string
+          lead_id?: string | null
+          notes?: string | null
+          type?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_entries_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_entries_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_entries_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           assigned_to: string | null
@@ -468,45 +538,57 @@ export type Database = {
       templates: {
         Row: {
           body: string
+          buttons: Json | null
           category: string
           created_at: string
           created_by: string | null
+          footer: string | null
+          header: string | null
           id: string
           language: string
           meta_template_id: string | null
           name: string
           rejection_reason: string | null
           status: string
+          synced_at: string | null
           updated_at: string
           variables: Json
           workspace_id: string
         }
         Insert: {
           body: string
+          buttons?: Json | null
           category?: string
           created_at?: string
           created_by?: string | null
+          footer?: string | null
+          header?: string | null
           id?: string
           language?: string
           meta_template_id?: string | null
           name: string
           rejection_reason?: string | null
           status?: string
+          synced_at?: string | null
           updated_at?: string
           variables?: Json
           workspace_id: string
         }
         Update: {
           body?: string
+          buttons?: Json | null
           category?: string
           created_at?: string
           created_by?: string | null
+          footer?: string | null
+          header?: string | null
           id?: string
           language?: string
           meta_template_id?: string | null
           name?: string
           rejection_reason?: string | null
           status?: string
+          synced_at?: string | null
           updated_at?: string
           variables?: Json
           workspace_id?: string
@@ -662,6 +744,7 @@ export type Database = {
           app_secret: string | null
           business_phone: string | null
           created_at: string
+          last_analytics_sync: string | null
           last_error: string | null
           phone_number_id: string | null
           updated_at: string
@@ -676,6 +759,7 @@ export type Database = {
           app_secret?: string | null
           business_phone?: string | null
           created_at?: string
+          last_analytics_sync?: string | null
           last_error?: string | null
           phone_number_id?: string | null
           updated_at?: string
@@ -690,6 +774,7 @@ export type Database = {
           app_secret?: string | null
           business_phone?: string | null
           created_at?: string
+          last_analytics_sync?: string | null
           last_error?: string | null
           phone_number_id?: string | null
           updated_at?: string
