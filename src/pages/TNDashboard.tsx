@@ -88,6 +88,10 @@ const TNDashboard = () => {
         msgsToday: m.count || 0,
         revenue: verifiedSum + bookingRevenue,
         awaiting: pendingSum + bookingAwaiting,
+        leadsNew: leadsRes.count || 0,
+        inboxUnread: msgUnread.count || 0,
+        campaignsMonth: campRes.count || 0,
+        automationsActive: 0,
       });
     })();
   }, [user]);
@@ -96,8 +100,16 @@ const TNDashboard = () => {
     <AppLayout>
       <div className="p-4 md:p-8 space-y-6">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">TN45 Travel Aid — Dashboard</h1>
-          <p className="text-muted-foreground text-sm mt-1">WhatsApp booking automation overview</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Reachably — Dashboard</h1>
+          <p className="text-muted-foreground text-sm mt-1">WhatsApp CRM · Leads · Campaigns · Automation</p>
+        </div>
+
+        {/* 2x2 Module grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+          <ModuleTile icon={Contact} label="Leads" value={stats.leadsNew} hint="New this week" gradient="bg-gradient-to-br from-fuchsia-500 to-pink-500" to="/leads" navigate={navigate} />
+          <ModuleTile icon={Inbox} label="Inbox" value={stats.inboxUnread} hint="Unread messages" gradient="bg-gradient-to-br from-blue-500 to-indigo-500" to="/inbox" navigate={navigate} />
+          <ModuleTile icon={Megaphone} label="Campaigns" value={stats.campaignsMonth} hint="Sent this month" gradient="bg-gradient-to-br from-orange-500 to-rose-500" to="/campaigns" navigate={navigate} />
+          <ModuleTile icon={Workflow} label="Automation" value={stats.automationsActive} hint="Active flows" gradient="bg-gradient-to-br from-emerald-500 to-teal-500" to="/automation" navigate={navigate} />
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
@@ -106,6 +118,7 @@ const TNDashboard = () => {
           <Stat icon={Users} label="Total Customers" value={stats.customers} accent="bg-blue-500" />
           <Stat icon={MessageSquare} label="Msgs Today" value={stats.msgsToday} accent="bg-green-500" />
         </div>
+
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card className="p-6">
