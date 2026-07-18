@@ -72,7 +72,8 @@ const Onboarding = () => {
 
   const uploadLogo = async () => {
     if (!logoFile || !user) return null;
-    const path = `${user.id}/logo-${Date.now()}-${logoFile.name}`;
+    const ext = logoFile.name.split('.').pop() || 'png';
+    const path = `logos/${user.id}/logo-${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from('salon-assets').upload(path, logoFile, { upsert: true });
     if (error) { toast.error('Logo upload failed'); return null; }
     return supabase.storage.from('salon-assets').getPublicUrl(path).data.publicUrl;
@@ -90,7 +91,7 @@ const Onboarding = () => {
       purpose,
       referral_source: source,
       logo_url: logo_url || undefined,
-      onboarded: true,
+      onboarding_completed: true,
     } as any);
     setLoading(false);
     if (error) return toast.error(error.message || 'Could not save');
