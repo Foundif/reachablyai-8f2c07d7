@@ -106,9 +106,8 @@ const App = () => (
                 <Route path="/flows" element={<Navigate to="/flow-editor" replace />} />
                 <Route path="/flows/templates" element={<Navigate to="/flow-editor" replace />} />
                 <Route path="/flows/:id" element={<Navigate to="/flow-editor" replace />} />
-                <Route path="/campaigns" element={<Navigate to="/" replace />} />
                 <Route path="/campaigns/:id/analytics" element={<Navigate to="/analytics" replace />} />
-                <Route path="/campaigns/:id/analytics" element={<Navigate to="/analytics" replace />} />
+
                 <Route path="/ai-studio" element={<Navigate to="/" replace />} />
                 <Route path="/copilot" element={<Navigate to="/" replace />} />
                 <Route path="/knowledge" element={<Navigate to="/" replace />} />
