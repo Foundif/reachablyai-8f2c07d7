@@ -110,11 +110,11 @@
     --popover: 0 0% 7%;
     --popover-foreground: 0 0% 96%;
 
-    --primary: 0 0% 96%;
+    --primary: 300 85% 62%;
     --primary-foreground: 0 0% 6%;
-    --primary-glow: 0 0% 80%;
+    --primary-glow: 320 90% 72%;
 
-    --secondary: 0 0% 80%;
+    --secondary: 330 85% 68%;
     --secondary-foreground: 0 0% 6%;
 
     --success: 0 0% 88%;
