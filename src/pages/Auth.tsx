@@ -181,7 +181,7 @@ const Auth = () => {
                   <Label htmlFor="email" className="text-foreground">Email</Label>
                   <div className="relative mt-1.5">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <Input id="email" type="email" placeholder="you@travel.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="pl-10 bg-card border-border focus:border-primary" />
+                    <Input id="email" type="email" placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="pl-10 bg-card border-border focus:border-primary" />
                   </div>
                 </div>
 
