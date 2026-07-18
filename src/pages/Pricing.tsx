@@ -5,31 +5,32 @@ import AppLayout from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, Crown, Sparkles, Zap, Star, MessageSquare, ArrowLeft } from 'lucide-react';
+import {
+  Check, X, Crown, Sparkles, Zap, Star, MessageSquare, ArrowLeft, Wrench,
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
-type PlanId = 'starter' | 'growth' | 'pro';
+type PlanId = 'starter' | 'growth' | 'business';
 
 interface Plan {
   id: PlanId;
   name: string;
   tagline: string;
-  monthly: number;
-  yearly: number;
-  yearlySave: number;
-  dailyLimit: string;
+  monthly: number;   // ₹ / month
+  yearly: number;    // ₹ / year (2 months free)
+  credits: string;   // included message credits (approx)
   badge?: string;
   badgeIcon?: any;
   icon: any;
   popular?: boolean;
   cta: string;
   features: string[];
-  limits?: string[];
 }
 
-// Decoy pricing: Starter is the anchor, Growth is the target, Pro makes Growth look great.
+// Reachably pricing — matches the published feature-comparison sheet.
+// Yearly = monthly × 10 (2 months free).
 const PLANS: Plan[] = [
   {
     id: 'starter',
@@ -37,88 +38,115 @@ const PLANS: Plan[] = [
     tagline: 'Solo founders getting started with WhatsApp outreach',
     monthly: 999,
     yearly: 9990,
-    yearlySave: 1998,
-    dailyLimit: '40–50 msgs / day',
-    badge: 'Anchor',
+    credits: '~500 msgs / mo',
+    badge: 'Basic',
     badgeIcon: Zap,
     icon: MessageSquare,
     cta: 'Start with Starter',
     features: [
-      '1 WhatsApp Business number',
-      'Your own free-form templates (in-app)',
-      'Bulk send to imported CSV / leads',
-      'Safe pacing (6–12s random delay)',
-      'Team inbox — 1 seat',
-      'Basic analytics',
-      'Email support',
+      '1 team member',
+      'Unlimited templates',
+      'CRM Dashboard',
+      'Contact management',
+      'WhatsApp broadcast',
+      'Official Meta Cloud API',
+      'Website integration',
+      'Basic campaign analytics',
+      'Basic automation workflows',
     ],
-    limits: ['~1,200 messages / month', 'No Meta template broadcasts', 'No automations'],
   },
   {
     id: 'growth',
     name: 'Growth',
-    tagline: 'The most popular plan — everything you need to scale',
-    monthly: 2499,
-    yearly: 24990,
-    yearlySave: 4998,
-    dailyLimit: 'Up to 2,000 msgs / day',
+    tagline: 'Most popular — everything you need to scale outreach',
+    monthly: 1999,
+    yearly: 19990,
+    credits: '~1,200 msgs / mo',
     badge: 'Most popular',
     badgeIcon: Crown,
     icon: Star,
     popular: true,
     cta: 'Choose Growth',
     features: [
+      'Up to 3 team members',
       'Everything in Starter, plus:',
-      'Approved Meta templates + carousels',
-      'Unlimited campaigns & automations',
-      'Reachability preview + progress tracker',
-      'Lead scraper (Google Maps)',
-      'Team inbox — 5 seats',
-      '24h window smart-fallback to templates',
-      'Priority email + chat support',
+      'API access',
+      'Advanced campaign analytics',
+      'Advanced automation workflows',
+      'Priority support',
     ],
   },
   {
-    id: 'pro',
-    name: 'Pro',
-    tagline: 'High-volume teams, agencies, and multi-brand ops',
-    monthly: 4999,
-    yearly: 49990,
-    yearlySave: 9998,
-    dailyLimit: 'Meta tier limits (up to 100K+)',
+    id: 'business',
+    name: 'Business',
+    tagline: 'Agencies & high-volume teams with dedicated support',
+    monthly: 3999,
+    yearly: 39990,
+    credits: '~2,800 msgs / mo',
     badge: 'Advanced',
     badgeIcon: Sparkles,
     icon: Crown,
-    cta: 'Talk to sales',
+    cta: 'Choose Business',
     features: [
+      'Unlimited team members',
       'Everything in Growth, plus:',
-      'Multiple WhatsApp numbers',
-      'Public Booking API + webhooks',
-      'AI reply assistant',
-      'Advanced accounting & Meta cost sync',
-      'Custom automations & role permissions',
-      'Unlimited team seats',
-      'Dedicated account manager · SLA',
+      'Unlimited automation workflows',
+      'Dedicated account manager',
+      'Priority support · SLA',
     ],
   },
 ];
 
+const SETUP_FEE = 2999;
+
+const COMPARE: { label: string; values: [string | boolean, string | boolean, string | boolean] }[] = [
+  { label: 'Monthly Price',           values: ['₹999', '₹1,999', '₹3,999'] },
+  { label: 'Annual Price (2 months free)', values: ['₹9,990', '₹19,990', '₹39,990'] },
+  { label: 'Included Message Credits*',    values: ['~500', '~1,200', '~2,800'] },
+  { label: 'CRM Dashboard',           values: [true, true, true] },
+  { label: 'Contact Management',      values: [true, true, true] },
+  { label: 'WhatsApp Broadcast',      values: [true, true, true] },
+  { label: 'Official Meta Cloud API', values: [true, true, true] },
+  { label: 'Campaign Analytics',      values: ['Basic', 'Advanced', 'Advanced'] },
+  { label: 'Team Members',            values: ['1', '3', 'Unlimited'] },
+  { label: 'Templates',               values: ['Unlimited', 'Unlimited', 'Unlimited'] },
+  { label: 'Website Integration',     values: [true, true, true] },
+  { label: 'API Access',              values: [false, true, true] },
+  { label: 'Automation Workflows',    values: ['Basic', 'Advanced', 'Unlimited'] },
+  { label: 'Priority Support',        values: [false, true, true] },
+  { label: 'Dedicated Account Manager', values: [false, false, true] },
+];
+
 const formatINR = (n: number) => `₹${n.toLocaleString('en-IN')}`;
+
+const Cell = ({ v }: { v: string | boolean }) => {
+  if (v === true) return <Check className="w-4 h-4 text-emerald-600 mx-auto" />;
+  if (v === false) return <X className="w-4 h-4 text-muted-foreground/60 mx-auto" />;
+  return <span className="text-sm">{v}</span>;
+};
 
 const PricingContent = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
   const [busy, setBusy] = useState<PlanId | null>(null);
+  const [setupBusy, setSetupBusy] = useState(false);
 
   const priceFor = (p: Plan) => billing === 'yearly' ? p.yearly : p.monthly;
+  const savingsFor = (p: Plan) => p.monthly * 12 - p.yearly;
 
   const handleSelect = async (plan: Plan) => {
     if (!user) { navigate('/auth'); return; }
     setBusy(plan.id);
-    // Subscription checkout will be wired to Razorpay separately.
     toast.info(`${plan.name} plan selected — checkout coming soon. We'll email you to activate.`);
     setTimeout(() => setBusy(null), 800);
+  };
+
+  const paySetup = async () => {
+    if (!user) { navigate('/auth'); return; }
+    setSetupBusy(true);
+    toast.info(`One-time setup fee ${formatINR(SETUP_FEE)} — checkout coming soon.`);
+    setTimeout(() => setSetupBusy(false), 800);
   };
 
   return (
@@ -151,13 +179,41 @@ const PricingContent = () => {
               <button onClick={() => setBilling('yearly')}
                 className={cn('px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5',
                   billing === 'yearly' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground')}
-              >Yearly <Badge variant="secondary" className="text-[10px] py-0 px-1.5">Save 17%</Badge></button>
+              >Yearly <Badge variant="secondary" className="text-[10px] py-0 px-1.5">2 months free</Badge></button>
             </div>
           </motion.div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-16">
+        {/* One-time setup banner */}
+        <Card className="mb-8 p-5 border-primary/30 bg-gradient-to-r from-primary/10 to-secondary/10">
+          <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-primary/20"><Wrench className="w-5 h-5 text-primary" /></div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold">One-time WhatsApp API &amp; CRM setup</h3>
+                  <Badge variant="secondary" className="text-[10px]">Paid separately</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1 max-w-2xl">
+                  Meta Cloud API config · WhatsApp Business onboarding · Webhook setup · CRM account setup · Team onboarding · Contact import · Basic training.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 md:shrink-0">
+              <div className="text-right">
+                <div className="text-2xl font-bold">{formatINR(SETUP_FEE)}</div>
+                <div className="text-[11px] text-muted-foreground">one-time</div>
+              </div>
+              <Button onClick={paySetup} disabled={setupBusy}>
+                {setupBusy ? 'Loading…' : 'Pay setup fee'}
+              </Button>
+            </div>
+          </div>
+        </Card>
+
+        {/* Plan cards */}
         <div className="grid md:grid-cols-3 gap-6">
           {PLANS.map((plan, i) => {
             const Icon = plan.icon;
@@ -191,10 +247,10 @@ const PricingContent = () => {
                     <span className="text-muted-foreground text-sm">/{billing === 'yearly' ? 'year' : 'month'}</span>
                   </div>
                   {billing === 'yearly' && (
-                    <p className="text-xs text-emerald-600 mb-3">You save {formatINR(plan.yearlySave)} /year</p>
+                    <p className="text-xs text-emerald-600 mb-3">You save {formatINR(savingsFor(plan))} /year</p>
                   )}
                   <div className="text-xs text-muted-foreground mb-5 flex items-center gap-1.5">
-                    <Zap className="w-3.5 h-3.5" /> {plan.dailyLimit}
+                    <Zap className="w-3.5 h-3.5" /> {plan.credits}
                   </div>
 
                   <ul className="space-y-2 mb-6 flex-1">
@@ -204,38 +260,88 @@ const PricingContent = () => {
                         <span>{f}</span>
                       </li>
                     ))}
-                    {plan.limits?.map((l, idx) => (
-                      <li key={`l-${idx}`} className="flex gap-2 text-xs text-muted-foreground">
-                        <span className="w-4 shrink-0 text-center">·</span>
-                        <span>{l}</span>
-                      </li>
-                    ))}
                   </ul>
 
                   <Button
                     onClick={() => handleSelect(plan)}
                     disabled={busy === plan.id}
-                    className={cn('w-full', plan.popular ? '' : 'variant-outline')}
+                    className="w-full"
                     variant={plan.popular ? 'default' : 'outline'}
                   >
                     {busy === plan.id ? 'Loading…' : plan.cta}
                   </Button>
+                  <p className="text-[11px] text-muted-foreground text-center mt-2">
+                    + one-time {formatINR(SETUP_FEE)} setup (paid separately)
+                  </p>
                 </Card>
               </motion.div>
             );
           })}
         </div>
 
-        <Card className="mt-10 p-6 bg-muted/30 border-dashed">
-          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-            <div>
-              <h3 className="font-semibold">Why the daily limit on Starter?</h3>
-              <p className="text-sm text-muted-foreground max-w-2xl">
-                To keep your WhatsApp number safe from Meta bans. Sending too fast — especially without approved templates —
-                is the #1 reason numbers get flagged. Growth and Pro add Meta template broadcasts, so you can safely scale to thousands.
-              </p>
-            </div>
-            <Button variant="outline" onClick={() => navigate('/guide')}>Read safety guide</Button>
+        {/* Feature comparison table */}
+        <div className="mt-14">
+          <h2 className="text-2xl font-bold text-center mb-2">Compare features</h2>
+          <p className="text-center text-sm text-muted-foreground mb-6">
+            Everything you get across all Reachably plans.
+          </p>
+          <Card className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/40">
+                  <th className="text-left px-4 py-3 font-semibold">Features</th>
+                  {PLANS.map(p => (
+                    <th key={p.id} className="px-4 py-3 font-semibold text-center min-w-[110px]">
+                      {p.name}
+                      {p.popular && <Badge className="ml-2 text-[10px]" variant="default">Popular</Badge>}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {COMPARE.map((row, i) => (
+                  <tr key={i} className={cn('border-b last:border-0', i % 2 && 'bg-muted/20')}>
+                    <td className="px-4 py-3 text-muted-foreground">{row.label}</td>
+                    {row.values.map((v, j) => (
+                      <td key={j} className="px-4 py-3 text-center">
+                        <Cell v={v} />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+          <p className="text-[11px] text-muted-foreground mt-3 text-center">
+            *Included message credits are sufficient for approximately the stated number of standard WhatsApp template messages.
+            Actual usage varies by Meta conversation category and destination country. Additional credits can be purchased anytime.
+          </p>
+        </div>
+
+        {/* Annual savings recap */}
+        <Card className="mt-10 p-6">
+          <h3 className="font-semibold mb-4">Annual savings</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-muted-foreground">
+                  <th className="text-left py-2">Plan</th>
+                  <th className="text-right py-2">Monthly total (12 mo)</th>
+                  <th className="text-right py-2">Annual price</th>
+                  <th className="text-right py-2">Savings</th>
+                </tr>
+              </thead>
+              <tbody>
+                {PLANS.map(p => (
+                  <tr key={p.id} className="border-b last:border-0">
+                    <td className="py-2 font-medium">{p.name}</td>
+                    <td className="text-right">{formatINR(p.monthly * 12)}</td>
+                    <td className="text-right">{formatINR(p.yearly)}</td>
+                    <td className="text-right text-emerald-600 font-medium">{formatINR(savingsFor(p))}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </Card>
       </div>
