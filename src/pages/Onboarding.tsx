@@ -120,15 +120,8 @@ const Onboarding = () => {
       });
       if (error) throw error;
 
-      // Seed services into DB when user added them one-by-one
-      if (intakeMode === 'list' && user) {
-        const rows = services
-          .filter(s => s.name.trim())
-          .map(s => ({ user_id: user.id, name: s.name.trim(), price: Number(s.price) || 0, duration: 30, category: 'General' }));
-        if (rows.length) {
-          await supabase.from('services').insert(rows as any).then(({ error }) => error && console.warn(error));
-        }
-      }
+      // (Old services table removed with concept change; conceptText saved to profile only.)
+
 
       toast.success('Business setup complete!');
       navigate('/');

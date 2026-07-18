@@ -63,7 +63,7 @@ const Profile = () => {
 
   const testSound = () => {
     enableNotificationSound();
-    playNotificationSound(true);
+    playNotificationSound();
     toast.success('Playing test sound — if you hear nothing, click anywhere on the page first then try again.');
   };
 

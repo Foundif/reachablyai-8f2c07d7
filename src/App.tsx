@@ -8,15 +8,10 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { LanguageProvider } from "@/hooks/useLanguage";
-import TNDashboard from "./pages/TNDashboard";
-import TNBookings from "./pages/TNBookings";
-import TNCustomers from "./pages/TNCustomers";
-import TNServices from "./pages/TNServices";
-import TNWhatsAppSettings from "./pages/TNWhatsAppSettings";
+import Dashboard from "./pages/Dashboard";
+import WhatsAppSettings from "./pages/WhatsAppSettings";
 import Inbox from "./pages/Inbox";
-import ComingSoon from "./pages/ComingSoon";
 import Analytics from "./pages/Analytics";
-import { PermissionLoader } from "@/hooks/usePermissionOverrides";
 import Profile from "./pages/Profile";
 import ShopInfo from "./pages/ShopInfo";
 import Guide from "./pages/Guide";
@@ -32,13 +27,8 @@ import AuditLogs from "./pages/AuditLogs";
 import Accounting from "./pages/Accounting";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
-import RazorpaySettings from "./pages/RazorpaySettings";
-import BookingDetail from "./pages/BookingDetail";
-import FlowEditorPage from "./pages/FlowEditorPage";
-import SheetsViewer from "./pages/SheetsViewer";
 import Leads from "./pages/Leads";
 import ComingSoonModule from "./pages/ComingSoonModule";
-
 
 const queryClient = new QueryClient();
 
@@ -60,7 +50,6 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <AuthProvider>
-        <PermissionLoader />
         <LanguageProvider>
           <TooltipProvider>
             <Toaster />
@@ -76,21 +65,16 @@ const App = () => (
                 <Route path="/admin-login" element={<AdminLogin />} />
                 <Route path="/admin" element={<AdminDashboard />} />
 
-                <Route path="/" element={<ProtectedRoute><TNDashboard /></ProtectedRoute>} />
+                <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
-                <Route path="/messages" element={<Navigate to="/inbox" replace />} />
-                <Route path="/bookings" element={<ProtectedRoute><TNBookings /></ProtectedRoute>} />
-                <Route path="/bookings/:id" element={<ProtectedRoute><BookingDetail /></ProtectedRoute>} />
-                <Route path="/payments" element={<Navigate to="/accounting" replace />} />
-                <Route path="/customers" element={<ProtectedRoute><TNCustomers /></ProtectedRoute>} />
-                <Route path="/services" element={<ProtectedRoute><TNServices /></ProtectedRoute>} />
-                <Route path="/whatsapp-settings" element={<ProtectedRoute><TNWhatsAppSettings /></ProtectedRoute>} />
-                <Route path="/flow-editor" element={<ProtectedRoute><FlowEditorPage /></ProtectedRoute>} />
-                <Route path="/sheets" element={<ProtectedRoute><SheetsViewer /></ProtectedRoute>} />
                 <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
-                <Route path="/campaigns" element={<ProtectedRoute><ComingSoonModule title="Campaigns" description="Bulk WhatsApp campaigns with analytics — shipping next." /></ProtectedRoute>} />
-                <Route path="/automation" element={<ProtectedRoute><ComingSoonModule title="Automation" description="Visual If→Then flow builder — shipping next." /></ProtectedRoute>} />
+                <Route path="/campaigns" element={<ProtectedRoute><ComingSoonModule title="Campaigns" description="Bulk WhatsApp campaigns with template selection and analytics — shipping in step 2e." /></ProtectedRoute>} />
+                <Route path="/automation" element={<ProtectedRoute><ComingSoonModule title="Automation" description="Trigger → action flows using approved templates — shipping in step 2f." /></ProtectedRoute>} />
+                <Route path="/scraper" element={<ProtectedRoute><ComingSoonModule title="Lead Scraper" description="Google Maps / GMB lead scraper with location, keyword and 'website missing' filters — shipping in step 2h." /></ProtectedRoute>} />
+                <Route path="/templates" element={<ProtectedRoute><ComingSoonModule title="Templates" description="WhatsApp message templates with Meta approval status — shipping in step 2b." /></ProtectedRoute>} />
                 <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+                <Route path="/accounting" element={<ProtectedRoute><Accounting /></ProtectedRoute>} />
+                <Route path="/whatsapp-settings" element={<ProtectedRoute><WhatsAppSettings /></ProtectedRoute>} />
 
                 <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                 <Route path="/shop-info" element={<ProtectedRoute><ShopInfo /></ProtectedRoute>} />
@@ -98,27 +82,17 @@ const App = () => (
                 <Route path="/team" element={<ProtectedRoute><TeamManagement /></ProtectedRoute>} />
                 <Route path="/roles" element={<ProtectedRoute><RolesPermissions /></ProtectedRoute>} />
                 <Route path="/audit" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
-                <Route path="/accounting" element={<ProtectedRoute><Accounting /></ProtectedRoute>} />
-                <Route path="/razorpay" element={<ProtectedRoute><RazorpaySettings /></ProtectedRoute>} />
 
-                {/* Legacy routes redirect to active pages */}
-                <Route path="/tn-flow" element={<Navigate to="/flow-editor" replace />} />
-                <Route path="/flows" element={<Navigate to="/flow-editor" replace />} />
-                <Route path="/flows/templates" element={<Navigate to="/flow-editor" replace />} />
-                <Route path="/flows/:id" element={<Navigate to="/flow-editor" replace />} />
-                <Route path="/campaigns/:id/analytics" element={<Navigate to="/analytics" replace />} />
-
-                <Route path="/ai-studio" element={<Navigate to="/" replace />} />
-                <Route path="/copilot" element={<Navigate to="/" replace />} />
-                <Route path="/knowledge" element={<Navigate to="/" replace />} />
-
-                <Route path="/catalog" element={<Navigate to="/services" replace />} />
-                <Route path="/orders" element={<Navigate to="/bookings" replace />} />
-                <Route path="/integrations" element={<Navigate to="/whatsapp-settings" replace />} />
-                <Route path="/api" element={<Navigate to="/whatsapp-settings" replace />} />
-                <Route path="/webhooks" element={<Navigate to="/whatsapp-settings" replace />} />
+                {/* Legacy redirects */}
+                <Route path="/messages" element={<Navigate to="/inbox" replace />} />
+                <Route path="/bookings" element={<Navigate to="/leads" replace />} />
+                <Route path="/customers" element={<Navigate to="/leads" replace />} />
+                <Route path="/services" element={<Navigate to="/" replace />} />
+                <Route path="/payments" element={<Navigate to="/accounting" replace />} />
+                <Route path="/sheets" element={<Navigate to="/leads" replace />} />
+                <Route path="/flow-editor" element={<Navigate to="/automation" replace />} />
+                <Route path="/razorpay" element={<Navigate to="/whatsapp-settings" replace />} />
                 <Route path="/billing" element={<Navigate to="/pricing" replace />} />
-                <Route path="/white-label" element={<Navigate to="/profile" replace />} />
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
