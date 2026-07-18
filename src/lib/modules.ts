@@ -1,8 +1,9 @@
 import {
-  Inbox, Users, CalendarDays,
+  Inbox, Users, CalendarDays, Contact,
   UserCog, Shield, FileText, Settings, UserCircle, CreditCard,
   LayoutDashboard, Briefcase, BarChart3, Wallet, Workflow, Sheet,
 } from 'lucide-react';
+
 
 export type ModuleItem = {
   to: string;
@@ -20,8 +21,10 @@ export const MODULE_GROUPS: ModuleGroup[] = [
     items: [
       { to: '/', icon: LayoutDashboard, label: 'Dashboard', status: 'live' },
       { to: '/inbox', icon: Inbox, label: 'Inbox', status: 'live' },
+      { to: '/leads', icon: Contact, label: 'Leads', status: 'live' },
     ],
   },
+
   {
     label: 'Services',
     items: [
