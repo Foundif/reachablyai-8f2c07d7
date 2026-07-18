@@ -29,6 +29,10 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Leads from "./pages/Leads";
 import ComingSoonModule from "./pages/ComingSoonModule";
+import Templates from "./pages/Templates";
+import Campaigns, { CampaignDetail } from "./pages/Campaigns";
+import Automations from "./pages/Automations";
+
 
 const queryClient = new QueryClient();
 
@@ -68,10 +72,12 @@ const App = () => (
                 <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
                 <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
-                <Route path="/campaigns" element={<ProtectedRoute><ComingSoonModule title="Campaigns" description="Bulk WhatsApp campaigns with template selection and analytics — shipping in step 2e." /></ProtectedRoute>} />
-                <Route path="/automation" element={<ProtectedRoute><ComingSoonModule title="Automation" description="Trigger → action flows using approved templates — shipping in step 2f." /></ProtectedRoute>} />
+                <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
+                <Route path="/campaigns/:id" element={<ProtectedRoute><CampaignDetail /></ProtectedRoute>} />
+                <Route path="/automation" element={<ProtectedRoute><Automations /></ProtectedRoute>} />
                 <Route path="/scraper" element={<ProtectedRoute><ComingSoonModule title="Lead Scraper" description="Google Maps / GMB lead scraper with location, keyword and 'website missing' filters — shipping in step 2h." /></ProtectedRoute>} />
-                <Route path="/templates" element={<ProtectedRoute><ComingSoonModule title="Templates" description="WhatsApp message templates with Meta approval status — shipping in step 2b." /></ProtectedRoute>} />
+                <Route path="/templates" element={<ProtectedRoute><Templates /></ProtectedRoute>} />
+
                 <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
                 <Route path="/accounting" element={<ProtectedRoute><Accounting /></ProtectedRoute>} />
                 <Route path="/whatsapp-settings" element={<ProtectedRoute><WhatsAppSettings /></ProtectedRoute>} />
