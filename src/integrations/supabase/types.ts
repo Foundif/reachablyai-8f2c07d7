@@ -341,12 +341,14 @@ export type Database = {
           active_workspace_id: string | null
           address: string | null
           allowed_modules: string[]
+          business_category: string | null
           business_type: string | null
           country: string | null
           created_at: string
           currency: string | null
           email: string | null
           full_name: string | null
+          gst_number: string | null
           id: string
           is_staff: boolean
           language: string | null
@@ -356,6 +358,8 @@ export type Database = {
           owner_id: string | null
           phone: string | null
           price_list_url: string | null
+          purpose: string | null
+          referral_source: string | null
           role: string | null
           services_concept: string | null
           store_name: string | null
@@ -370,12 +374,14 @@ export type Database = {
           active_workspace_id?: string | null
           address?: string | null
           allowed_modules?: string[]
+          business_category?: string | null
           business_type?: string | null
           country?: string | null
           created_at?: string
           currency?: string | null
           email?: string | null
           full_name?: string | null
+          gst_number?: string | null
           id?: string
           is_staff?: boolean
           language?: string | null
@@ -385,6 +391,8 @@ export type Database = {
           owner_id?: string | null
           phone?: string | null
           price_list_url?: string | null
+          purpose?: string | null
+          referral_source?: string | null
           role?: string | null
           services_concept?: string | null
           store_name?: string | null
@@ -399,12 +407,14 @@ export type Database = {
           active_workspace_id?: string | null
           address?: string | null
           allowed_modules?: string[]
+          business_category?: string | null
           business_type?: string | null
           country?: string | null
           created_at?: string
           currency?: string | null
           email?: string | null
           full_name?: string | null
+          gst_number?: string | null
           id?: string
           is_staff?: boolean
           language?: string | null
@@ -414,6 +424,8 @@ export type Database = {
           owner_id?: string | null
           phone?: string | null
           price_list_url?: string | null
+          purpose?: string | null
+          referral_source?: string | null
           role?: string | null
           services_concept?: string | null
           store_name?: string | null
@@ -502,6 +514,141 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "templates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_conversations: {
+        Row: {
+          assigned_to: string | null
+          contact_name: string | null
+          contact_phone: string
+          created_at: string
+          id: string
+          last_message_at: string | null
+          last_message_direction: string | null
+          last_message_text: string | null
+          lead_id: string | null
+          status: string
+          unread_count: number
+          updated_at: string
+          window_expires_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          contact_name?: string | null
+          contact_phone: string
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          last_message_direction?: string | null
+          last_message_text?: string | null
+          lead_id?: string | null
+          status?: string
+          unread_count?: number
+          updated_at?: string
+          window_expires_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          contact_name?: string | null
+          contact_phone?: string
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          last_message_direction?: string | null
+          last_message_text?: string | null
+          lead_id?: string | null
+          status?: string
+          unread_count?: number
+          updated_at?: string
+          window_expires_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_conversations_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wa_conversations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_messages: {
+        Row: {
+          body: string | null
+          conversation_id: string
+          created_at: string
+          direction: string
+          error: string | null
+          from_phone: string | null
+          id: string
+          media_url: string | null
+          message_type: string
+          sent_by: string | null
+          status: string
+          template_name: string | null
+          to_phone: string | null
+          wa_message_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          body?: string | null
+          conversation_id: string
+          created_at?: string
+          direction: string
+          error?: string | null
+          from_phone?: string | null
+          id?: string
+          media_url?: string | null
+          message_type?: string
+          sent_by?: string | null
+          status?: string
+          template_name?: string | null
+          to_phone?: string | null
+          wa_message_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          body?: string | null
+          conversation_id?: string
+          created_at?: string
+          direction?: string
+          error?: string | null
+          from_phone?: string | null
+          id?: string
+          media_url?: string | null
+          message_type?: string
+          sent_by?: string | null
+          status?: string
+          template_name?: string | null
+          to_phone?: string | null
+          wa_message_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "wa_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wa_messages_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
