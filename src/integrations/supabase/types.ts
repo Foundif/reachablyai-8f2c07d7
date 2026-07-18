@@ -143,7 +143,9 @@ export type Database = {
           meta_message_id: string | null
           name: string | null
           phone: string
+          reachable: boolean | null
           read_at: string | null
+          reason: string | null
           replied_at: string | null
           sent_at: string | null
           status: string
@@ -160,7 +162,9 @@ export type Database = {
           meta_message_id?: string | null
           name?: string | null
           phone: string
+          reachable?: boolean | null
           read_at?: string | null
+          reason?: string | null
           replied_at?: string | null
           sent_at?: string | null
           status?: string
@@ -177,7 +181,9 @@ export type Database = {
           meta_message_id?: string | null
           name?: string | null
           phone?: string
+          reachable?: boolean | null
           read_at?: string | null
+          reason?: string | null
           replied_at?: string | null
           sent_at?: string | null
           status?: string
@@ -210,17 +216,24 @@ export type Database = {
       }
       campaigns: {
         Row: {
+          body_text: string | null
           completed_at: string | null
           created_at: string
           created_by: string | null
           delivered_count: number
           failed_count: number
           id: string
+          max_delay_sec: number
+          media_urls: Json
+          min_delay_sec: number
+          mode: string
           name: string
+          progress: Json
           read_count: number
           replied_count: number
           scheduled_at: string | null
           sent_count: number
+          skipped_count: number
           started_at: string | null
           status: string
           template_id: string | null
@@ -229,17 +242,24 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          body_text?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
           delivered_count?: number
           failed_count?: number
           id?: string
+          max_delay_sec?: number
+          media_urls?: Json
+          min_delay_sec?: number
+          mode?: string
           name: string
+          progress?: Json
           read_count?: number
           replied_count?: number
           scheduled_at?: string | null
           sent_count?: number
+          skipped_count?: number
           started_at?: string | null
           status?: string
           template_id?: string | null
@@ -248,17 +268,24 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          body_text?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
           delivered_count?: number
           failed_count?: number
           id?: string
+          max_delay_sec?: number
+          media_urls?: Json
+          min_delay_sec?: number
+          mode?: string
           name?: string
+          progress?: Json
           read_count?: number
           replied_count?: number
           scheduled_at?: string | null
           sent_count?: number
+          skipped_count?: number
           started_at?: string | null
           status?: string
           template_id?: string | null
