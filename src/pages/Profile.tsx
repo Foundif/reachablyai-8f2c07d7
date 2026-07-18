@@ -195,6 +195,10 @@ const EditProfileCard = ({ onClose }: { onClose: () => void }) => {
   const { user, profile, updateProfile } = useAuth();
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [storeName, setStoreName] = useState(profile?.store_name || '');
+  const [businessType, setBusinessType] = useState((profile as any)?.business_type || '');
+  const [businessCategory, setBusinessCategory] = useState((profile as any)?.business_category || '');
+  const [gstNumber, setGstNumber] = useState((profile as any)?.gst_number || '');
+  const [phone, setPhone] = useState((profile as any)?.phone || '');
   const [country, setCountry] = useState(profile?.country || 'India');
   const [currency, setCurrency] = useState(profile?.currency || 'INR');
   const [email, setEmail] = useState(user?.email || '');
@@ -203,7 +207,11 @@ const EditProfileCard = ({ onClose }: { onClose: () => void }) => {
 
   const save = async () => {
     setSaving(true);
-    const { error } = await updateProfile({ full_name: fullName, store_name: storeName, country, currency });
+    const { error } = await updateProfile({
+      full_name: fullName, store_name: storeName,
+      business_type: businessType, business_category: businessCategory,
+      gst_number: gstNumber, phone, country, currency,
+    } as any);
     setSaving(false);
     if (error) toast.error(error.message); else { toast.success('Profile updated'); onClose(); }
   };
@@ -226,9 +234,14 @@ const EditProfileCard = ({ onClose }: { onClose: () => void }) => {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div><Label className="text-xs">Full name</Label><Input value={fullName} onChange={e => setFullName(e.target.value)} className="mt-1.5" /></div>
         <div><Label className="text-xs">Business name</Label><Input value={storeName} onChange={e => setStoreName(e.target.value)} className="mt-1.5" /></div>
+        <div><Label className="text-xs">Business type</Label><Input value={businessType} onChange={e => setBusinessType(e.target.value)} className="mt-1.5" /></div>
+        <div><Label className="text-xs">Category</Label><Input value={businessCategory} onChange={e => setBusinessCategory(e.target.value)} className="mt-1.5" placeholder="B2C, B2B…" /></div>
+        <div><Label className="text-xs">Phone</Label><Input value={phone} onChange={e => setPhone(e.target.value)} className="mt-1.5" /></div>
+        <div><Label className="text-xs">GST number</Label><Input value={gstNumber} onChange={e => setGstNumber(e.target.value.toUpperCase())} className="mt-1.5" /></div>
         <div><Label className="text-xs">Country</Label><Input value={country} onChange={e => setCountry(e.target.value)} className="mt-1.5" /></div>
         <div><Label className="text-xs">Currency</Label><Input value={currency} onChange={e => setCurrency(e.target.value)} className="mt-1.5" /></div>
       </div>
+
       <div className="flex gap-2 pt-1">
         <Button onClick={save} disabled={saving} className="flex-1">
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Check className="w-4 h-4" />Save</>}
