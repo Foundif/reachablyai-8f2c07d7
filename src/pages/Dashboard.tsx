@@ -36,23 +36,16 @@ const Dashboard = () => {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const today = new Date().toISOString().slice(0, 10);
       const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
-      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-      const [leadsRes, msgUnread, campRes] = await Promise.all([
-        supabase.from('leads' as any).select('id', { count: 'exact', head: true }).gte('created_at', weekAgo).eq('status', 'new'),
-        supabase.from('tn_messages').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('direction', 'inbound').gte('created_at', today),
-        supabase.from('tn_campaigns').select('id', { count: 'exact', head: true }).eq('user_id', user.id).gte('created_at', monthStart),
-      ]);
-
-      setStats({
-        leadsNew: leadsRes.count || 0,
-        inboxUnread: msgUnread.count || 0,
-        campaignsMonth: campRes.count || 0,
-        automationsActive: 0,
-      });
+      const { count } = await supabase
+        .from('leads')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', weekAgo)
+        .eq('status', 'new');
+      setStats({ leadsNew: count || 0, inboxUnread: 0, campaignsMonth: 0, automationsActive: 0 });
     })();
   }, [user]);
+
 
   return (
     <AppLayout>
