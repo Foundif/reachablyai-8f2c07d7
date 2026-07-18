@@ -34,8 +34,8 @@ export const MODULE_GROUPS: ModuleGroup[] = [
   {
     label: 'Insights',
     items: [
-      { to: '/analytics', icon: BarChart3, label: 'Analytics', status: 'soon' },
-      { to: '/accounting', icon: Wallet, label: 'Accounting', status: 'soon' },
+      { to: '/analytics', icon: BarChart3, label: 'Analytics', status: 'live' },
+      { to: '/accounting', icon: Wallet, label: 'Accounting', status: 'live' },
     ],
   },
   {
