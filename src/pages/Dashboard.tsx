@@ -28,7 +28,7 @@ const ModuleTile = ({ icon: Icon, label, value, hint, gradient, to, navigate }: 
   </button>
 );
 
-const TNDashboard = () => {
+const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState({ leadsNew: 0, inboxUnread: 0, campaignsMonth: 0, automationsActive: 0 });
@@ -74,4 +74,4 @@ const TNDashboard = () => {
   );
 };
 
-export default TNDashboard;
+export default Dashboard;

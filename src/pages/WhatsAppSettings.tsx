@@ -14,7 +14,7 @@ import { AlertCircle, CheckCircle2, Copy, RefreshCw, Radio, Send, GitBranch, Glo
 const WEBHOOK_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-webhook`;
 const BOOKING_API_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/booking-api`;
 
-const TNWhatsAppSettings = () => {
+const WhatsAppSettings = () => {
   const { user } = useAuth();
   const [s, setS] = useState<any>({
     upi_id: '', payee_name: '', qr_image_url: '', advance_amount: 200,
@@ -451,4 +451,4 @@ const TNWhatsAppSettings = () => {
     </AppLayout>
   );
 };
-export default TNWhatsAppSettings;
+export default WhatsAppSettings;
