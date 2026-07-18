@@ -1,7 +1,7 @@
 import {
-  Inbox, Users, CalendarDays, Contact,
-  UserCog, Shield, FileText, Settings, UserCircle, CreditCard,
-  LayoutDashboard, Briefcase, BarChart3, Wallet, Workflow, Sheet,
+  Inbox, Users, Contact,
+  UserCog, Settings, UserCircle,
+  LayoutDashboard, BarChart3, Wallet, Megaphone, Workflow,
 } from 'lucide-react';
 
 
@@ -24,38 +24,27 @@ export const MODULE_GROUPS: ModuleGroup[] = [
       { to: '/leads', icon: Contact, label: 'Leads', status: 'live' },
     ],
   },
-
   {
-    label: 'Services',
+    label: 'Growth',
     items: [
-      { to: '/services', icon: Briefcase, label: 'Services & Tariff', status: 'live' },
-      { to: '/bookings', icon: CalendarDays, label: 'Bookings', status: 'live' },
+      { to: '/campaigns', icon: Megaphone, label: 'Campaigns', status: 'soon' },
+      { to: '/automation', icon: Workflow, label: 'Automation', status: 'soon' },
       { to: '/customers', icon: Users, label: 'Customers', status: 'live' },
     ],
   },
   {
-    label: 'Business',
+    label: 'Insights',
     items: [
-      { to: '/accounting', icon: Wallet, label: 'Accounting', status: 'live' },
       { to: '/analytics', icon: BarChart3, label: 'Analytics', status: 'live' },
-      { to: '/sheets', icon: Sheet, label: 'Bookings Sheet', status: 'live' },
-    ],
-  },
-  {
-    label: 'WhatsApp',
-    items: [
-      { to: '/flow-editor', icon: Workflow, label: 'Flow Editor', status: 'live' },
-      { to: '/whatsapp-settings', icon: Settings, label: 'WhatsApp', status: 'live' },
+      { to: '/accounting', icon: Wallet, label: 'Accounting', status: 'live' },
     ],
   },
   {
     label: 'Settings',
     items: [
-      { to: '/razorpay', icon: CreditCard, label: 'Razorpay', status: 'live' },
-      { to: '/profile', icon: UserCircle, label: 'Profile', status: 'live' },
+      { to: '/whatsapp-settings', icon: Settings, label: 'WhatsApp API', status: 'live' },
       { to: '/team', icon: UserCog, label: 'Team', status: 'live' },
-      { to: '/roles', icon: Shield, label: 'Roles', status: 'live' },
-      { to: '/audit', icon: FileText, label: 'Audit Logs', status: 'live' },
+      { to: '/profile', icon: UserCircle, label: 'Profile', status: 'live' },
     ],
   },
 ];
