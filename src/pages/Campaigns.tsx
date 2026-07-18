@@ -360,12 +360,14 @@ function BulkWizard({
               <Label>Delay between messages: {delay[0]}s – {delay[1]}s</Label>
               <div className="grid grid-cols-2 gap-3 mt-2">
                 <div>
-                  <p className="text-xs text-muted-foreground">Min seconds</p>
-                  <Slider min={2} max={30} step={1} value={[delay[0]]} onValueChange={(v) => setDelay([v[0], Math.max(v[0], delay[1])])} />
+                  <p className="text-xs text-muted-foreground mb-1">Min ({delay[0]}s)</p>
+                  <Slider min={2} max={30} step={1} value={[delay[0]]}
+                    onValueChange={(v) => setDelay([v[0], Math.max(v[0], delay[1])])} />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Max seconds</p>
-                  <Slider min={2} max={60} step={1} value={[delay[1]]} onValueChange={(v) => setDelay([Math.min(v[0], delay[0]) === v[0] ? delay[0] : delay[0], Math.max(delay[0], v[0])])} />
+                  <p className="text-xs text-muted-foreground mb-1">Max ({delay[1]}s)</p>
+                  <Slider min={2} max={60} step={1} value={[delay[1]]}
+                    onValueChange={(v) => setDelay([Math.min(delay[0], v[0]), v[0]])} />
                 </div>
               </div>
             </div>
