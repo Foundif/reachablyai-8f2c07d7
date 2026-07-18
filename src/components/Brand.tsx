@@ -1,16 +1,13 @@
-import logoLightSrc from '@/assets/brand/logo-light.png';
-import logoDarkSrc from '@/assets/brand/logo-dark.png';
-import iconLightSrc from '@/assets/brand/icon-light.png';
-import iconDarkSrc from '@/assets/brand/icon-dark.png';
+import wordmarkSrc from '@/assets/reachably-wordmark.png';
+import iconSrc from '@/assets/reachably-icon.png';
 import { useAuth } from '@/hooks/useAuth';
-import { useTheme } from '@/hooks/useTheme';
 import { cn } from '@/lib/utils';
 
-export const BRAND_ICON_URL = iconLightSrc;
-export const BRAND_WORDMARK_URL = logoLightSrc;
-export const BRAND_LOGO_URL = logoLightSrc;
+export const BRAND_ICON_URL = iconSrc;
+export const BRAND_WORDMARK_URL = wordmarkSrc;
+export const BRAND_LOGO_URL = wordmarkSrc;
 
-/** Theme-aware Chatarly logo. Falls back to tenant logo when uploaded. */
+/** Reachably logo. Falls back to tenant logo when uploaded. */
 export const BrandMark = ({
   className,
   size = 36,
@@ -23,20 +20,13 @@ export const BrandMark = ({
   variant?: 'icon' | 'wordmark';
 }) => {
   const { profile } = useAuth();
-  const { theme } = useTheme();
   const tenantLogo = (profile as any)?.logo_url;
-  const themedWord = theme === 'dark' ? logoDarkSrc : logoLightSrc;
-  const themedIcon = theme === 'dark' ? iconDarkSrc : iconLightSrc;
-  const src = tenantLogo
-    ? tenantLogo
-    : variant === 'wordmark'
-      ? themedWord
-      : themedIcon;
+  const src = tenantLogo ? tenantLogo : variant === 'wordmark' ? wordmarkSrc : iconSrc;
 
   return (
     <img
       src={src}
-      alt={profile?.store_name || 'Chatarly'}
+      alt={profile?.store_name || 'Reachably'}
       style={
         fullWidth
           ? undefined
@@ -53,7 +43,7 @@ export const BrandMark = ({
   );
 };
 
-/** Compact lockup: logo + optional caption (logo already includes wordmark). */
+/** Compact lockup: logo + optional caption. */
 export const BrandLockup = ({
   caption,
   size = 32,

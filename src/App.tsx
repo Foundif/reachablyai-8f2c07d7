@@ -36,6 +36,9 @@ import RazorpaySettings from "./pages/RazorpaySettings";
 import BookingDetail from "./pages/BookingDetail";
 import FlowEditorPage from "./pages/FlowEditorPage";
 import SheetsViewer from "./pages/SheetsViewer";
+import Leads from "./pages/Leads";
+import ComingSoonModule from "./pages/ComingSoonModule";
+
 
 const queryClient = new QueryClient();
 
@@ -84,7 +87,11 @@ const App = () => (
                 <Route path="/whatsapp-settings" element={<ProtectedRoute><TNWhatsAppSettings /></ProtectedRoute>} />
                 <Route path="/flow-editor" element={<ProtectedRoute><FlowEditorPage /></ProtectedRoute>} />
                 <Route path="/sheets" element={<ProtectedRoute><SheetsViewer /></ProtectedRoute>} />
+                <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
+                <Route path="/campaigns" element={<ProtectedRoute><ComingSoonModule title="Campaigns" description="Bulk WhatsApp campaigns with analytics — shipping next." /></ProtectedRoute>} />
+                <Route path="/automation" element={<ProtectedRoute><ComingSoonModule title="Automation" description="Visual If→Then flow builder — shipping next." /></ProtectedRoute>} />
                 <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+
                 <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                 <Route path="/shop-info" element={<ProtectedRoute><ShopInfo /></ProtectedRoute>} />
                 <Route path="/guide" element={<ProtectedRoute><Guide /></ProtectedRoute>} />
@@ -99,11 +106,12 @@ const App = () => (
                 <Route path="/flows" element={<Navigate to="/flow-editor" replace />} />
                 <Route path="/flows/templates" element={<Navigate to="/flow-editor" replace />} />
                 <Route path="/flows/:id" element={<Navigate to="/flow-editor" replace />} />
-                <Route path="/campaigns" element={<Navigate to="/" replace />} />
                 <Route path="/campaigns/:id/analytics" element={<Navigate to="/analytics" replace />} />
+
                 <Route path="/ai-studio" element={<Navigate to="/" replace />} />
                 <Route path="/copilot" element={<Navigate to="/" replace />} />
                 <Route path="/knowledge" element={<Navigate to="/" replace />} />
+
                 <Route path="/catalog" element={<Navigate to="/services" replace />} />
                 <Route path="/orders" element={<Navigate to="/bookings" replace />} />
                 <Route path="/integrations" element={<Navigate to="/whatsapp-settings" replace />} />

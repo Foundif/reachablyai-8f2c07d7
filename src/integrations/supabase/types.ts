@@ -293,6 +293,59 @@ export type Database = {
           },
         ]
       }
+      leads: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          source: string
+          status: string
+          tags: string[]
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          source?: string
+          status?: string
+          tags?: string[]
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          source?: string
+          status?: string
+          tags?: string[]
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
@@ -476,6 +529,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          active_workspace_id: string | null
           address: string | null
           allowed_modules: string[]
           business_type: string | null
@@ -504,6 +558,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          active_workspace_id?: string | null
           address?: string | null
           allowed_modules?: string[]
           business_type?: string | null
@@ -532,6 +587,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          active_workspace_id?: string | null
           address?: string | null
           allowed_modules?: string[]
           business_type?: string | null
@@ -1081,6 +1137,7 @@ export type Database = {
           tools: Json
           updated_at: string
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           avatar?: string | null
@@ -1098,6 +1155,7 @@ export type Database = {
           tools?: Json
           updated_at?: string
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           avatar?: string | null
@@ -1115,6 +1173,7 @@ export type Database = {
           tools?: Json
           updated_at?: string
           user_id?: string
+          workspace_id?: string | null
         }
         Relationships: []
       }
@@ -1246,6 +1305,7 @@ export type Database = {
           updated_at: string
           user_id: string
           wa_id: string
+          workspace_id: string | null
         }
         Insert: {
           addons?: Json | null
@@ -1278,6 +1338,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           wa_id: string
+          workspace_id?: string | null
         }
         Update: {
           addons?: Json | null
@@ -1310,6 +1371,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           wa_id?: string
+          workspace_id?: string | null
         }
         Relationships: []
       }
@@ -1325,6 +1387,7 @@ export type Database = {
           status: string
           updated_at: string
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           audience_snapshot?: Json
@@ -1337,6 +1400,7 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           audience_snapshot?: Json
@@ -1349,6 +1413,7 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -1371,6 +1436,7 @@ export type Database = {
           updated_at: string
           user_id: string
           wa_id: string
+          workspace_id: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -1382,6 +1448,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           wa_id: string
+          workspace_id?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -1393,6 +1460,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           wa_id?: string
+          workspace_id?: string | null
         }
         Relationships: []
       }
@@ -1408,6 +1476,7 @@ export type Database = {
           updated_at: string
           user_id: string
           vendor: string | null
+          workspace_id: string | null
         }
         Insert: {
           amount?: number
@@ -1420,6 +1489,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           vendor?: string | null
+          workspace_id?: string | null
         }
         Update: {
           amount?: number
@@ -1432,6 +1502,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           vendor?: string | null
+          workspace_id?: string | null
         }
         Relationships: []
       }
@@ -1558,6 +1629,7 @@ export type Database = {
           status: string
           updated_at: string
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           audience_rules?: Json
@@ -1570,6 +1642,7 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           audience_rules?: Json
@@ -1582,6 +1655,7 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string
+          workspace_id?: string | null
         }
         Relationships: []
       }
@@ -1596,6 +1670,7 @@ export type Database = {
           user_id: string
           wa_id: string
           wa_message_id: string | null
+          workspace_id: string | null
         }
         Insert: {
           created_at?: string
@@ -1607,6 +1682,7 @@ export type Database = {
           user_id: string
           wa_id: string
           wa_message_id?: string | null
+          workspace_id?: string | null
         }
         Update: {
           created_at?: string
@@ -1618,6 +1694,7 @@ export type Database = {
           user_id?: string
           wa_id?: string
           wa_message_id?: string | null
+          workspace_id?: string | null
         }
         Relationships: []
       }
@@ -1636,6 +1713,7 @@ export type Database = {
           updated_at: string
           user_id: string
           validation_errors: Json
+          workspace_id: string | null
         }
         Insert: {
           categories?: string[] | null
@@ -1651,6 +1729,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           validation_errors?: Json
+          workspace_id?: string | null
         }
         Update: {
           categories?: string[] | null
@@ -1666,6 +1745,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           validation_errors?: Json
+          workspace_id?: string | null
         }
         Relationships: []
       }
@@ -1684,6 +1764,7 @@ export type Database = {
           synced_at: string
           updated_at: string
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           category?: string | null
@@ -1699,6 +1780,7 @@ export type Database = {
           synced_at?: string
           updated_at?: string
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           category?: string | null
@@ -1714,6 +1796,7 @@ export type Database = {
           synced_at?: string
           updated_at?: string
           user_id?: string
+          workspace_id?: string | null
         }
         Relationships: []
       }
@@ -1731,6 +1814,7 @@ export type Database = {
           user_id: string
           verified_at: string | null
           verified_by: string | null
+          workspace_id: string | null
         }
         Insert: {
           amount?: number
@@ -1745,6 +1829,7 @@ export type Database = {
           user_id: string
           verified_at?: string | null
           verified_by?: string | null
+          workspace_id?: string | null
         }
         Update: {
           amount?: number
@@ -1759,6 +1844,7 @@ export type Database = {
           user_id?: string
           verified_at?: string | null
           verified_by?: string | null
+          workspace_id?: string | null
         }
         Relationships: []
       }
@@ -1805,6 +1891,7 @@ export type Database = {
           price: number
           updated_at: string
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           active?: boolean
@@ -1818,6 +1905,7 @@ export type Database = {
           price?: number
           updated_at?: string
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           active?: boolean
@@ -1831,6 +1919,7 @@ export type Database = {
           price?: number
           updated_at?: string
           user_id?: string
+          workspace_id?: string | null
         }
         Relationships: []
       }
@@ -1870,6 +1959,7 @@ export type Database = {
           upi_id: string | null
           user_id: string
           verify_token_hint: string | null
+          workspace_id: string | null
         }
         Insert: {
           advance_amount?: number
@@ -1906,6 +1996,7 @@ export type Database = {
           upi_id?: string | null
           user_id: string
           verify_token_hint?: string | null
+          workspace_id?: string | null
         }
         Update: {
           advance_amount?: number
@@ -1942,6 +2033,119 @@ export type Database = {
           upi_id?: string | null
           user_id?: string
           verify_token_hint?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: []
+      }
+      whatsapp_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          last_connected_at: string | null
+          meta_api_key_encrypted: string | null
+          meta_business_account_id: string | null
+          meta_phone_number_id: string | null
+          mode: string
+          phone_number: string | null
+          qr_code_url: string | null
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_connected_at?: string | null
+          meta_api_key_encrypted?: string | null
+          meta_business_account_id?: string | null
+          meta_phone_number_id?: string | null
+          mode?: string
+          phone_number?: string | null
+          qr_code_url?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_connected_at?: string | null
+          meta_api_key_encrypted?: string | null
+          meta_business_account_id?: string | null
+          meta_phone_number_id?: string | null
+          mode?: string
+          phone_number?: string | null
+          qr_code_url?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_sessions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_members: {
+        Row: {
+          created_at: string
+          role: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          role?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          role?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspaces: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          plan_tier: string
+          updated_at: string
+          whatsapp_mode: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id: string
+          plan_tier?: string
+          updated_at?: string
+          whatsapp_mode?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          plan_tier?: string
+          updated_at?: string
+          whatsapp_mode?: string
         }
         Relationships: []
       }
@@ -1950,6 +2154,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_workspace_id: { Args: never; Returns: string }
+      ensure_personal_workspace: {
+        Args: { _email: string; _uid: string }
+        Returns: string
+      }
+      is_workspace_member: {
+        Args: { _uid: string; _ws: string }
+        Returns: boolean
+      }
       tn_consume_ai_credit: { Args: { _user_id: string }; Returns: Json }
       tn_owner_of: { Args: { _uid: string }; Returns: string }
       tn_shared_access: { Args: { _row_user: string }; Returns: boolean }
