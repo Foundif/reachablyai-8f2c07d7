@@ -68,9 +68,12 @@ const Profile = () => {
   };
 
 
+  const isStaff = !!(profile as any)?.is_staff;
   const planStatus = (profile as any)?.subscription_status || 'free';
   const planLabel = planStatus === 'pro' ? 'Pro' : planStatus === 'growth' ? 'Growth' : 'Free';
-  const storeName = profile?.store_name || 'My Business';
+  const storeName = isStaff
+    ? (profile?.full_name || user?.email?.split('@')[0] || 'Team member')
+    : (profile?.store_name || 'My Business');
   const initial = (storeName?.[0] || 'B').toUpperCase();
 
   const handleSignOut = async () => {
