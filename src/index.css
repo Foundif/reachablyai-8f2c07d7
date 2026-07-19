@@ -22,14 +22,15 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 8%;
 
-    /* Primary — Reachably fuchsia */
-    --primary: 300 85% 52%;
+    /* Primary — pure black */
+    --primary: 0 0% 8%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 320 90% 65%;
+    --primary-glow: 0 0% 25%;
 
-    /* Secondary — Reachably pink */
-    --secondary: 330 85% 60%;
+    /* Secondary — dark grey */
+    --secondary: 0 0% 20%;
     --secondary-foreground: 0 0% 100%;
+
 
     /* Success / Accent — kept monochrome */
     --success: 0 0% 20%;
@@ -83,14 +84,15 @@
     --glass-highlight: 0 0% 100% / 0.7;
 
     /* Gradients — monochrome only */
-    --gradient-aurora: linear-gradient(135deg, hsl(300 85% 52%) 0%, hsl(330 85% 60%) 50%, hsl(300 85% 52%) 100%);
-    --gradient-mesh: radial-gradient(at 18% 12%, hsl(300 85% 52% / 0.08) 0px, transparent 50%),
-                     radial-gradient(at 82% 8%, hsl(330 85% 60% / 0.06) 0px, transparent 50%),
-                     radial-gradient(at 90% 92%, hsl(320 90% 65% / 0.06) 0px, transparent 50%),
-                     radial-gradient(at 10% 88%, hsl(300 85% 52% / 0.08) 0px, transparent 50%);
-    --gradient-trust: linear-gradient(135deg, hsl(300 85% 52%), hsl(330 85% 60%));
+    --gradient-aurora: linear-gradient(135deg, hsl(0 0% 8%) 0%, hsl(0 0% 35%) 50%, hsl(0 0% 8%) 100%);
+    --gradient-mesh: radial-gradient(at 18% 12%, hsl(0 0% 0% / 0.05) 0px, transparent 50%),
+                     radial-gradient(at 82% 8%, hsl(0 0% 0% / 0.04) 0px, transparent 50%),
+                     radial-gradient(at 90% 92%, hsl(0 0% 0% / 0.04) 0px, transparent 50%),
+                     radial-gradient(at 10% 88%, hsl(0 0% 0% / 0.05) 0px, transparent 50%);
+    --gradient-trust: linear-gradient(135deg, hsl(0 0% 8%), hsl(0 0% 35%));
     --gradient-surface: linear-gradient(180deg, hsl(0 0% 100%), hsl(0 0% 96%));
     --gradient-glow: radial-gradient(ellipse at center, hsl(0 0% 0% / 0.08), transparent 70%);
+
 
     /* Shadows */
     --shadow-glow: 0 0 60px -10px hsl(0 0% 0% / 0.18);
@@ -110,12 +112,13 @@
     --popover: 0 0% 7%;
     --popover-foreground: 0 0% 96%;
 
-    --primary: 300 85% 62%;
+    --primary: 0 0% 96%;
     --primary-foreground: 0 0% 6%;
-    --primary-glow: 320 90% 72%;
+    --primary-glow: 0 0% 78%;
 
-    --secondary: 330 85% 68%;
+    --secondary: 0 0% 80%;
     --secondary-foreground: 0 0% 6%;
+
 
     --success: 0 0% 88%;
     --success-foreground: 0 0% 6%;
