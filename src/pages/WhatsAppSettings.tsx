@@ -167,6 +167,8 @@ const WhatsAppSettings = () => {
           </div>
           <p className="text-xs text-muted-foreground">Subscribe to <code>messages</code> and <code>message_status</code> fields on your WhatsApp app in Meta Developer Console.</p>
         </Card>
+
+        {wsId && <DebugPanel workspaceId={wsId} phoneNumberId={form.phone_number_id} />}
         </>)}
       </div>
     </AppLayout>
