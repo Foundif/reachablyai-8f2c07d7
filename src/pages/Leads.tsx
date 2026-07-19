@@ -217,7 +217,7 @@ const Leads = () => {
             <Button variant="outline" onClick={() => csvInputRef.current?.click()}>
               <Upload className="w-4 h-4 mr-2" /> Import CSV
             </Button>
-            <ScrapeLeadsDialog wsId={wsId} onDone={load} />
+            <ScrapeLeadsDialog wsId={wsId} onDone={loadLeads} />
             <Dialog open={addOpen} onOpenChange={setAddOpen}>
               <DialogTrigger asChild>
                 <Button>
