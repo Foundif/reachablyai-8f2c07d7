@@ -4,12 +4,15 @@ import MobileNav from './MobileNav';
 import MobileHeader from './MobileHeader';
 import TopBar from './TopBar';
 import AppFooter from './AppFooter';
+import PaymentAlertBanner from './PaymentAlertBanner';
+import { useGlobalAlerts } from '@/hooks/useGlobalAlerts';
 
 interface AppLayoutProps {
   children: ReactNode;
 }
 
 const AppLayout = ({ children }: AppLayoutProps) => {
+  useGlobalAlerts();
   return (
     <div className="relative flex min-h-screen w-full">
       <AppSidebar />
