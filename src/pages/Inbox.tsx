@@ -84,7 +84,7 @@ const Inbox = () => {
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'wa_messages', filter: `workspace_id=eq.${wsId}` }, (payload: any) => {
         if (payload.new.conversation_id === selectedId) {
-          setMessages(prev => [...prev, payload.new]);
+          setMessages(prev => prev.some(m => m.id === payload.new.id) ? prev : [...prev, payload.new]);
         }
       })
       .subscribe();
