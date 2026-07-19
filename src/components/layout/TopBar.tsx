@@ -4,12 +4,15 @@ import { Search, Sparkles, Command } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import CommandPalette from './CommandPalette';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 
 const TopBar = () => {
   const [open, setOpen] = useState(false);
+  const [wsName, setWsName] = useState<string | null>(null);
+  const [wsLogo, setWsLogo] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -22,21 +25,40 @@ const TopBar = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  // Resolve the active workspace name — for staff this is the owner's workspace name,
+  // never a stale "My Salon" default from an old profile row.
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const activeId = (profile as any)?.active_workspace_id;
+      const { data: ws } = activeId
+        ? await supabase.from('workspaces' as any).select('id,name').eq('id', activeId).maybeSingle()
+        : await supabase.from('workspaces' as any).select('id,name').eq('owner_id', user.id).order('created_at').limit(1).maybeSingle();
+      const name = (ws as any)?.name;
+      if (name && name.toLowerCase() !== 'my salon') setWsName(name);
+      // Only show owner's uploaded logo on owners' screens, not staff, per user request.
+      if (!(profile as any)?.is_staff) setWsLogo((profile as any)?.logo_url || null);
+      else setWsLogo(null);
+    })();
+  }, [user, profile]);
+
+  const displayName = wsName || profile?.store_name || 'My Workspace';
+
   return (
     <>
       <div className="hidden md:flex sticky top-3 z-30 mx-3 mb-2">
         <div className="flex-1 flex items-center gap-3 px-3 py-2 glass-elevated glass-sheen rounded-2xl">
           {/* Workspace switcher */}
           <button className="flex items-center gap-2 px-3 py-1.5 rounded-xl hover:bg-foreground/[0.04] transition-all magnetic" onClick={() => navigate('/profile')}>
-            {(profile as any)?.logo_url ? (
-              <img src={(profile as any).logo_url} alt={profile?.store_name || ''} className="w-6 h-6 rounded-md object-contain bg-card border border-border/40" />
+            {wsLogo ? (
+              <img src={wsLogo} alt={displayName} className="w-6 h-6 rounded-md object-contain bg-card border border-border/40" />
             ) : (
               <div className="w-6 h-6 rounded-md bg-foreground text-background flex items-center justify-center text-[10px] font-bold">
-                {(profile?.store_name?.[0] || 'W').toUpperCase()}
+                {(displayName?.[0] || 'W').toUpperCase()}
               </div>
             )}
             <span className="text-sm font-semibold tracking-tight max-w-[200px] truncate">
-              {profile?.store_name || 'My Workspace'}
+              {displayName}
             </span>
           </button>
 

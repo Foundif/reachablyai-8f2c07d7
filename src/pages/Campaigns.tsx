@@ -448,6 +448,13 @@ const CampaignsList = () => {
     setTemplates((ts as any) || []);
     setLeads((ls as any) || []);
     setLoading(false);
+    // Auto-sync approved templates from Meta so freshly-approved ones show up in the picker
+    supabase.functions.invoke('template-sync', { body: { workspace_id: id } })
+      .then(async ({ error }) => {
+        if (error) return;
+        const { data: ts2 } = await supabase.from('templates' as any).select('id,name,status,body,variables,category').eq('workspace_id', id).eq('status', 'approved');
+        setTemplates((ts2 as any) || []);
+      }).catch(() => {});
   };
   useEffect(() => { load(); }, [user]);
 

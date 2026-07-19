@@ -65,9 +65,9 @@ const Templates = () => {
   const [editingMetaId, setEditingMetaId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm());
 
-  const load = async () => {
+  const load = async (silent = false) => {
     if (!user) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     const { data: ws } = await supabase.from('workspaces' as any)
       .select('id').eq('owner_id', user.id).order('created_at').limit(1).maybeSingle();
     const id = (ws as any)?.id || null;
@@ -77,6 +77,12 @@ const Templates = () => {
       .select('*').eq('workspace_id', id).order('created_at', { ascending: false });
     setItems((data as any[]) || []);
     setLoading(false);
+    // Auto-sync from Meta on mount so approved statuses show up without user clicking Sync
+    if (!silent) {
+      supabase.functions.invoke('template-sync', { body: { workspace_id: id } })
+        .then(({ error }) => { if (!error) load(true); })
+        .catch(() => {});
+    }
   };
   useEffect(() => { load(); }, [user]);
 

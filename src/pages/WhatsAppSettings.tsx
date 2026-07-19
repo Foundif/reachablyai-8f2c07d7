@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { Settings, ShieldCheck, ShieldAlert, Copy } from 'lucide-react';
+import { Settings, ShieldCheck, ShieldAlert, Copy, Bug, RefreshCw, CheckCircle2, XCircle, MinusCircle, Inbox as InboxIcon } from 'lucide-react';
 
 interface Creds {
   workspace_id: string;
@@ -167,6 +167,8 @@ const WhatsAppSettings = () => {
           </div>
           <p className="text-xs text-muted-foreground">Subscribe to <code>messages</code> and <code>message_status</code> fields on your WhatsApp app in Meta Developer Console.</p>
         </Card>
+
+        {wsId && <DebugPanel workspaceId={wsId} phoneNumberId={form.phone_number_id} />}
         </>)}
       </div>
     </AppLayout>
@@ -174,3 +176,101 @@ const WhatsAppSettings = () => {
 };
 
 export default WhatsAppSettings;
+
+interface DebugEvent {
+  id: string; event_type: string | null; status: string | null;
+  from_phone: string | null; summary: string | null; error: string | null;
+  phone_number_id: string | null; created_at: string; payload: any;
+}
+
+const DebugPanel = ({ workspaceId, phoneNumberId }: { workspaceId: string; phoneNumberId: string }) => {
+  const [events, setEvents] = useState<DebugEvent[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showRaw, setShowRaw] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    // Show workspace events + orphan events matching this phone_number_id (unmatched-workspace hits)
+    const orFilter = phoneNumberId
+      ? `workspace_id.eq.${workspaceId},and(workspace_id.is.null,phone_number_id.eq.${phoneNumberId})`
+      : `workspace_id.eq.${workspaceId}`;
+    const { data } = await supabase.from('wa_webhook_events' as any)
+      .select('*').or(orFilter).order('created_at', { ascending: false }).limit(50);
+    setEvents((data as any) || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, [workspaceId, phoneNumberId]);
+
+  useEffect(() => {
+    const ch = supabase
+      .channel(`webhook-debug-${workspaceId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'wa_webhook_events' }, () => load())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [workspaceId, phoneNumberId]);
+
+  const okCount = events.filter(e => e.status === 'ok').length;
+  const errCount = events.filter(e => e.status === 'error').length;
+
+  const StatusIcon = ({ s }: { s: string | null }) =>
+    s === 'ok' ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> :
+    s === 'error' ? <XCircle className="w-4 h-4 text-red-500" /> :
+    <MinusCircle className="w-4 h-4 text-muted-foreground" />;
+
+  return (
+    <Card className="p-6 space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <Bug className="w-5 h-5 text-primary" />
+          <div>
+            <div className="font-semibold">Webhook Debug Panel</div>
+            <div className="text-xs text-muted-foreground">Live feed of every inbound event Meta sends to your webhook.</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30">{okCount} ok</Badge>
+          <Badge className="bg-red-500/15 text-red-600 border-red-500/30">{errCount} failed</Badge>
+          <Button variant="outline" size="sm" onClick={load} disabled={loading} className="gap-1">
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
+          </Button>
+        </div>
+      </div>
+
+      {events.length === 0 ? (
+        <div className="text-sm text-muted-foreground p-6 text-center border border-dashed rounded-lg">
+          <InboxIcon className="w-8 h-8 mx-auto mb-2 opacity-40" />
+          No webhook events yet. Send a "Hi" from any WhatsApp to your business number and it should appear here within a second.<br />
+          If nothing appears, Meta isn't reaching this URL — check the Callback URL and Verify Token above, and make sure you subscribed to <code>messages</code> in Meta.
+        </div>
+      ) : (
+        <div className="border rounded-lg divide-y max-h-[500px] overflow-y-auto">
+          {events.map(e => (
+            <div key={e.id} className="p-3 text-sm">
+              <div className="flex items-start gap-2">
+                <StatusIcon s={e.status} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="outline" className="text-[10px] uppercase">{e.event_type}</Badge>
+                    {e.from_phone && <span className="text-xs font-mono text-muted-foreground">{e.from_phone}</span>}
+                    <span className="text-[11px] text-muted-foreground ml-auto">{new Date(e.created_at).toLocaleString()}</span>
+                  </div>
+                  <div className="mt-1">{e.summary}</div>
+                  {e.error && <div className="mt-1 text-xs text-red-600 bg-red-500/10 rounded px-2 py-1"><b>Reason:</b> {e.error}</div>}
+                  <button onClick={() => setShowRaw(showRaw === e.id ? null : e.id)} className="mt-1 text-[11px] text-primary underline">
+                    {showRaw === e.id ? 'Hide' : 'Show'} raw payload
+                  </button>
+                  {showRaw === e.id && (
+                    <pre className="mt-2 p-2 bg-muted/50 rounded text-[10px] overflow-x-auto max-h-60">
+                      {JSON.stringify(e.payload, null, 2)}
+                    </pre>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+};

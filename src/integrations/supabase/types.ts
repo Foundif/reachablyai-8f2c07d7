@@ -859,6 +859,53 @@ export type Database = {
           },
         ]
       }
+      wa_webhook_events: {
+        Row: {
+          created_at: string
+          error: string | null
+          event_type: string | null
+          from_phone: string | null
+          id: string
+          payload: Json | null
+          phone_number_id: string | null
+          status: string | null
+          summary: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          event_type?: string | null
+          from_phone?: string | null
+          id?: string
+          payload?: Json | null
+          phone_number_id?: string | null
+          status?: string | null
+          summary?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          event_type?: string | null
+          from_phone?: string | null
+          id?: string
+          payload?: Json | null
+          phone_number_id?: string | null
+          status?: string | null
+          summary?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_webhook_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_credentials: {
         Row: {
           access_token: string | null
