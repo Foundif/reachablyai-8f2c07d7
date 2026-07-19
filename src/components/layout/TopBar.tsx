@@ -50,15 +50,15 @@ const TopBar = () => {
         <div className="flex-1 flex items-center gap-3 px-3 py-2 glass-elevated glass-sheen rounded-2xl">
           {/* Workspace switcher */}
           <button className="flex items-center gap-2 px-3 py-1.5 rounded-xl hover:bg-foreground/[0.04] transition-all magnetic" onClick={() => navigate('/profile')}>
-            {(profile as any)?.logo_url ? (
-              <img src={(profile as any).logo_url} alt={profile?.store_name || ''} className="w-6 h-6 rounded-md object-contain bg-card border border-border/40" />
+            {wsLogo ? (
+              <img src={wsLogo} alt={displayName} className="w-6 h-6 rounded-md object-contain bg-card border border-border/40" />
             ) : (
               <div className="w-6 h-6 rounded-md bg-foreground text-background flex items-center justify-center text-[10px] font-bold">
-                {(profile?.store_name?.[0] || 'W').toUpperCase()}
+                {(displayName?.[0] || 'W').toUpperCase()}
               </div>
             )}
             <span className="text-sm font-semibold tracking-tight max-w-[200px] truncate">
-              {profile?.store_name || 'My Workspace'}
+              {displayName}
             </span>
           </button>
 
