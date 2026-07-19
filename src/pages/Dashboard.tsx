@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Contact, Inbox, Megaphone, Workflow, ArrowRight, MessageSquareText, Send, Sparkles } from 'lucide-react';
+import { Contact, Inbox, Megaphone, Workflow, ArrowRight, MessageSquareText, Send } from 'lucide-react';
 
 const ModuleTile = ({ icon: Icon, label, value, hint, gradient, to, navigate }: any) => (
   <button
@@ -108,14 +108,6 @@ const Dashboard = () => {
     return () => { supabase.removeChannel(ch); };
   }, [wsId]);
 
-  const setupSteps = [
-    { done: stats.waConnected, label: 'Connect WhatsApp Cloud API', to: '/whatsapp-settings' },
-    { done: stats.templatesApproved > 0, label: 'Create an approved template', to: '/templates' },
-    { done: stats.leadsTotal > 0, label: 'Import your first leads', to: '/leads' },
-    { done: stats.campaignsMonth > 0, label: 'Launch your first campaign', to: '/campaigns' },
-    { done: stats.automationsActive > 0, label: 'Enable an automation', to: '/automation' },
-  ];
-  const completed = setupSteps.filter(s => s.done).length;
 
   return (
     <AppLayout>
