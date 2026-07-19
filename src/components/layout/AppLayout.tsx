@@ -20,6 +20,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       <main className="relative flex-1 min-w-0 min-h-screen pb-28 md:pb-0 overflow-x-clip flex flex-col">
         <MobileHeader />
         <TopBar />
+        <PaymentAlertBanner />
         <div className="relative max-w-[1600px] mx-auto flex-1 w-full">
           {children}
         </div>
