@@ -32,6 +32,7 @@ const ModuleTile = ({ icon: Icon, label, value, hint, gradient, to, navigate }: 
 const Dashboard = () => {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const [wsId, setWsId] = useState<string | null>(null);
   const [stats, setStats] = useState({
     leadsNew: 0, leadsTotal: 0, campaignsMonth: 0, messagesSent: 0,
     templatesApproved: 0, automationsActive: 0, waConnected: false,
@@ -40,53 +41,72 @@ const Dashboard = () => {
   const [recentCampaigns, setRecentCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const loadStats = async (id: string) => {
+    const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+
+    const [
+      { count: leadsNew },
+      { count: leadsTotal },
+      { data: campaigns },
+      { count: templatesApproved },
+      { count: automationsActive },
+      { data: creds },
+      { data: recLeads },
+    ] = await Promise.all([
+      supabase.from('leads').select('id', { count: 'exact', head: true }).eq('workspace_id', id).gte('created_at', weekAgo),
+      supabase.from('leads').select('id', { count: 'exact', head: true }).eq('workspace_id', id),
+      supabase.from('campaigns' as any).select('id,name,status,sent_count,delivered_count,total_count,created_at').eq('workspace_id', id).gte('created_at', monthStart).order('created_at', { ascending: false }),
+      supabase.from('templates' as any).select('id', { count: 'exact', head: true }).eq('workspace_id', id).eq('status', 'approved'),
+      supabase.from('automations' as any).select('id', { count: 'exact', head: true }).eq('workspace_id', id).eq('enabled', true),
+      supabase.from('whatsapp_credentials' as any).select('id,verified,phone_number_id').eq('workspace_id', id).limit(1),
+      supabase.from('leads').select('id,name,phone,status,created_at').eq('workspace_id', id).order('created_at', { ascending: false }).limit(5),
+    ]);
+
+    const cs = (campaigns as any[]) || [];
+    const messagesSent = cs.reduce((s, c) => s + (c.sent_count || 0), 0);
+    const cred = (creds as any[])?.[0];
+
+    setStats({
+      leadsNew: leadsNew || 0,
+      leadsTotal: leadsTotal || 0,
+      campaignsMonth: cs.length,
+      messagesSent,
+      templatesApproved: templatesApproved || 0,
+      automationsActive: automationsActive || 0,
+      waConnected: !!(cred?.verified || cred?.phone_number_id),
+    });
+    setRecentCampaigns(cs.slice(0, 5));
+    setRecentLeads((recLeads as any[]) || []);
+    setLoading(false);
+  };
+
   useEffect(() => {
     if (!user) return;
     (async () => {
       setLoading(true);
       const { data: ws } = await supabase
         .from('workspaces' as any).select('id').eq('owner_id', user.id).order('created_at').limit(1).maybeSingle();
-      const wsId = (ws as any)?.id;
-      if (!wsId) { setLoading(false); return; }
-
-      const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
-      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-
-      const [
-        { count: leadsNew },
-        { count: leadsTotal },
-        { data: campaigns },
-        { count: templatesApproved },
-        { count: automationsActive },
-        { data: creds },
-        { data: recLeads },
-      ] = await Promise.all([
-        supabase.from('leads').select('id', { count: 'exact', head: true }).eq('workspace_id', wsId).gte('created_at', weekAgo),
-        supabase.from('leads').select('id', { count: 'exact', head: true }).eq('workspace_id', wsId),
-        supabase.from('campaigns' as any).select('id,name,status,sent_count,delivered_count,total_count,created_at').eq('workspace_id', wsId).gte('created_at', monthStart).order('created_at', { ascending: false }),
-        supabase.from('templates' as any).select('id', { count: 'exact', head: true }).eq('workspace_id', wsId).eq('status', 'approved'),
-        supabase.from('automations' as any).select('id', { count: 'exact', head: true }).eq('workspace_id', wsId).eq('enabled', true),
-        supabase.from('whatsapp_credentials' as any).select('id,verified').eq('workspace_id', wsId).limit(1),
-        supabase.from('leads').select('id,name,phone,status,created_at').eq('workspace_id', wsId).order('created_at', { ascending: false }).limit(5),
-      ]);
-
-      const cs = (campaigns as any[]) || [];
-      const messagesSent = cs.reduce((s, c) => s + (c.sent_count || 0), 0);
-
-      setStats({
-        leadsNew: leadsNew || 0,
-        leadsTotal: leadsTotal || 0,
-        campaignsMonth: cs.length,
-        messagesSent,
-        templatesApproved: templatesApproved || 0,
-        automationsActive: automationsActive || 0,
-        waConnected: !!(creds as any[])?.[0]?.verified,
-      });
-      setRecentCampaigns(cs.slice(0, 5));
-      setRecentLeads((recLeads as any[]) || []);
-      setLoading(false);
+      const id = (ws as any)?.id;
+      if (!id) { setLoading(false); return; }
+      setWsId(id);
+      await loadStats(id);
     })();
   }, [user]);
+
+  // Realtime: auto-refresh the checklist + tiles when data changes
+  useEffect(() => {
+    if (!wsId) return;
+    const ch = supabase
+      .channel(`dash-${wsId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads', filter: `workspace_id=eq.${wsId}` }, () => loadStats(wsId))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'campaigns', filter: `workspace_id=eq.${wsId}` }, () => loadStats(wsId))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'templates', filter: `workspace_id=eq.${wsId}` }, () => loadStats(wsId))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'automations', filter: `workspace_id=eq.${wsId}` }, () => loadStats(wsId))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'whatsapp_credentials', filter: `workspace_id=eq.${wsId}` }, () => loadStats(wsId))
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [wsId]);
 
   const setupSteps = [
     { done: stats.waConnected, label: 'Connect WhatsApp Cloud API', to: '/whatsapp-settings' },
