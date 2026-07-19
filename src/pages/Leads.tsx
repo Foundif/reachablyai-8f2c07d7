@@ -17,7 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import {
-  Plus, Search, Upload, MessageCircle, LayoutGrid, List, Trash2, Tag,
+  Plus, Search, Upload, MessageCircle, LayoutGrid, List, Trash2, Tag, Globe, Loader2, Sparkles,
 } from 'lucide-react';
 
 type LeadStatus = 'new' | 'contacted' | 'converted' | 'lost';
