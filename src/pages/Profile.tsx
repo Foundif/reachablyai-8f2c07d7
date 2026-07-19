@@ -103,28 +103,32 @@ const Profile = () => {
 
         {editOpen && <EditProfileCard onClose={() => setEditOpen(false)} />}
 
-        <SectionCard
-          title="Business"
-          rows={[
-            { icon: Building2, label: 'Agency Details', sub: (profile as any)?.phone || user?.email, onClick: () => navigate('/shop-info') },
-            { icon: Plane, label: 'Services & Branding', sub: 'Logo, tagline, services line', onClick: () => navigate('/services') },
-            { icon: BarChart3, label: 'Reports & Exports', sub: 'Bookings, payments, customers', onClick: () => navigate('/analytics') },
-          ]}
-        />
+        {!isStaff && (
+          <SectionCard
+            title="Business"
+            rows={[
+              { icon: Building2, label: 'Agency Details', sub: (profile as any)?.phone || user?.email, onClick: () => navigate('/shop-info') },
+              { icon: Plane, label: 'Services & Branding', sub: 'Logo, tagline, services line', onClick: () => navigate('/services') },
+              { icon: BarChart3, label: 'Reports & Exports', sub: 'Bookings, payments, customers', onClick: () => navigate('/analytics') },
+            ]}
+          />
+        )}
 
-        <SectionCard
-          title="Plan"
-          rows={[
-            {
-              icon: Crown, label: planLabel === 'Free' ? 'Upgrade to Pro' : `${planLabel} plan active`,
-              sub: planLabel === 'Free' ? 'Unlimited bookings & exports' : 'Manage subscription & invoices',
-              right: <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${planLabel === 'Free' ? 'bg-emerald-500/15 text-emerald-600' : 'bg-primary/15 text-primary'}`}>{planLabel.toUpperCase()}</span>,
-              onClick: () => navigate(planLabel === 'Free' ? '/pricing' : '/billing'),
-            },
-            { icon: Receipt, label: 'Billing & Invoices', sub: 'Download GST invoices', onClick: () => navigate('/billing') },
-            { icon: Gift, label: 'Refer & Earn Credits', sub: 'Invite a friend, earn ₹500', onClick: () => toast.info('Referral programme launching soon') },
-          ]}
-        />
+        {!isStaff && (
+          <SectionCard
+            title="Plan"
+            rows={[
+              {
+                icon: Crown, label: planLabel === 'Free' ? 'Upgrade to Pro' : `${planLabel} plan active`,
+                sub: planLabel === 'Free' ? 'Unlimited bookings & exports' : 'Manage subscription & invoices',
+                right: <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${planLabel === 'Free' ? 'bg-emerald-500/15 text-emerald-600' : 'bg-primary/15 text-primary'}`}>{planLabel.toUpperCase()}</span>,
+                onClick: () => navigate(planLabel === 'Free' ? '/pricing' : '/billing'),
+              },
+              { icon: Receipt, label: 'Billing & Invoices', sub: 'Download GST invoices', onClick: () => navigate('/billing') },
+              { icon: Gift, label: 'Refer & Earn Credits', sub: 'Invite a friend, earn ₹500', onClick: () => toast.info('Referral programme launching soon') },
+            ]}
+          />
+        )}
 
         <SectionCard
           title="Preferences"
