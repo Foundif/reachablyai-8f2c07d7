@@ -310,6 +310,56 @@ export type Database = {
           },
         ]
       }
+      credit_transactions: {
+        Row: {
+          amount_paise: number
+          created_at: string
+          id: string
+          kind: string
+          msgs: number
+          notes: string | null
+          pack_id: string | null
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
+          user_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          amount_paise?: number
+          created_at?: string
+          id?: string
+          kind: string
+          msgs: number
+          notes?: string | null
+          pack_id?: string | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          user_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          amount_paise?: number
+          created_at?: string
+          id?: string
+          kind?: string
+          msgs?: number
+          notes?: string | null
+          pack_id?: string | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          user_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_transactions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       finance_entries: {
         Row: {
           amount: number
@@ -428,6 +478,38 @@ export type Database = {
             foreignKeyName: "leads_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_credits: {
+        Row: {
+          balance: number
+          lifetime_purchased: number
+          lifetime_used: number
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          balance?: number
+          lifetime_purchased?: number
+          lifetime_used?: number
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          balance?: number
+          lifetime_purchased?: number
+          lifetime_used?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_credits_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -566,11 +648,15 @@ export type Database = {
         Row: {
           body: string
           buttons: Json | null
+          carousel_cards: Json | null
           category: string
           created_at: string
           created_by: string | null
           footer: string | null
           header: string | null
+          header_media_handle: string | null
+          header_media_url: string | null
+          header_type: string
           id: string
           language: string
           meta_template_id: string | null
@@ -585,11 +671,15 @@ export type Database = {
         Insert: {
           body: string
           buttons?: Json | null
+          carousel_cards?: Json | null
           category?: string
           created_at?: string
           created_by?: string | null
           footer?: string | null
           header?: string | null
+          header_media_handle?: string | null
+          header_media_url?: string | null
+          header_type?: string
           id?: string
           language?: string
           meta_template_id?: string | null
@@ -604,11 +694,15 @@ export type Database = {
         Update: {
           body?: string
           buttons?: Json | null
+          carousel_cards?: Json | null
           category?: string
           created_at?: string
           created_by?: string | null
           footer?: string | null
           header?: string | null
+          header_media_handle?: string | null
+          header_media_url?: string | null
+          header_type?: string
           id?: string
           language?: string
           meta_template_id?: string | null

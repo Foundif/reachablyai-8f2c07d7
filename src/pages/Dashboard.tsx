@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Contact, Inbox, Megaphone, Workflow, ArrowRight, MessageSquareText, Send, Sparkles } from 'lucide-react';
+import { Contact, Inbox, Megaphone, Workflow, ArrowRight, MessageSquareText, Send } from 'lucide-react';
 
 const ModuleTile = ({ icon: Icon, label, value, hint, gradient, to, navigate }: any) => (
   <button
@@ -108,14 +108,6 @@ const Dashboard = () => {
     return () => { supabase.removeChannel(ch); };
   }, [wsId]);
 
-  const setupSteps = [
-    { done: stats.waConnected, label: 'Connect WhatsApp Cloud API', to: '/whatsapp-settings' },
-    { done: stats.templatesApproved > 0, label: 'Create an approved template', to: '/templates' },
-    { done: stats.leadsTotal > 0, label: 'Import your first leads', to: '/leads' },
-    { done: stats.campaignsMonth > 0, label: 'Launch your first campaign', to: '/campaigns' },
-    { done: stats.automationsActive > 0, label: 'Enable an automation', to: '/automation' },
-  ];
-  const completed = setupSteps.filter(s => s.done).length;
 
   return (
     <AppLayout>
@@ -132,24 +124,6 @@ const Dashboard = () => {
           <ModuleTile icon={Workflow} label="Automation" value={stats.automationsActive} hint="Active flows" gradient="bg-gradient-to-br from-emerald-500 to-teal-500" to="/automation" navigate={navigate} />
         </div>
 
-        {completed < setupSteps.length && (
-          <Card className="p-5 border-primary/30 bg-gradient-to-br from-primary/5 to-secondary/5">
-            <div className="flex items-center gap-2 mb-3">
-              <Sparkles className="w-5 h-5 text-primary" />
-              <h2 className="font-semibold">Setup checklist</h2>
-              <span className="text-xs text-muted-foreground ml-auto">{completed}/{setupSteps.length} complete</span>
-            </div>
-            <div className="space-y-2">
-              {setupSteps.map(s => (
-                <button key={s.to} onClick={() => navigate(s.to)} className="w-full flex items-center gap-3 text-left p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                  <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center text-[10px] font-bold ${s.done ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-muted-foreground/40 text-transparent'}`}>✓</span>
-                  <span className={`text-sm ${s.done ? 'line-through text-muted-foreground' : ''}`}>{s.label}</span>
-                  <ArrowRight className="w-3 h-3 ml-auto text-muted-foreground" />
-                </button>
-              ))}
-            </div>
-          </Card>
-        )}
 
         <div className="grid md:grid-cols-2 gap-4">
           <Card className="p-5">

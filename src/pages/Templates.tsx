@@ -7,21 +7,29 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { Plus, Trash2, MessageSquareText, RefreshCw, Info, Loader2 } from 'lucide-react';
+import { Plus, Trash2, MessageSquareText, RefreshCw, Info, Loader2, Upload, Pencil, X } from 'lucide-react';
 
-type TplStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'paused' | 'disabled';
-type TplCategory = 'marketing' | 'utility' | 'authentication';
+type TplStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'paused' | 'disabled' | 'in_appeal' | 'pending_deletion' | 'deleted';
+type TplCategory = 'marketing' | 'utility' | 'authentication' | 'carousel';
+type HeaderType = 'none' | 'text' | 'image' | 'video' | 'document' | 'carousel';
+type BtnType = 'QUICK_REPLY' | 'URL' | 'PHONE_NUMBER';
+
+interface Btn { type: BtnType; text: string; url?: string; phone_number?: string }
+interface CarouselCard { header_media_url: string; header_type: 'image' | 'video'; body: string; buttons: Btn[] }
 
 interface Template {
   id: string; workspace_id: string; name: string; category: TplCategory;
   language: string; body: string; header: string | null; footer: string | null;
   variables: string[]; status: TplStatus; rejection_reason: string | null;
   meta_template_id: string | null; synced_at: string | null; created_at: string;
+  header_type?: HeaderType; header_media_url?: string | null;
+  buttons?: Btn[] | null; carousel_cards?: CarouselCard[] | null;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -31,7 +39,18 @@ const STATUS_STYLES: Record<string, string> = {
   paused: 'bg-slate-500/15 text-slate-600 border-slate-500/30',
   disabled: 'bg-slate-500/15 text-slate-600 border-slate-500/30',
   draft: 'bg-slate-500/15 text-slate-600 border-slate-500/30',
+  in_appeal: 'bg-blue-500/15 text-blue-600 border-blue-500/30',
+  pending_deletion: 'bg-slate-500/15 text-slate-600 border-slate-500/30',
+  deleted: 'bg-red-500/15 text-red-600 border-red-500/30',
 };
+
+const emptyForm = () => ({
+  name: '', category: 'marketing' as TplCategory, language: 'en',
+  header_type: 'none' as HeaderType, header: '', header_media_url: '',
+  body: 'Hi {{name}}, welcome to our store!', footer: '',
+  buttons: [] as Btn[],
+  carousel_cards: [] as CarouselCard[],
+});
 
 const Templates = () => {
   const { user } = useAuth();
@@ -40,11 +59,11 @@ const Templates = () => {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({
-    name: '', category: 'marketing' as TplCategory, language: 'en',
-    header: '', body: 'Hi {{name}}, welcome to our store!', footer: '',
-  });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingMetaId, setEditingMetaId] = useState<string | null>(null);
+  const [form, setForm] = useState(emptyForm());
 
   const load = async () => {
     if (!user) return;
@@ -61,20 +80,55 @@ const Templates = () => {
   };
   useEffect(() => { load(); }, [user]);
 
+  const uploadMedia = async (file: File, setUrl: (u: string) => void) => {
+    if (!wsId) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop() || 'bin';
+      const path = `template-media/${wsId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from('salon-assets').upload(path, file, { upsert: false });
+      if (error) throw error;
+      const { data: pub } = supabase.storage.from('salon-assets').getPublicUrl(path);
+      setUrl(pub.publicUrl);
+      toast.success('Uploaded');
+    } catch (e: any) {
+      toast.error(e.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const openNew = () => {
+    setEditingId(null); setEditingMetaId(null);
+    setForm(emptyForm()); setOpen(true);
+  };
+  const openEdit = (t: Template) => {
+    setEditingId(t.id); setEditingMetaId(t.meta_template_id || null);
+    setForm({
+      name: t.name, category: t.category, language: t.language,
+      header_type: (t.header_type || (t.header ? 'text' : 'none')) as HeaderType,
+      header: t.header || '', header_media_url: t.header_media_url || '',
+      body: t.body || '', footer: t.footer || '',
+      buttons: (t.buttons || []) as Btn[],
+      carousel_cards: (t.carousel_cards || []) as CarouselCard[],
+    });
+    setOpen(true);
+  };
+
   const submitToMeta = async () => {
     if (!wsId) return;
-    if (!form.name.trim() || !form.body.trim()) return toast.error('Name and body required');
+    if (!form.name.trim()) return toast.error('Name is required');
+    if (form.category !== 'carousel' && !form.body.trim()) return toast.error('Body is required');
     setSubmitting(true);
     const { data, error } = await supabase.functions.invoke('template-create', {
-      body: { workspace_id: wsId, ...form },
+      body: { workspace_id: wsId, template_id: editingMetaId, ...form },
     });
     setSubmitting(false);
     if (error || (data as any)?.error) {
       return toast.error((data as any)?.error || error!.message);
     }
-    toast.success(`Submitted to Meta — status: ${(data as any).status}`);
+    toast.success(`${editingMetaId ? 'Update' : 'Submission'} sent to Meta — status: ${(data as any).status}`);
     setOpen(false);
-    setForm({ name: '', category: 'marketing', language: 'en', header: '', body: 'Hi {{name}}, welcome!', footer: '' });
     load();
   };
 
@@ -94,6 +148,17 @@ const Templates = () => {
     load();
   };
 
+  const addBtn = () => setForm(f => ({ ...f, buttons: [...f.buttons, { type: 'QUICK_REPLY', text: 'Reply' }] }));
+  const upBtn = (i: number, patch: Partial<Btn>) => setForm(f => ({ ...f, buttons: f.buttons.map((b, ix) => ix === i ? { ...b, ...patch } : b) }));
+  const rmBtn = (i: number) => setForm(f => ({ ...f, buttons: f.buttons.filter((_, ix) => ix !== i) }));
+
+  const addCard = () => setForm(f => ({ ...f, carousel_cards: [...f.carousel_cards, { header_media_url: '', header_type: 'image', body: '', buttons: [] }] }));
+  const upCard = (i: number, patch: Partial<CarouselCard>) => setForm(f => ({ ...f, carousel_cards: f.carousel_cards.map((c, ix) => ix === i ? { ...c, ...patch } : c) }));
+  const rmCard = (i: number) => setForm(f => ({ ...f, carousel_cards: f.carousel_cards.filter((_, ix) => ix !== i) }));
+
+  const isCarousel = form.category === 'carousel' || form.header_type === 'carousel';
+  const canEdit = (t: Template) => !!t.meta_template_id && ['approved', 'rejected', 'paused'].includes(t.status);
+
   return (
     <AppLayout>
       <div className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto">
@@ -102,68 +167,14 @@ const Templates = () => {
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
               <MessageSquareText className="w-6 h-6" /> Message Templates
             </h1>
-            <p className="text-muted-foreground text-sm">All templates come from Meta. Create here → submitted to Meta → usable once approved.</p>
+            <p className="text-muted-foreground text-sm">All templates come from Meta. Submit here → shown on Meta → usable once approved. Click <b>Sync from Meta</b> to refresh statuses.</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={syncFromMeta} disabled={syncing || !wsId} className="gap-2">
               {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
               Sync from Meta
             </Button>
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger asChild>
-                <Button className="gap-2" disabled={!wsId}><Plus className="w-4 h-4" /> New Template</Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg">
-                <DialogHeader><DialogTitle>Submit template to Meta</DialogTitle></DialogHeader>
-                <div className="space-y-3">
-                  <div className="text-xs bg-primary/5 border border-primary/20 rounded-md p-2 flex gap-2">
-                    <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                    <span>This is sent to Meta immediately. Approval takes minutes to hours. Only approved templates can be used in campaigns and outside the 24-hour window.</span>
-                  </div>
-                  <div>
-                    <Label>Name</Label>
-                    <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="welcome_offer" />
-                    <p className="text-[11px] text-muted-foreground mt-1">Lowercase, digits, underscores only.</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label>Category</Label>
-                      <Select value={form.category} onValueChange={(v: TplCategory) => setForm({ ...form, category: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="marketing">Marketing</SelectItem>
-                          <SelectItem value="utility">Utility</SelectItem>
-                          <SelectItem value="authentication">Authentication</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Language</Label>
-                      <Input value={form.language} onChange={e => setForm({ ...form, language: e.target.value })} placeholder="en" />
-                    </div>
-                  </div>
-                  <div>
-                    <Label>Header (optional)</Label>
-                    <Input value={form.header} onChange={e => setForm({ ...form, header: e.target.value })} placeholder="Big news!" />
-                  </div>
-                  <div>
-                    <Label>Body</Label>
-                    <Textarea rows={5} value={form.body} onChange={e => setForm({ ...form, body: e.target.value })} />
-                    <p className="text-[11px] text-muted-foreground mt-1">Use <code>{'{{name}}'}</code> for variables.</p>
-                  </div>
-                  <div>
-                    <Label>Footer (optional)</Label>
-                    <Input value={form.footer} onChange={e => setForm({ ...form, footer: e.target.value })} placeholder="Reply STOP to opt out" />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="ghost" onClick={() => setOpen(false)} disabled={submitting}>Cancel</Button>
-                  <Button onClick={submitToMeta} disabled={submitting}>
-                    {submitting ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Submitting…</> : 'Submit to Meta'}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <Button className="gap-2" disabled={!wsId} onClick={openNew}><Plus className="w-4 h-4" /> New Template</Button>
           </div>
         </div>
 
@@ -182,8 +193,7 @@ const Templates = () => {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Category</TableHead>
-                  <TableHead>Lang</TableHead>
-                  <TableHead>Vars</TableHead>
+                  <TableHead>Header</TableHead>
                   <TableHead>Meta Status</TableHead>
                   <TableHead>Last synced</TableHead>
                   <TableHead className="text-right"></TableHead>
@@ -197,13 +207,15 @@ const Templates = () => {
                       {t.rejection_reason && <div className="text-[11px] text-red-500 mt-0.5">{t.rejection_reason}</div>}
                     </TableCell>
                     <TableCell><Badge variant="outline">{t.category}</Badge></TableCell>
-                    <TableCell>{t.language}</TableCell>
-                    <TableCell className="text-xs">{(t.variables || []).length}</TableCell>
-                    <TableCell><Badge variant="outline" className={STATUS_STYLES[t.status] || STATUS_STYLES.draft}>{t.status}</Badge></TableCell>
+                    <TableCell className="text-xs capitalize">{t.header_type || 'none'}</TableCell>
+                    <TableCell><Badge variant="outline" className={STATUS_STYLES[t.status] || STATUS_STYLES.draft}>{t.status.replace('_', ' ')}</Badge></TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {t.synced_at ? new Date(t.synced_at).toLocaleString() : '—'}
                     </TableCell>
                     <TableCell className="text-right">
+                      <Button size="sm" variant="ghost" onClick={() => openEdit(t)} title={canEdit(t) ? 'Edit & resubmit to Meta' : 'View / duplicate'}>
+                        <Pencil className="w-4 h-4" />
+                      </Button>
                       <Button size="sm" variant="ghost" onClick={() => remove(t)}><Trash2 className="w-4 h-4" /></Button>
                     </TableCell>
                   </TableRow>
@@ -213,6 +225,163 @@ const Templates = () => {
           )}
         </Card>
       </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingMetaId ? 'Edit template on Meta' : 'Submit template to Meta'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="text-xs bg-primary/5 border border-primary/20 rounded-md p-2 flex gap-2">
+              <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+              <span>Sent to Meta immediately. Approval takes minutes to hours. Only approved templates can be used in campaigns and outside the 24-hour window.</span>
+            </div>
+            <div>
+              <Label>Name</Label>
+              <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="welcome_offer" disabled={!!editingMetaId} />
+              <p className="text-[11px] text-muted-foreground mt-1">Lowercase, digits, underscores only. Cannot be changed after submission.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Category</Label>
+                <Select value={form.category} onValueChange={(v: TplCategory) => setForm({ ...form, category: v, header_type: v === 'carousel' ? 'carousel' : form.header_type })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="marketing">Marketing</SelectItem>
+                    <SelectItem value="utility">Utility</SelectItem>
+                    <SelectItem value="authentication">Authentication</SelectItem>
+                    <SelectItem value="carousel">Carousel (multi-card)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Language</Label>
+                <Input value={form.language} onChange={e => setForm({ ...form, language: e.target.value })} placeholder="en" disabled={!!editingMetaId} />
+              </div>
+            </div>
+
+            <Tabs defaultValue="content" className="mt-2">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="content">Content</TabsTrigger>
+                <TabsTrigger value="buttons" disabled={isCarousel}>Buttons</TabsTrigger>
+                <TabsTrigger value="carousel" disabled={!isCarousel}>Cards</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="content" className="space-y-3 pt-3">
+                <div>
+                  <Label>Header</Label>
+                  <Select value={form.header_type} onValueChange={(v: HeaderType) => setForm({ ...form, header_type: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="text">Text</SelectItem>
+                      <SelectItem value="image">Image (JPG/PNG)</SelectItem>
+                      <SelectItem value="video">Video (MP4)</SelectItem>
+                      <SelectItem value="document">Document (PDF)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {form.header_type === 'text' && (
+                  <Input value={form.header} onChange={e => setForm({ ...form, header: e.target.value })} placeholder="Big news!" />
+                )}
+                {['image', 'video', 'document'].includes(form.header_type) && (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <Input value={form.header_media_url} onChange={e => setForm({ ...form, header_media_url: e.target.value })} placeholder="Public URL of media (JPG/PNG/MP4/PDF)" />
+                      <Button type="button" variant="outline" size="sm" asChild disabled={uploading}>
+                        <label className="cursor-pointer">
+                          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                          <input type="file" className="hidden"
+                            accept={form.header_type === 'image' ? 'image/*' : form.header_type === 'video' ? 'video/mp4' : 'application/pdf'}
+                            onChange={e => { const f = e.target.files?.[0]; if (f) uploadMedia(f, (u) => setForm(cur => ({ ...cur, header_media_url: u }))); }} />
+                        </label>
+                      </Button>
+                    </div>
+                    {form.header_media_url && form.header_type === 'image' && (
+                      <img src={form.header_media_url} alt="preview" className="max-h-28 rounded border" />
+                    )}
+                  </div>
+                )}
+                {!isCarousel && (
+                  <div>
+                    <Label>Body</Label>
+                    <Textarea rows={5} value={form.body} onChange={e => setForm({ ...form, body: e.target.value })} />
+                    <p className="text-[11px] text-muted-foreground mt-1">Use <code>{'{{name}}'}</code> for variables.</p>
+                  </div>
+                )}
+                {!isCarousel && (
+                  <div>
+                    <Label>Footer (optional)</Label>
+                    <Input value={form.footer} onChange={e => setForm({ ...form, footer: e.target.value })} placeholder="Reply STOP to opt out" />
+                  </div>
+                )}
+                {isCarousel && (
+                  <div>
+                    <Label>Intro text (shown above cards)</Label>
+                    <Textarea rows={3} value={form.body} onChange={e => setForm({ ...form, body: e.target.value })} placeholder="Check out our new arrivals" />
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="buttons" className="space-y-3 pt-3">
+                <p className="text-xs text-muted-foreground">Up to 10 buttons. Mix quick replies with 1–2 CTAs (URL or Call).</p>
+                {form.buttons.map((b, i) => (
+                  <div key={i} className="p-3 border rounded-lg space-y-2 relative">
+                    <button className="absolute top-2 right-2 text-muted-foreground hover:text-destructive" onClick={() => rmBtn(i)}><X className="w-4 h-4" /></button>
+                    <Select value={b.type} onValueChange={(v: BtnType) => upBtn(i, { type: v })}>
+                      <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="QUICK_REPLY">Quick reply</SelectItem>
+                        <SelectItem value="URL">URL / website</SelectItem>
+                        <SelectItem value="PHONE_NUMBER">Call phone number</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input placeholder="Button text (max 25 chars)" maxLength={25} value={b.text} onChange={e => upBtn(i, { text: e.target.value })} />
+                    {b.type === 'URL' && <Input placeholder="https://..." value={b.url || ''} onChange={e => upBtn(i, { url: e.target.value })} />}
+                    {b.type === 'PHONE_NUMBER' && <Input placeholder="+919999999999" value={b.phone_number || ''} onChange={e => upBtn(i, { phone_number: e.target.value })} />}
+                  </div>
+                ))}
+                <Button variant="outline" size="sm" onClick={addBtn} disabled={form.buttons.length >= 10}><Plus className="w-4 h-4 mr-1" /> Add button</Button>
+              </TabsContent>
+
+              <TabsContent value="carousel" className="space-y-3 pt-3">
+                <p className="text-xs text-muted-foreground">2–10 media cards. Each card can have its own image/video, body text, and buttons.</p>
+                {form.carousel_cards.map((c, i) => (
+                  <div key={i} className="p-3 border rounded-lg space-y-2 relative">
+                    <button className="absolute top-2 right-2 text-muted-foreground hover:text-destructive" onClick={() => rmCard(i)}><X className="w-4 h-4" /></button>
+                    <div className="text-xs font-semibold text-muted-foreground">Card {i + 1}</div>
+                    <Select value={c.header_type} onValueChange={(v: 'image' | 'video') => upCard(i, { header_type: v })}>
+                      <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="image">Image</SelectItem>
+                        <SelectItem value="video">Video</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="flex gap-2">
+                      <Input value={c.header_media_url} onChange={e => upCard(i, { header_media_url: e.target.value })} placeholder="Public media URL" />
+                      <Button type="button" variant="outline" size="sm" asChild disabled={uploading}>
+                        <label className="cursor-pointer">
+                          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                          <input type="file" className="hidden" accept={c.header_type === 'image' ? 'image/*' : 'video/mp4'}
+                            onChange={e => { const f = e.target.files?.[0]; if (f) uploadMedia(f, (u) => upCard(i, { header_media_url: u })); }} />
+                        </label>
+                      </Button>
+                    </div>
+                    <Textarea rows={2} value={c.body} onChange={e => upCard(i, { body: e.target.value })} placeholder="Card description" />
+                  </div>
+                ))}
+                <Button variant="outline" size="sm" onClick={addCard} disabled={form.carousel_cards.length >= 10}><Plus className="w-4 h-4 mr-1" /> Add card</Button>
+              </TabsContent>
+            </Tabs>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setOpen(false)} disabled={submitting}>Cancel</Button>
+            <Button onClick={submitToMeta} disabled={submitting}>
+              {submitting ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Submitting…</> : editingMetaId ? 'Update on Meta' : 'Submit to Meta'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 };
