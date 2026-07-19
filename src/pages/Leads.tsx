@@ -17,7 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import {
-  Plus, Search, Upload, MessageCircle, LayoutGrid, List, Trash2, Tag,
+  Plus, Search, Upload, MessageCircle, LayoutGrid, List, Trash2, Tag, Globe, Loader2, Sparkles,
 } from 'lucide-react';
 
 type LeadStatus = 'new' | 'contacted' | 'converted' | 'lost';
@@ -217,6 +217,7 @@ const Leads = () => {
             <Button variant="outline" onClick={() => csvInputRef.current?.click()}>
               <Upload className="w-4 h-4 mr-2" /> Import CSV
             </Button>
+            <ScrapeLeadsDialog wsId={wsId} onDone={loadLeads} />
             <Dialog open={addOpen} onOpenChange={setAddOpen}>
               <DialogTrigger asChild>
                 <Button>
@@ -388,3 +389,108 @@ const Leads = () => {
 };
 
 export default Leads;
+
+function ScrapeLeadsDialog({ wsId, onDone }: { wsId: string | null; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    keyword: '', location: '',
+    hasWebsite: 'any' as 'any' | 'yes' | 'no',
+    requirePhone: true,
+    minRating: '', minReviews: '',
+    maxResults: 40,
+  });
+  const [result, setResult] = useState<any | null>(null);
+
+  const run = async () => {
+    if (!wsId) return toast.error('Workspace not ready');
+    if (!form.keyword.trim()) return toast.error('Enter a keyword like "salons" or "cafes"');
+    setLoading(true); setResult(null);
+    const { data, error } = await supabase.functions.invoke('leads-scrape', {
+      body: {
+        workspace_id: wsId,
+        keyword: form.keyword, location: form.location,
+        hasWebsite: form.hasWebsite,
+        requirePhone: form.requirePhone,
+        minRating: Number(form.minRating) || 0,
+        minReviews: Number(form.minReviews) || 0,
+        maxResults: form.maxResults,
+        saveAsLeads: true,
+      },
+    });
+    setLoading(false);
+    if (error) return toast.error(error.message);
+    if ((data as any)?.error) return toast.error((data as any).error);
+    setResult(data);
+    toast.success(`Scraped ${(data as any).matched} matches, added ${(data as any).inserted} new leads`);
+    onDone();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="gap-1"><Sparkles className="w-4 h-4" /> Scrape Leads</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Scrape Google Maps leads</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-muted-foreground">Keyword *</label>
+              <Input value={form.keyword} onChange={e => setForm({ ...form, keyword: e.target.value })} placeholder="salons, gyms, dentists…" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Location</label>
+              <Input value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} placeholder="Coimbatore" />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="text-xs text-muted-foreground">Website</label>
+              <Select value={form.hasWebsite} onValueChange={(v: any) => setForm({ ...form, hasWebsite: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="any">Any</SelectItem>
+                  <SelectItem value="no">No website (best for cold outreach)</SelectItem>
+                  <SelectItem value="yes">Has website</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Min rating</label>
+              <Input type="number" step="0.1" min="0" max="5" value={form.minRating} onChange={e => setForm({ ...form, minRating: e.target.value })} placeholder="4.0" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Min reviews</label>
+              <Input type="number" min="0" value={form.minReviews} onChange={e => setForm({ ...form, minReviews: e.target.value })} placeholder="20" />
+            </div>
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={form.requirePhone} onChange={e => setForm({ ...form, requirePhone: e.target.checked })} />
+            Only keep businesses with a phone number
+          </label>
+          <div>
+            <label className="text-xs text-muted-foreground">Max results ({form.maxResults})</label>
+            <input type="range" min="10" max="100" step="10" value={form.maxResults} onChange={e => setForm({ ...form, maxResults: Number(e.target.value) })} className="w-full" />
+          </div>
+          {result && (
+            <div className="text-xs bg-muted/40 border rounded-md p-3">
+              Found <b>{result.total_found}</b>, matched filters <b>{result.matched}</b>, new leads added <b>{result.inserted}</b>.
+            </div>
+          )}
+          <p className="text-[11px] text-muted-foreground">
+            Uses your SerpAPI key (free tier: 100 searches/mo). Configure once in project settings.
+          </p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Close</Button>
+          <Button onClick={run} disabled={loading}>
+            {loading ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Scraping…</> : <><Globe className="w-4 h-4 mr-1" /> Scrape now</>}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
