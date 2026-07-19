@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
     const mode = url.searchParams.get('hub.mode');
     const token = url.searchParams.get('hub.verify_token');
     const challenge = url.searchParams.get('hub.challenge');
-    const expected = Deno.env.get('WA_WEBHOOK_VERIFY_TOKEN') || 'reachably';
+    const expected = Deno.env.get('WA_WEBHOOK_VERIFY_TOKEN') || 'TheAurax@dmin2027';
     if (mode === 'subscribe' && token === expected) return new Response(challenge || 'ok', { status: 200 });
     return new Response('forbidden', { status: 403 });
   }
