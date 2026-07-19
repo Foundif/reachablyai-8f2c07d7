@@ -240,7 +240,7 @@ const DebugPanel = ({ workspaceId, phoneNumberId }: { workspaceId: string; phone
       {events.length === 0 ? (
         <div className="text-sm text-muted-foreground p-6 text-center border border-dashed rounded-lg">
           <InboxIcon className="w-8 h-8 mx-auto mb-2 opacity-40" />
-          No webhook events yet. Send a "Hi" from any WhatsApp to <b>{form => ''}</b>your business number and it should appear here within a second.<br />
+          No webhook events yet. Send a "Hi" from any WhatsApp to your business number and it should appear here within a second.<br />
           If nothing appears, Meta isn't reaching this URL — check the Callback URL and Verify Token above, and make sure you subscribed to <code>messages</code> in Meta.
         </div>
       ) : (
