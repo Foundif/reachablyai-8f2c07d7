@@ -911,10 +911,13 @@ export type Database = {
           access_token: string | null
           app_secret: string | null
           business_phone: string | null
+          connected_at: string | null
+          connection_type: string
           created_at: string
           last_analytics_sync: string | null
           last_error: string | null
           phone_number_id: string | null
+          status: string
           updated_at: string
           verified: boolean
           verified_at: string | null
@@ -926,10 +929,13 @@ export type Database = {
           access_token?: string | null
           app_secret?: string | null
           business_phone?: string | null
+          connected_at?: string | null
+          connection_type?: string
           created_at?: string
           last_analytics_sync?: string | null
           last_error?: string | null
           phone_number_id?: string | null
+          status?: string
           updated_at?: string
           verified?: boolean
           verified_at?: string | null
@@ -941,10 +947,13 @@ export type Database = {
           access_token?: string | null
           app_secret?: string | null
           business_phone?: string | null
+          connected_at?: string | null
+          connection_type?: string
           created_at?: string
           last_analytics_sync?: string | null
           last_error?: string | null
           phone_number_id?: string | null
+          status?: string
           updated_at?: string
           verified?: boolean
           verified_at?: string | null
