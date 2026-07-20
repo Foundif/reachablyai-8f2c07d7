@@ -118,6 +118,8 @@ const WhatsAppSettings = () => {
     toast.success('Disconnected');
     load();
   };
+
+  const load = async () => {
     if (!user) return;
     setLoading(true);
     const { data: ws } = await supabase.from('workspaces' as any)
