@@ -10,6 +10,7 @@ import { ThemeProvider } from "@/hooks/useTheme";
 import { LanguageProvider } from "@/hooks/useLanguage";
 import Dashboard from "./pages/Dashboard";
 import WhatsAppSettings from "./pages/WhatsAppSettings";
+import WhatsAppCallback from "./pages/WhatsAppCallback";
 import Inbox from "./pages/Inbox";
 import Analytics from "./pages/Analytics";
 import Profile from "./pages/Profile";
@@ -63,6 +64,7 @@ const App = () => (
               <Routes>
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/onboarding" element={<Onboarding />} />
+                <Route path="/whatsapp/callback" element={<WhatsAppCallback />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/terms" element={<Terms />} />

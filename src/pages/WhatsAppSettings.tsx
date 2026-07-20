@@ -5,10 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { Settings, ShieldCheck, ShieldAlert, Copy, Bug, RefreshCw, CheckCircle2, XCircle, MinusCircle, Inbox as InboxIcon } from 'lucide-react';
+import { Settings, ShieldCheck, ShieldAlert, Copy, Bug, RefreshCw, CheckCircle2, XCircle, MinusCircle, Inbox as InboxIcon, Facebook, Zap, Unplug } from 'lucide-react';
+import { META_APP_ID, META_CONFIG_ID } from '@/lib/metaConfig';
 
 interface Creds {
   workspace_id: string;
@@ -21,6 +23,9 @@ interface Creds {
   verified: boolean;
   verified_at: string | null;
   last_error: string | null;
+  connection_type: 'manual' | 'embedded' | null;
+  connected_at: string | null;
+  status: string | null;
 }
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -43,6 +48,76 @@ const WhatsAppSettings = () => {
     webhook_verify_token: '',
   });
   const [showToken, setShowToken] = useState(false);
+  const [fbReady, setFbReady] = useState(false);
+  const [embedLoading, setEmbedLoading] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+
+  // Load Facebook SDK once
+  useEffect(() => {
+    if ((window as any).FB) { setFbReady(true); return; }
+    (window as any).fbAsyncInit = function () {
+      (window as any).FB.init({ appId: META_APP_ID, cookie: true, xfbml: true, version: 'v20.0' });
+      setFbReady(true);
+    };
+    const id = 'facebook-jssdk';
+    if (document.getElementById(id)) return;
+    const js = document.createElement('script');
+    js.id = id;
+    js.async = true;
+    js.defer = true;
+    js.crossOrigin = 'anonymous';
+    js.src = 'https://connect.facebook.net/en_US/sdk.js';
+    document.body.appendChild(js);
+  }, []);
+
+  const startEmbeddedSignup = () => {
+    const FB = (window as any).FB;
+    if (!FB) return toast.error('Facebook SDK not loaded yet — try again in a moment.');
+    setEmbedLoading(true);
+    FB.login(
+      async (response: any) => {
+        try {
+          if (response?.status !== 'connected' || !response?.authResponse?.code) {
+            if (response?.status === 'not_authorized') toast.info('Connection cancelled.');
+            else toast.error('Facebook login failed or was cancelled.');
+            return;
+          }
+          const code = response.authResponse.code;
+          const redirect_uri = `${window.location.origin}/whatsapp/callback`;
+          const { data, error } = await supabase.functions.invoke('whatsapp-embedded-connect', {
+            body: { code, redirect_uri },
+          });
+          if (error || (data as any)?.error) {
+            toast.error((data as any)?.error || error?.message || 'Connection failed');
+            return;
+          }
+          toast.success(`Connected ${(data as any)?.phone || 'WhatsApp'} via Facebook`);
+          load();
+        } finally {
+          setEmbedLoading(false);
+        }
+      },
+      {
+        config_id: META_CONFIG_ID,
+        response_type: 'code',
+        override_default_response_type: true,
+        extras: { setup: {}, featureType: '', sessionInfoVersion: '3' },
+      },
+    );
+  };
+
+  const disconnect = async () => {
+    if (!wsId) return;
+    if (!confirm('Disconnect WhatsApp? Incoming messages will stop until you reconnect.')) return;
+    setDisconnecting(true);
+    const { error } = await supabase.from('whatsapp_credentials' as any)
+      .update({ status: 'disconnected', verified: false, access_token: null })
+      .eq('workspace_id', wsId);
+    setDisconnecting(false);
+    if (error) return toast.error(error.message);
+    toast.success('Disconnected');
+    load();
+  };
 
   const load = async () => {
     if (!user) return;
@@ -81,6 +156,7 @@ const WhatsAppSettings = () => {
       business_phone: form.business_phone.trim() || null,
       webhook_verify_token: form.webhook_verify_token.trim() || null,
       verified: false,
+      connection_type: 'manual',
     };
     if (form.access_token.trim()) payload.access_token = form.access_token.trim();
     if (form.app_secret.trim()) payload.app_secret = form.app_secret.trim();
@@ -115,38 +191,90 @@ const WhatsAppSettings = () => {
 
         {loading ? <Card className="p-8 text-center">Loading…</Card> : (
         <>
-        <Card className="p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="font-semibold">Connection status</div>
-            {creds?.verified
-              ? <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30 gap-1"><ShieldCheck className="w-3 h-3" /> Verified</Badge>
-              : <Badge variant="outline" className="gap-1"><ShieldAlert className="w-3 h-3" /> Not verified</Badge>}
+        {/* Connection status header */}
+        <Card className="p-6 space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <div className="font-semibold flex items-center gap-2">
+                Connection status
+                {creds?.status === 'connected' || creds?.verified
+                  ? <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30 gap-1"><ShieldCheck className="w-3 h-3" /> Connected</Badge>
+                  : <Badge variant="outline" className="gap-1"><ShieldAlert className="w-3 h-3" /> Not connected</Badge>}
+                {creds?.connection_type && (
+                  <Badge variant="outline" className="gap-1 text-[10px] uppercase">
+                    {creds.connection_type === 'embedded' ? <><Facebook className="w-3 h-3" /> Embedded</> : <>Manual</>}
+                  </Badge>
+                )}
+              </div>
+              {creds?.business_phone && <div className="text-sm text-muted-foreground mt-1">{creds.business_phone}</div>}
+              {creds?.connected_at && <div className="text-xs text-muted-foreground">Connected {new Date(creds.connected_at).toLocaleString()}</div>}
+            </div>
+            {(creds?.status === 'connected' || creds?.verified) && (
+              <Button variant="outline" size="sm" onClick={disconnect} disabled={disconnecting} className="gap-1">
+                <Unplug className="w-3.5 h-3.5" /> {disconnecting ? 'Disconnecting…' : 'Disconnect'}
+              </Button>
+            )}
           </div>
           {creds?.last_error && <p className="text-sm text-red-600">{creds.last_error}</p>}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><Label>Phone Number ID *</Label><Input value={form.phone_number_id} onChange={e => setForm({ ...form, phone_number_id: e.target.value })} placeholder="e.g. 123456789012345" /></div>
-            <div><Label>WhatsApp Business Account ID *</Label><Input value={form.waba_id} onChange={e => setForm({ ...form, waba_id: e.target.value })} placeholder="e.g. 987654321098765" /></div>
-            <div><Label>Business phone number</Label><Input value={form.business_phone} onChange={e => setForm({ ...form, business_phone: e.target.value })} placeholder="+91…" /></div>
-            <div>
-              <Label>Access Token {creds?.access_token && <span className="text-xs text-muted-foreground">(saved: {mask(creds.access_token)})</span>}</Label>
-              <div className="flex gap-2">
-                <Input type={showToken ? 'text' : 'password'} value={form.access_token} onChange={e => setForm({ ...form, access_token: e.target.value })} placeholder="Leave blank to keep existing" />
-                <Button type="button" variant="outline" onClick={() => setShowToken(s => !s)}>{showToken ? 'Hide' : 'Show'}</Button>
+        </Card>
+
+        {/* Two connection methods */}
+        <Card className="p-6 space-y-4">
+          <div>
+            <div className="font-semibold">Connect WhatsApp</div>
+            <p className="text-xs text-muted-foreground">Choose how you want to link your WhatsApp Business account.</p>
+          </div>
+          <Tabs defaultValue={creds?.connection_type === 'manual' ? 'manual' : 'embedded'} className="w-full">
+            <TabsList className="grid grid-cols-2 w-full">
+              <TabsTrigger value="embedded" className="gap-1"><Zap className="w-3.5 h-3.5" /> Quick Connect <Badge className="ml-1 text-[9px] bg-emerald-500/15 text-emerald-600 border-emerald-500/30">Recommended</Badge></TabsTrigger>
+              <TabsTrigger value="manual">Manual Setup</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="embedded" className="pt-4 space-y-3">
+              <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600"><Facebook className="w-5 h-5" /></div>
+                  <div className="flex-1">
+                    <div className="font-medium">Quick Connect via Facebook</div>
+                    <p className="text-xs text-muted-foreground">Sign in with the Facebook account that owns your WhatsApp Business. We'll auto-fetch your Phone Number ID, WABA ID, and access token in one click.</p>
+                  </div>
+                </div>
+                <Button onClick={startEmbeddedSignup} disabled={!fbReady || embedLoading} className="w-full gap-2 bg-[#1877F2] hover:bg-[#1877F2]/90 text-white">
+                  <Facebook className="w-4 h-4" />
+                  {embedLoading ? 'Connecting…' : fbReady ? 'Continue with Facebook' : 'Loading Facebook…'}
+                </Button>
+                <p className="text-[11px] text-muted-foreground">Requires a Meta Business account with a verified WhatsApp Business number.</p>
               </div>
-            </div>
-            <div className="md:col-span-2">
-              <Label>App Secret {creds?.app_secret && <span className="text-xs text-muted-foreground">(saved: {mask(creds.app_secret)})</span>}</Label>
-              <Input type="password" value={form.app_secret} onChange={e => setForm({ ...form, app_secret: e.target.value })} placeholder="For webhook signature verification" />
-            </div>
-            <div className="md:col-span-2">
-              <Label>Webhook Verify Token</Label>
-              <Input value={form.webhook_verify_token} onChange={e => setForm({ ...form, webhook_verify_token: e.target.value })} placeholder="Any string. You'll paste this into Meta." />
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
-            <Button variant="outline" onClick={test} disabled={testing || !creds?.access_token}>{testing ? 'Testing…' : 'Test Connection'}</Button>
-          </div>
+            </TabsContent>
+
+            <TabsContent value="manual" className="pt-4 space-y-4">
+              <p className="text-xs text-muted-foreground">Advanced — paste credentials from Meta Developer Console.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><Label>Phone Number ID *</Label><Input value={form.phone_number_id} onChange={e => setForm({ ...form, phone_number_id: e.target.value })} placeholder="e.g. 123456789012345" /></div>
+                <div><Label>WhatsApp Business Account ID *</Label><Input value={form.waba_id} onChange={e => setForm({ ...form, waba_id: e.target.value })} placeholder="e.g. 987654321098765" /></div>
+                <div><Label>Business phone number</Label><Input value={form.business_phone} onChange={e => setForm({ ...form, business_phone: e.target.value })} placeholder="+91…" /></div>
+                <div>
+                  <Label>Access Token {creds?.access_token && <span className="text-xs text-muted-foreground">(saved: {mask(creds.access_token)})</span>}</Label>
+                  <div className="flex gap-2">
+                    <Input type={showToken ? 'text' : 'password'} value={form.access_token} onChange={e => setForm({ ...form, access_token: e.target.value })} placeholder="Leave blank to keep existing" />
+                    <Button type="button" variant="outline" onClick={() => setShowToken(s => !s)}>{showToken ? 'Hide' : 'Show'}</Button>
+                  </div>
+                </div>
+                <div className="md:col-span-2">
+                  <Label>App Secret {creds?.app_secret && <span className="text-xs text-muted-foreground">(saved: {mask(creds.app_secret)})</span>}</Label>
+                  <Input type="password" value={form.app_secret} onChange={e => setForm({ ...form, app_secret: e.target.value })} placeholder="For webhook signature verification" />
+                </div>
+                <div className="md:col-span-2">
+                  <Label>Webhook Verify Token</Label>
+                  <Input value={form.webhook_verify_token} onChange={e => setForm({ ...form, webhook_verify_token: e.target.value })} placeholder="Any string. You'll paste this into Meta." />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+                <Button variant="outline" onClick={test} disabled={testing || !creds?.access_token}>{testing ? 'Testing…' : 'Test Connection'}</Button>
+              </div>
+            </TabsContent>
+          </Tabs>
         </Card>
 
         <Card className="p-6 space-y-3">
