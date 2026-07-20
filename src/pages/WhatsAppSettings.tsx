@@ -23,6 +23,9 @@ interface Creds {
   verified: boolean;
   verified_at: string | null;
   last_error: string | null;
+  connection_type: 'manual' | 'embedded' | null;
+  connected_at: string | null;
+  status: string | null;
 }
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
