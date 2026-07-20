@@ -31,6 +31,8 @@ Deno.serve(async (req) => {
     await supabase.from('whatsapp_credentials').update({
       verified: true,
       verified_at: new Date().toISOString(),
+      status: 'connected',
+      connected_at: new Date().toISOString(),
       last_error: null,
       business_phone: body.display_phone_number || creds.business_phone,
     }).eq('workspace_id', workspace_id);
