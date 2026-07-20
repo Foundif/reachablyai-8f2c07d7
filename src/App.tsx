@@ -10,6 +10,7 @@ import { ThemeProvider } from "@/hooks/useTheme";
 import { LanguageProvider } from "@/hooks/useLanguage";
 import Dashboard from "./pages/Dashboard";
 import WhatsAppSettings from "./pages/WhatsAppSettings";
+import WhatsAppCallback from "./pages/WhatsAppCallback";
 import Inbox from "./pages/Inbox";
 import Analytics from "./pages/Analytics";
 import Profile from "./pages/Profile";
