@@ -156,6 +156,7 @@ const WhatsAppSettings = () => {
       business_phone: form.business_phone.trim() || null,
       webhook_verify_token: form.webhook_verify_token.trim() || null,
       verified: false,
+      connection_type: 'manual',
     };
     if (form.access_token.trim()) payload.access_token = form.access_token.trim();
     if (form.app_secret.trim()) payload.app_secret = form.app_secret.trim();
