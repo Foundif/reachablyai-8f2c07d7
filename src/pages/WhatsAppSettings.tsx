@@ -48,8 +48,76 @@ const WhatsAppSettings = () => {
     webhook_verify_token: '',
   });
   const [showToken, setShowToken] = useState(false);
+  const [fbReady, setFbReady] = useState(false);
+  const [embedLoading, setEmbedLoading] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
 
-  const load = async () => {
+  // Load Facebook SDK once
+  useEffect(() => {
+    if ((window as any).FB) { setFbReady(true); return; }
+    (window as any).fbAsyncInit = function () {
+      (window as any).FB.init({ appId: META_APP_ID, cookie: true, xfbml: true, version: 'v20.0' });
+      setFbReady(true);
+    };
+    const id = 'facebook-jssdk';
+    if (document.getElementById(id)) return;
+    const js = document.createElement('script');
+    js.id = id;
+    js.async = true;
+    js.defer = true;
+    js.crossOrigin = 'anonymous';
+    js.src = 'https://connect.facebook.net/en_US/sdk.js';
+    document.body.appendChild(js);
+  }, []);
+
+  const startEmbeddedSignup = () => {
+    const FB = (window as any).FB;
+    if (!FB) return toast.error('Facebook SDK not loaded yet — try again in a moment.');
+    setEmbedLoading(true);
+    FB.login(
+      async (response: any) => {
+        try {
+          if (response?.status !== 'connected' || !response?.authResponse?.code) {
+            if (response?.status === 'not_authorized') toast.info('Connection cancelled.');
+            else toast.error('Facebook login failed or was cancelled.');
+            return;
+          }
+          const code = response.authResponse.code;
+          const redirect_uri = `${window.location.origin}/whatsapp/callback`;
+          const { data, error } = await supabase.functions.invoke('whatsapp-embedded-connect', {
+            body: { code, redirect_uri },
+          });
+          if (error || (data as any)?.error) {
+            toast.error((data as any)?.error || error?.message || 'Connection failed');
+            return;
+          }
+          toast.success(`Connected ${(data as any)?.phone || 'WhatsApp'} via Facebook`);
+          load();
+        } finally {
+          setEmbedLoading(false);
+        }
+      },
+      {
+        config_id: META_CONFIG_ID,
+        response_type: 'code',
+        override_default_response_type: true,
+        extras: { setup: {}, featureType: '', sessionInfoVersion: '3' },
+      },
+    );
+  };
+
+  const disconnect = async () => {
+    if (!wsId) return;
+    if (!confirm('Disconnect WhatsApp? Incoming messages will stop until you reconnect.')) return;
+    setDisconnecting(true);
+    const { error } = await supabase.from('whatsapp_credentials' as any)
+      .update({ status: 'disconnected', verified: false, access_token: null })
+      .eq('workspace_id', wsId);
+    setDisconnecting(false);
+    if (error) return toast.error(error.message);
+    toast.success('Disconnected');
+    load();
+  };
     if (!user) return;
     setLoading(true);
     const { data: ws } = await supabase.from('workspaces' as any)
