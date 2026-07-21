@@ -48,62 +48,37 @@ const WhatsAppSettings = () => {
     webhook_verify_token: '',
   });
   const [showToken, setShowToken] = useState(false);
-  const [fbReady, setFbReady] = useState(false);
   const [embedLoading, setEmbedLoading] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
 
-  // Load Facebook SDK once
-  useEffect(() => {
-    if ((window as any).FB) { setFbReady(true); return; }
-    (window as any).fbAsyncInit = function () {
-      (window as any).FB.init({ appId: META_APP_ID, cookie: true, xfbml: true, version: 'v20.0' });
-      setFbReady(true);
-    };
-    const id = 'facebook-jssdk';
-    if (document.getElementById(id)) return;
-    const js = document.createElement('script');
-    js.id = id;
-    js.async = true;
-    js.defer = true;
-    js.crossOrigin = 'anonymous';
-    js.src = 'https://connect.facebook.net/en_US/sdk.js';
-    document.body.appendChild(js);
-  }, []);
-
   const startEmbeddedSignup = () => {
-    const FB = (window as any).FB;
-    if (!FB) return toast.error('Facebook SDK not loaded yet — try again in a moment.');
     setEmbedLoading(true);
-    FB.login(
-      async (response: any) => {
-        try {
-          if (response?.status !== 'connected' || !response?.authResponse?.code) {
-            if (response?.status === 'not_authorized') toast.info('Connection cancelled.');
-            else toast.error('Facebook login failed or was cancelled.');
-            return;
-          }
-          const code = response.authResponse.code;
-          const redirect_uri = `${window.location.origin}/whatsapp/callback`;
-          const { data, error } = await supabase.functions.invoke('whatsapp-embedded-connect', {
-            body: { code, redirect_uri },
-          });
-          if (error || (data as any)?.error) {
-            toast.error((data as any)?.error || error?.message || 'Connection failed');
-            return;
-          }
-          toast.success(`Connected ${(data as any)?.phone || 'WhatsApp'} via Facebook`);
-          load();
-        } finally {
-          setEmbedLoading(false);
-        }
-      },
-      {
-        config_id: META_CONFIG_ID,
-        response_type: 'code',
-        override_default_response_type: true,
-        extras: { setup: {}, featureType: '', sessionInfoVersion: '3' },
-      },
-    );
+    const redirect_uri = `${window.location.origin}/whatsapp/callback`;
+    const state = Math.random().toString(36).slice(2);
+    try { sessionStorage.setItem('wa_oauth_state', state); } catch {}
+    const extras = encodeURIComponent(JSON.stringify({ setup: {}, featureType: '', sessionInfoVersion: '3' }));
+    const url =
+      `https://www.facebook.com/v20.0/dialog/oauth` +
+      `?client_id=${encodeURIComponent(META_APP_ID)}` +
+      `&config_id=${encodeURIComponent(META_CONFIG_ID)}` +
+      `&redirect_uri=${encodeURIComponent(redirect_uri)}` +
+      `&response_type=code` +
+      `&override_default_response_type=true` +
+      `&state=${state}` +
+      `&extras=${extras}`;
+    // Break out of iframe (Lovable preview) so Facebook accepts the top-level navigation
+    try {
+      if (window.top && window.top !== window.self) {
+        (window.top as Window).location.href = url;
+        return;
+      }
+    } catch {
+      // cross-origin — fall back to opening in a new tab
+      window.open(url, '_blank', 'noopener,noreferrer');
+      setEmbedLoading(false);
+      return;
+    }
+    window.location.href = url;
   };
 
   const disconnect = async () => {
