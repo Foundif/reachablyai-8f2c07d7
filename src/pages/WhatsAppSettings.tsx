@@ -269,6 +269,7 @@ const WhatsAppSettings = () => {
             </div>
           </div>
           <p className="text-xs text-muted-foreground">Subscribe to <code>messages</code> and <code>message_status</code> fields on your WhatsApp app in Meta Developer Console.</p>
+          <WebhookTestButton phoneNumberId={form.phone_number_id} webhookUrl={webhookUrl} />
         </Card>
 
         {wsId && <DebugPanel workspaceId={wsId} phoneNumberId={form.phone_number_id} />}
