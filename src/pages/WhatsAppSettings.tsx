@@ -214,9 +214,9 @@ const WhatsAppSettings = () => {
                     <p className="text-xs text-muted-foreground">Sign in with the Facebook account that owns your WhatsApp Business. We'll auto-fetch your Phone Number ID, WABA ID, and access token in one click.</p>
                   </div>
                 </div>
-                <Button onClick={startEmbeddedSignup} disabled={!fbReady || embedLoading} className="w-full gap-2 bg-[#1877F2] hover:bg-[#1877F2]/90 text-white">
+                <Button onClick={startEmbeddedSignup} disabled={embedLoading} className="w-full gap-2 bg-[#1877F2] hover:bg-[#1877F2]/90 text-white">
                   <Facebook className="w-4 h-4" />
-                  {embedLoading ? 'Connecting…' : fbReady ? 'Continue with Facebook' : 'Loading Facebook…'}
+                  {embedLoading ? 'Redirecting to Facebook…' : 'Continue with Facebook'}
                 </Button>
                 <p className="text-[11px] text-muted-foreground">Requires a Meta Business account with a verified WhatsApp Business number.</p>
               </div>
