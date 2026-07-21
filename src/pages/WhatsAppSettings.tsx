@@ -423,4 +423,3 @@ const WebhookTestButton = ({ phoneNumberId, webhookUrl }: { phoneNumberId: strin
     </div>
   );
 };
-};
