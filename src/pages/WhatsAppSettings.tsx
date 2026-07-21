@@ -269,6 +269,7 @@ const WhatsAppSettings = () => {
             </div>
           </div>
           <p className="text-xs text-muted-foreground">Subscribe to <code>messages</code> and <code>message_status</code> fields on your WhatsApp app in Meta Developer Console.</p>
+          <WebhookTestButton phoneNumberId={form.phone_number_id} webhookUrl={webhookUrl} />
         </Card>
 
         {wsId && <DebugPanel workspaceId={wsId} phoneNumberId={form.phone_number_id} />}
@@ -375,5 +376,50 @@ const DebugPanel = ({ workspaceId, phoneNumberId }: { workspaceId: string; phone
         </div>
       )}
     </Card>
+  );
+};
+
+const WebhookTestButton = ({ phoneNumberId, webhookUrl }: { phoneNumberId: string; webhookUrl: string }) => {
+  const [sending, setSending] = useState(false);
+  const send = async () => {
+    if (!phoneNumberId) return toast.error('Save your Phone Number ID first (Manual tab) or connect via Facebook.');
+    setSending(true);
+    const testFrom = '919999900000';
+    const msgId = `wamid.TEST_${Date.now()}`;
+    const payload = {
+      object: 'whatsapp_business_account',
+      entry: [{
+        id: 'TEST',
+        changes: [{
+          field: 'messages',
+          value: {
+            messaging_product: 'whatsapp',
+            metadata: { display_phone_number: 'test', phone_number_id: phoneNumberId },
+            contacts: [{ profile: { name: 'Webhook Test' }, wa_id: testFrom }],
+            messages: [{ from: testFrom, id: msgId, timestamp: `${Math.floor(Date.now()/1000)}`, type: 'text', text: { body: `🧪 Webhook test at ${new Date().toLocaleTimeString()}` } }],
+          },
+        }],
+      }],
+    };
+    try {
+      const r = await fetch(webhookUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const t = await r.text();
+      if (!r.ok) toast.error(`Webhook returned ${r.status}: ${t.slice(0,120)}`);
+      else toast.success('Test payload delivered. Check the debug panel and Inbox.');
+    } catch (e: any) {
+      toast.error(`Failed to reach webhook: ${e?.message || e}`);
+    } finally {
+      setSending(false);
+    }
+  };
+  return (
+    <div className="pt-2 border-t">
+      <Button variant="outline" size="sm" onClick={send} disabled={sending} className="gap-2">
+        <Bug className="w-3.5 h-3.5" /> {sending ? 'Sending test…' : 'Send test webhook event'}
+      </Button>
+      <p className="text-[11px] text-muted-foreground mt-1">
+        Simulates a Meta inbound message hitting your webhook. If this appears in the Inbox but real customer messages don't, the problem is in Meta's webhook subscription (not payments — inbound receipts are free).
+      </p>
+    </div>
   );
 };
