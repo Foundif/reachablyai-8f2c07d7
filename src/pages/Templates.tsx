@@ -182,13 +182,18 @@ const Templates = () => {
       body: { workspace_id: wsId, template_id: editingMetaId, ...form },
     });
     setSubmitting(false);
-    const errPayload: any = (data as any)?.error || error?.message;
-    if (errPayload || (data as any)?.error) {
-      const meta = (data as any)?.meta;
-      const friendly = meta?.error_user_msg || meta?.error_user_title || (data as any)?.error || error?.message || 'Meta rejected this template.';
+    // Extract friendly Meta error even when supabase-js wraps the response as FunctionsHttpError
+    let errBody: any = (data as any)?.error ? data : null;
+    if (error && (error as any)?.context?.json) {
+      try { errBody = await (error as any).context.json(); } catch {}
+    }
+    if (errBody?.error) {
+      const meta = errBody.meta;
+      const friendly = meta?.error_user_msg || meta?.error_user_title || errBody.error || 'Meta rejected this template.';
       toast.error('Template not accepted', { description: friendly, duration: 10000 });
       return;
     }
+    if (error) return toast.error(error.message);
     toast.success(`${editingMetaId ? 'Update' : 'Submission'} sent to Meta — status: ${(data as any).status}`);
     setOpen(false);
     load();
