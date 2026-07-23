@@ -70,8 +70,28 @@ Deno.serve(async (req) => {
               m.interactive?.button_reply?.title || m.interactive?.list_reply?.title ||
               (m.image ? '[image]' : m.audio ? '[audio]' : m.document ? '[document]' : m.video ? '[video]' : m.type);
 
+            // Auto-create/find lead so every inbound customer shows in Leads
+            let leadId: string | null = null;
+            try {
+              const { data: existingLead } = await admin.from('leads')
+                .select('id').eq('workspace_id', workspace_id).eq('phone', from).maybeSingle();
+              if (existingLead) {
+                leadId = existingLead.id;
+                if (contactName) {
+                  await admin.from('leads').update({ name: contactName }).eq('id', leadId).eq('name', from);
+                }
+              } else {
+                const { data: newLead } = await admin.from('leads').insert({
+                  workspace_id, name: contactName || from, phone: from,
+                  source: 'manual', status: 'new', tags: ['whatsapp'],
+                  notes: `Auto-created from WhatsApp: "${(bodyText || '').slice(0, 100)}"`,
+                }).select('id').single();
+                leadId = newLead?.id || null;
+              }
+            } catch (_) { /* non-fatal */ }
+
             const { data: existing } = await admin.from('wa_conversations')
-              .select('id, unread_count').eq('workspace_id', workspace_id).eq('contact_phone', from).maybeSingle();
+              .select('id, unread_count, lead_id').eq('workspace_id', workspace_id).eq('contact_phone', from).maybeSingle();
 
             let convId: string;
             if (existing) {
@@ -84,10 +104,12 @@ Deno.serve(async (req) => {
                 unread_count: (existing.unread_count || 0) + 1,
                 window_expires_at: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
                 status: 'open',
+                lead_id: existing.lead_id || leadId,
               }).eq('id', convId);
             } else {
               const { data: created, error: cErr } = await admin.from('wa_conversations').insert({
                 workspace_id, contact_phone: from, contact_name: contactName,
+                lead_id: leadId,
                 last_message_text: (bodyText || '').slice(0, 200),
                 last_message_direction: 'inbound', unread_count: 1,
                 window_expires_at: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
