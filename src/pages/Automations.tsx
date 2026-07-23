@@ -220,7 +220,7 @@ const Automations = () => {
                     <TableCell>{a.run_count}</TableCell>
                     <TableCell className="text-xs">{a.last_run_at ? new Date(a.last_run_at).toLocaleString() : '—'}</TableCell>
                     <TableCell><Switch checked={a.enabled} onCheckedChange={() => toggle(a)} /></TableCell>
-                    <TableCell><Button size="sm" variant="ghost" onClick={() => remove(a.id)}><Trash2 className="w-4 h-4" /></Button></TableCell>
+                    <TableCell><Button size="sm" variant="ghost" onClick={() => setPendingDelete(a)}><Trash2 className="w-4 h-4" /></Button></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -228,6 +228,14 @@ const Automations = () => {
           )}
         </Card>
       </div>
+      <ConfirmDialog
+        open={!!pendingDelete}
+        onOpenChange={(o) => !o && setPendingDelete(null)}
+        title="Delete automation?"
+        description={<>Automation <b>{pendingDelete?.name}</b> will be removed. Runs history stays intact.</>}
+        confirmLabel="Delete automation"
+        onConfirm={confirmDelete}
+      />
     </AppLayout>
   );
 };
