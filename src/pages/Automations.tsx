@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Plus, Workflow, Trash2 } from 'lucide-react';
+import { resolveWorkspaceId } from '@/lib/workspace';
 
 type TriggerType = 'new_lead' | 'tag_added' | 'status_changed' | 'keyword_match' | 'no_reply_24h';
 type ActionType = 'send_template' | 'add_tag' | 'set_status' | 'assign_agent';
@@ -40,7 +41,7 @@ const ACTION_LABELS: Record<ActionType, string> = {
 };
 
 const Automations = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [wsId, setWsId] = useState<string | null>(null);
   const [items, setItems] = useState<Automation[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -58,9 +59,7 @@ const Automations = () => {
   const load = async () => {
     if (!user) return;
     setLoading(true);
-    const { data: ws } = await supabase.from('workspaces' as any)
-      .select('id').eq('owner_id', user.id).order('created_at').limit(1).maybeSingle();
-    const id = (ws as any)?.id || null;
+    const id = await resolveWorkspaceId(user.id, profile);
     setWsId(id);
     if (!id) { setLoading(false); return; }
     const [{ data: a }, { data: t }] = await Promise.all([
@@ -71,7 +70,7 @@ const Automations = () => {
     setTemplates((t as any) || []);
     setLoading(false);
   };
-  useEffect(() => { load(); }, [user]);
+  useEffect(() => { load(); }, [user, profile]);
 
   const create = async () => {
     if (!wsId) return;

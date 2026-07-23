@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Plus, Trash2, MessageSquareText, RefreshCw, Info, Loader2, Upload, Pencil, X } from 'lucide-react';
+import { resolveWorkspaceId } from '@/lib/workspace';
 
 type TplStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'paused' | 'disabled' | 'in_appeal' | 'pending_deletion' | 'deleted';
 type TplCategory = 'marketing' | 'utility' | 'authentication' | 'carousel';
@@ -53,7 +54,7 @@ const emptyForm = () => ({
 });
 
 const Templates = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [wsId, setWsId] = useState<string | null>(null);
   const [items, setItems] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,9 +69,7 @@ const Templates = () => {
   const load = async (silent = false) => {
     if (!user) return;
     if (!silent) setLoading(true);
-    const { data: ws } = await supabase.from('workspaces' as any)
-      .select('id').eq('owner_id', user.id).order('created_at').limit(1).maybeSingle();
-    const id = (ws as any)?.id || null;
+    const id = await resolveWorkspaceId(user.id, profile);
     setWsId(id);
     if (!id) { setLoading(false); return; }
     const { data } = await supabase.from('templates' as any)
@@ -84,7 +83,7 @@ const Templates = () => {
         .catch(() => {});
     }
   };
-  useEffect(() => { load(); }, [user]);
+  useEffect(() => { load(); }, [user, profile]);
 
   const uploadMedia = async (file: File, setUrl: (u: string) => void) => {
     if (!wsId) return;

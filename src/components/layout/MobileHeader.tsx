@@ -7,11 +7,13 @@ import { MODULE_GROUPS } from '@/lib/modules';
 import { BrandMark } from '@/components/Brand';
 import CommandPalette from './CommandPalette';
 import TrialCard from './TrialCard';
+import { useAuth } from '@/hooks/useAuth';
 
 const MobileHeader = () => {
   const [open, setOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const location = useLocation();
+  const { canAccess } = useAuth();
 
   useEffect(() => { setOpen(false); }, [location.pathname]);
 
@@ -53,7 +55,7 @@ const MobileHeader = () => {
                     <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/80">{group.label}</span>
                   </div>
                   <div className="space-y-0.5">
-                    {group.items.map(({ to, icon: Icon, label, status }) => {
+                    {group.items.filter(i => canAccess(i.to)).map(({ to, icon: Icon, label, status }) => {
                       const isActive = location.pathname === to;
                       return (
                         <NavLink

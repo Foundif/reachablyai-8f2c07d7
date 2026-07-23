@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Contact, Inbox, Megaphone, Workflow, ArrowRight, MessageSquareText, Send } from 'lucide-react';
+import { resolveWorkspaceId } from '@/lib/workspace';
 
 const ModuleTile = ({ icon: Icon, label, value, hint, gradient, to, navigate }: any) => (
   <button
@@ -36,6 +37,7 @@ const Dashboard = () => {
   const [stats, setStats] = useState({
     leadsNew: 0, leadsTotal: 0, campaignsMonth: 0, messagesSent: 0,
     templatesApproved: 0, automationsActive: 0, waConnected: false,
+    inboxUnread: 0, inboxConversations: 0, messagesToday: 0,
   });
   const [recentLeads, setRecentLeads] = useState<any[]>([]);
   const [recentCampaigns, setRecentCampaigns] = useState<any[]>([]);
@@ -44,6 +46,8 @@ const Dashboard = () => {
   const loadStats = async (id: string) => {
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
 
     const [
       { count: leadsNew },
@@ -53,6 +57,8 @@ const Dashboard = () => {
       { count: automationsActive },
       { data: creds },
       { data: recLeads },
+      { data: conversations },
+      { count: messagesToday },
     ] = await Promise.all([
       supabase.from('leads').select('id', { count: 'exact', head: true }).eq('workspace_id', id).gte('created_at', weekAgo),
       supabase.from('leads').select('id', { count: 'exact', head: true }).eq('workspace_id', id),
@@ -61,11 +67,15 @@ const Dashboard = () => {
       supabase.from('automations' as any).select('id', { count: 'exact', head: true }).eq('workspace_id', id).eq('enabled', true),
       supabase.from('whatsapp_credentials' as any).select('id,verified,phone_number_id').eq('workspace_id', id).limit(1),
       supabase.from('leads').select('id,name,phone,status,created_at').eq('workspace_id', id).order('created_at', { ascending: false }).limit(5),
+      supabase.from('wa_conversations' as any).select('id,unread_count').eq('workspace_id', id),
+      supabase.from('wa_messages' as any).select('id', { count: 'exact', head: true }).eq('workspace_id', id).gte('created_at', todayStart.toISOString()),
     ]);
 
     const cs = (campaigns as any[]) || [];
     const messagesSent = cs.reduce((s, c) => s + (c.sent_count || 0), 0);
     const cred = (creds as any[])?.[0];
+    const convs = (conversations as any[]) || [];
+    const inboxUnread = convs.reduce((s, c) => s + (Number(c.unread_count) || 0), 0);
 
     setStats({
       leadsNew: leadsNew || 0,
@@ -75,6 +85,9 @@ const Dashboard = () => {
       templatesApproved: templatesApproved || 0,
       automationsActive: automationsActive || 0,
       waConnected: !!(cred?.verified || cred?.phone_number_id),
+      inboxUnread,
+      inboxConversations: convs.length,
+      messagesToday: messagesToday || 0,
     });
     setRecentCampaigns(cs.slice(0, 5));
     setRecentLeads((recLeads as any[]) || []);
@@ -85,9 +98,7 @@ const Dashboard = () => {
     if (!user) return;
     (async () => {
       setLoading(true);
-      const { data: ws } = await supabase
-        .from('workspaces' as any).select('id').eq('owner_id', user.id).order('created_at').limit(1).maybeSingle();
-      const id = (ws as any)?.id;
+      const id = await resolveWorkspaceId(user.id, profile);
       if (!id) { setLoading(false); return; }
       setWsId(id);
       await loadStats(id);
@@ -104,6 +115,8 @@ const Dashboard = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'templates', filter: `workspace_id=eq.${wsId}` }, () => loadStats(wsId))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'automations', filter: `workspace_id=eq.${wsId}` }, () => loadStats(wsId))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'whatsapp_credentials', filter: `workspace_id=eq.${wsId}` }, () => loadStats(wsId))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_conversations', filter: `workspace_id=eq.${wsId}` }, () => loadStats(wsId))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_messages', filter: `workspace_id=eq.${wsId}` }, () => loadStats(wsId))
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [wsId]);
@@ -119,7 +132,7 @@ const Dashboard = () => {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           <ModuleTile icon={Contact} label="Leads" value={stats.leadsNew} hint={`${stats.leadsTotal} total · new this week`} gradient="bg-gradient-to-br from-fuchsia-500 to-pink-500" to="/leads" navigate={navigate} />
-          <ModuleTile icon={Inbox} label="Inbox" value={0} hint="Unread today" gradient="bg-gradient-to-br from-blue-500 to-indigo-500" to="/inbox" navigate={navigate} />
+          <ModuleTile icon={Inbox} label="Inbox" value={stats.inboxUnread} hint={`${stats.inboxConversations} chats · ${stats.messagesToday} msgs today`} gradient="bg-gradient-to-br from-blue-500 to-indigo-500" to="/inbox" navigate={navigate} />
           <ModuleTile icon={Megaphone} label="Campaigns" value={stats.campaignsMonth} hint={`${stats.messagesSent} messages this month`} gradient="bg-gradient-to-br from-orange-500 to-rose-500" to="/campaigns" navigate={navigate} />
           <ModuleTile icon={Workflow} label="Automation" value={stats.automationsActive} hint="Active flows" gradient="bg-gradient-to-br from-emerald-500 to-teal-500" to="/automation" navigate={navigate} />
         </div>

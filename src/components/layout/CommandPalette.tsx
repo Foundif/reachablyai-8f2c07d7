@@ -3,7 +3,7 @@ import {
   CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator,
 } from '@/components/ui/command';
 import { MODULE_GROUPS } from '@/lib/modules';
-import { Sparkles, LogOut, User } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 interface Props {
@@ -13,7 +13,7 @@ interface Props {
 
 const CommandPalette = ({ open, onOpenChange }: Props) => {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { signOut, canAccess } = useAuth();
 
   const go = (to: string) => {
     onOpenChange(false);
@@ -22,22 +22,15 @@ const CommandPalette = ({ open, onOpenChange }: Props) => {
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput placeholder="Search modules, customers, bookings…" />
+      <CommandInput placeholder="Search modules, leads, campaigns…" />
       <CommandList className="custom-scrollbar">
         <CommandEmpty>No results found.</CommandEmpty>
-
-        <CommandGroup heading="AI">
-          <CommandItem onSelect={() => go('/copilot')}>
-            <Sparkles className="w-4 h-4 text-primary" />
-            Ask AI Copilot…
-          </CommandItem>
-        </CommandGroup>
 
         {MODULE_GROUPS.map((group) => (
           <div key={group.label}>
             <CommandSeparator />
             <CommandGroup heading={group.label}>
-              {group.items.map((item) => {
+              {group.items.filter((item) => canAccess(item.to)).map((item) => {
                 const Icon = item.icon;
                 return (
                   <CommandItem key={item.to} onSelect={() => go(item.to)}>

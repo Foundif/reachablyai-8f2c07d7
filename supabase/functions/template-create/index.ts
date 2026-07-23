@@ -3,6 +3,19 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const json = (b: any, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
+const mapStatus = (s: string) => {
+  const k = (s || '').toUpperCase();
+  if (k === 'APPROVED' || k === 'ACTIVE') return 'approved';
+  if (k === 'REJECTED') return 'rejected';
+  if (k === 'PAUSED') return 'paused';
+  if (k === 'DISABLED') return 'disabled';
+  if (k === 'PENDING' || k === 'PENDING_REVIEW' || k === 'IN_REVIEW' || k === 'SUBMITTED') return 'pending';
+  if (k === 'IN_APPEAL') return 'in_appeal';
+  if (k === 'PENDING_DELETION') return 'pending_deletion';
+  if (k === 'DELETED') return 'deleted';
+  return 'pending';
+};
+
 // Submits (or edits) a template on Meta and stores the returned status.
 // Supports text/image/video/document headers, quick-reply / URL / phone buttons, and carousel cards.
 Deno.serve(async (req) => {
@@ -39,10 +52,14 @@ Deno.serve(async (req) => {
     const catUpper = (category || 'MARKETING').toUpperCase();
     const isCarousel = header_type === 'carousel' || catUpper === 'CAROUSEL';
     const components: any[] = [];
+    const footerHasVars = /\{\{\s*[a-zA-Z0-9_]+\s*\}\}/.test(String(footer || ''));
+    const bodyForMeta = footerHasVars
+      ? `${body || ''}\n\n${footer || ''}`.trim()
+      : (body || '');
 
     if (isCarousel) {
-      if (body) {
-        const metaBody = toMetaBody(body);
+      if (bodyForMeta) {
+        const metaBody = toMetaBody(bodyForMeta);
         const bc: any = { type: 'BODY', text: metaBody };
         if (vars.length) bc.example = { body_text: [vars.map(v => `sample_${v}`)] };
         components.push(bc);
@@ -79,12 +96,12 @@ Deno.serve(async (req) => {
         });
       }
       // BODY
-      const metaBody = body ? toMetaBody(body) : '';
+      const metaBody = bodyForMeta ? toMetaBody(bodyForMeta) : '';
       const bodyComp: any = { type: 'BODY', text: metaBody };
       if (vars.length) bodyComp.example = { body_text: [vars.map(v => `sample_${v}`)] };
       components.push(bodyComp);
       // FOOTER
-      if (footer) components.push({ type: 'FOOTER', text: footer });
+      if (footer && !footerHasVars) components.push({ type: 'FOOTER', text: footer });
       // BUTTONS
       if (Array.isArray(buttons) && buttons.length) {
         const cleaned = buttons.slice(0, 10).map((b: any) => {
@@ -112,7 +129,7 @@ Deno.serve(async (req) => {
       });
       rbody = await resp.json();
       if (!resp.ok) return json({ error: rbody?.error?.message || `Meta error ${resp.status}`, meta: rbody?.error }, 400);
-      status = 'pending';
+      status = mapStatus(rbody?.status || 'PENDING');
     } else {
       const resp = await fetch(`https://graph.facebook.com/v20.0/${creds.waba_id}/message_templates`, {
         method: 'POST',
@@ -122,13 +139,13 @@ Deno.serve(async (req) => {
       rbody = await resp.json();
       if (!resp.ok) return json({ error: rbody?.error?.message || `Meta error ${resp.status}`, meta: rbody?.error }, 400);
       metaId = rbody?.id || null;
-      status = (rbody?.status || 'PENDING').toLowerCase();
+      status = mapStatus(rbody?.status || 'PENDING');
     }
 
     await admin.from('templates').upsert({
       workspace_id, name: cleanName, category: isCarousel ? 'carousel' : finalCat.toLowerCase(),
       language: language || 'en',
-      body: body || '', header: header_type === 'text' ? header : null,
+      body: bodyForMeta || '', header: header_type === 'text' ? header : null,
       header_type, header_media_url,
       footer: footer || null, variables: vars,
       buttons: !isCarousel && buttons?.length ? buttons : null,

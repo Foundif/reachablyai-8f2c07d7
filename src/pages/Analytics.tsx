@@ -5,11 +5,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { BarChart3, TrendingUp, Users, Send } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Legend, CartesianGrid } from 'recharts';
+import { resolveWorkspaceId } from '@/lib/workspace';
 
 const COLORS = ['#d946ef', '#ec4899', '#f97316', '#10b981', '#3b82f6', '#8b5cf6'];
 
 const Analytics = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [totals, setTotals] = useState({ leads: 0, sent: 0, delivered: 0, read: 0, replied: 0, failed: 0 });
   const [leadsDaily, setLeadsDaily] = useState<any[]>([]);
@@ -21,8 +22,7 @@ const Analytics = () => {
     if (!user) return;
     (async () => {
       setLoading(true);
-      const { data: ws } = await supabase.from('workspaces' as any).select('id').eq('owner_id', user.id).order('created_at').limit(1).maybeSingle();
-      const wsId = (ws as any)?.id;
+      const wsId = await resolveWorkspaceId(user.id, profile);
       if (!wsId) { setLoading(false); return; }
 
       const since = new Date(Date.now() - 30 * 86400000);
@@ -79,7 +79,7 @@ const Analytics = () => {
 
       setLoading(false);
     })();
-  }, [user]);
+  }, [user, profile]);
 
   const deliveryRate = totals.sent ? Math.round((totals.delivered * 100) / totals.sent) : 0;
   const readRate = totals.delivered ? Math.round((totals.read * 100) / totals.delivered) : 0;

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { resolveWorkspaceId } from '@/lib/workspace';
 
 export function useInboxUnreadCount() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [count, setCount] = useState(0);
 
   useEffect(() => {
@@ -11,9 +12,7 @@ export function useInboxUnreadCount() {
     let wsId: string | null = null;
 
     const load = async () => {
-      const { data: ws } = await supabase
-        .from('workspaces' as any).select('id').eq('owner_id', user.id).order('created_at').limit(1).maybeSingle();
-      wsId = (ws as any)?.id || null;
+      wsId = await resolveWorkspaceId(user.id, profile);
       if (!wsId) return;
       const { data } = await supabase
         .from('wa_conversations' as any).select('unread_count').eq('workspace_id', wsId);
@@ -27,7 +26,7 @@ export function useInboxUnreadCount() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_conversations' }, load)
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [user]);
+  }, [user, profile]);
 
   return count;
 }

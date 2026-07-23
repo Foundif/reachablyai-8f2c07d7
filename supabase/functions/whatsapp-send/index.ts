@@ -46,9 +46,14 @@ Deno.serve(async (req) => {
       if (tpl.status !== 'approved') return json({ error: 'Template must be approved' }, 400);
       msgType = 'template';
       tplName = tpl.name;
+      const varNames: string[] = Array.isArray(tpl.variables) ? tpl.variables : [];
+      const components = varNames.length > 0 ? [{
+        type: 'body',
+        parameters: varNames.map((v) => ({ type: 'text', text: String(v === 'name' ? '' : '-') })),
+      }] : [];
       waPayload = {
         messaging_product: 'whatsapp', to, type: 'template',
-        template: { name: tpl.name, language: { code: tpl.language || 'en' } },
+        template: { name: tpl.name, language: { code: tpl.language || 'en' }, ...(components.length ? { components } : {}) },
       };
     }
 

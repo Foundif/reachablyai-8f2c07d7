@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import {
   Plus, Search, Upload, MessageCircle, LayoutGrid, List, Trash2, Tag, Globe, Loader2, Sparkles,
 } from 'lucide-react';
+import { resolveWorkspaceId } from '@/lib/workspace';
 
 type LeadStatus = 'new' | 'contacted' | 'converted' | 'lost';
 type LeadSource = 'manual' | 'csv' | 'meta_ads' | 'scraped' | 'booking';
@@ -79,7 +80,7 @@ function parseCSV(text: string): string[][] {
 }
 
 const Leads = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'cards' | 'table'>('table');
@@ -94,14 +95,7 @@ const Leads = () => {
 
   const loadWorkspace = async () => {
     if (!user) return;
-    const { data } = await supabase
-      .from('workspaces' as any)
-      .select('id')
-      .eq('owner_id', user.id)
-      .order('created_at')
-      .limit(1)
-      .maybeSingle();
-    setWsId((data as any)?.id || null);
+    setWsId(await resolveWorkspaceId(user.id, profile));
   };
 
   const loadLeads = async () => {
@@ -115,7 +109,7 @@ const Leads = () => {
     setLoading(false);
   };
 
-  useEffect(() => { loadWorkspace(); loadLeads(); }, [user]);
+  useEffect(() => { loadWorkspace(); loadLeads(); }, [user, profile]);
 
   const filtered = useMemo(() => {
     return leads.filter(l => {

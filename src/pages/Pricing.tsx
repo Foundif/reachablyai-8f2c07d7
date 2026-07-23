@@ -12,6 +12,7 @@ import {
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { resolveWorkspaceId } from '@/lib/workspace';
 
 type PlanId = 'starter' | 'growth' | 'business';
 
@@ -94,13 +95,12 @@ const PricingContent = () => {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data: ws } = await supabase.from('workspaces' as any).select('id').eq('owner_id', user.id).order('created_at').limit(1).maybeSingle();
-      const wsId = (ws as any)?.id;
+      const wsId = await resolveWorkspaceId(user.id, profile);
       if (!wsId) return;
       const { data: cr } = await supabase.from('message_credits' as any).select('balance').eq('workspace_id', wsId).maybeSingle();
       setBalance((cr as any)?.balance ?? 0);
     })();
-  }, [user]);
+  }, [user, profile]);
 
   const priceFor = (p: Plan) => billing === 'yearly' ? p.yearly : p.monthly;
   const savingsFor = (p: Plan) => p.monthly * 12 - p.yearly;

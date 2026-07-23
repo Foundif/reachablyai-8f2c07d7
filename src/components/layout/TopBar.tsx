@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Sparkles, Command } from 'lucide-react';
+import { Search, Command } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import CommandPalette from './CommandPalette';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { resolveWorkspaceId } from '@/lib/workspace';
 
 
 const TopBar = () => {
@@ -31,8 +32,9 @@ const TopBar = () => {
     if (!user) return;
     (async () => {
       const activeId = (profile as any)?.active_workspace_id;
-      const { data: ws } = activeId
-        ? await supabase.from('workspaces' as any).select('id,name').eq('id', activeId).maybeSingle()
+      const workspaceId = activeId || await resolveWorkspaceId(user.id, profile);
+      const { data: ws } = workspaceId
+        ? await supabase.from('workspaces' as any).select('id,name').eq('id', workspaceId).maybeSingle()
         : await supabase.from('workspaces' as any).select('id,name').eq('owner_id', user.id).order('created_at').limit(1).maybeSingle();
       const name = (ws as any)?.name;
       if (name && name.toLowerCase() !== 'my salon') setWsName(name);
@@ -42,7 +44,8 @@ const TopBar = () => {
     })();
   }, [user, profile]);
 
-  const displayName = wsName || profile?.store_name || 'My Workspace';
+  const profileStoreName = profile?.store_name && profile.store_name.toLowerCase() !== 'my salon' ? profile.store_name : null;
+  const displayName = wsName || profileStoreName || 'Reachably';
 
   return (
     <>
@@ -76,15 +79,6 @@ const TopBar = () => {
             <kbd className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] font-mono text-muted-foreground">
               <Command className="w-3 h-3" /> K
             </kbd>
-          </button>
-
-          {/* AI copilot */}
-          <button
-            onClick={() => navigate('/copilot')}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-primary/15 to-secondary/15 hover:from-primary/25 hover:to-secondary/25 border border-primary/20 transition-all magnetic"
-          >
-            <Sparkles className="w-4 h-4 text-primary" />
-            <span className="hidden xl:inline text-sm font-medium">Ask Copilot</span>
           </button>
 
           <NotificationBell />
