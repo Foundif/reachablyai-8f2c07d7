@@ -211,6 +211,14 @@ const TeamManagement = () => {
           </DialogContent>
         </Dialog>
       </div>
+      <ConfirmDialog
+        open={!!pendingDelete}
+        onOpenChange={(o) => !o && setPendingDelete(null)}
+        title="Delete team member?"
+        description={<>User <b>{pendingDelete?.email}</b> will lose access immediately. This cannot be undone.</>}
+        confirmLabel="Delete user"
+        onConfirm={confirmDelete}
+      />
     </AppLayout>
   );
 };
