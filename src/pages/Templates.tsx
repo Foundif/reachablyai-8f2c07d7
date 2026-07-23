@@ -57,6 +57,43 @@ const emptyForm = () => ({
   carousel_cards: [] as CarouselCard[],
 });
 
+const extractVars = (s: string): string[] => {
+  const set: string[] = [];
+  (s || '').replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_m, v: string) => { if (!set.includes(v)) set.push(v); return _m; });
+  return set;
+};
+
+// Meta rejects templates where a variable is at the very start or end of the body/header.
+const validateTemplateForm = (form: ReturnType<typeof emptyForm>) => {
+  const errors: string[] = [];
+  if (!form.name.trim() || !/^[a-z0-9_]+$/.test(form.name)) {
+    errors.push('Name must be lowercase letters, digits, or underscores.');
+  }
+  const isCarousel = form.category === 'carousel' || form.header_type === 'carousel';
+  if (!isCarousel && !form.body.trim()) errors.push('Body is required.');
+
+  const body = (form.body || '').trim();
+  if (body) {
+    if (/^\{\{\s*[a-zA-Z0-9_]+\s*\}\}/.test(body)) errors.push('Body can\'t start with a variable — add some text before {{...}}.');
+    if (/\{\{\s*[a-zA-Z0-9_]+\s*\}\}$/.test(body)) errors.push('Body can\'t end with a variable — add text or punctuation after {{...}}.');
+  }
+  if (form.header_type === 'text' && form.header) {
+    const h = form.header.trim();
+    if (/^\{\{\s*[a-zA-Z0-9_]+\s*\}\}/.test(h) || /\{\{\s*[a-zA-Z0-9_]+\s*\}\}$/.test(h)) {
+      errors.push('Header text can\'t start or end with a variable.');
+    }
+  }
+  if (['image', 'video', 'document'].includes(form.header_type) && !form.header_media_url) {
+    errors.push('Upload or paste a public URL for the header media.');
+  }
+  for (const b of form.buttons || []) {
+    if (!b.text?.trim()) errors.push('Every button needs text.');
+    if (b.type === 'URL' && !b.url?.trim()) errors.push('URL buttons need a URL.');
+    if (b.type === 'PHONE_NUMBER' && !b.phone_number?.trim()) errors.push('Call buttons need a phone number.');
+  }
+  return errors;
+};
+
 const Templates = () => {
   const { user, profile } = useAuth();
   const [wsId, setWsId] = useState<string | null>(null);
@@ -69,8 +106,15 @@ const Templates = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingMetaId, setEditingMetaId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm());
+  const [pendingDelete, setPendingDelete] = useState<Template | null>(null);
+  const [showPreview, setShowPreview] = useState(true);
 
-  const load = async (silent = false) => {
+  const validationErrors = validateTemplateForm(form);
+  const detectedVars = extractVars(form.body);
+  const [previewValues, setPreviewValues] = useState<Record<string, string>>({});
+  const renderedPreview = detectedVars.length
+    ? form.body.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_m, v: string) => previewValues[v] || `{{${v}}}`)
+    : form.body;
     if (!user) return;
     if (!silent) setLoading(true);
     const id = await resolveWorkspaceId(user.id, profile);
