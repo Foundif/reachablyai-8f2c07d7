@@ -166,12 +166,36 @@ const Inbox = () => {
     toast.success('Template sent');
   };
 
+  const canAssign = !profile?.is_staff || profile?.role === 'admin';
+  const assignedMember = useMemo(
+    () => members.find(m => m.user_id === selected?.assigned_to) || null,
+    [members, selected?.assigned_to],
+  );
+
   const assign = async (userId: string | null) => {
     if (!selected) return;
+    if (!canAssign) return toast.error('Only owners/admins can assign chats');
     const { error } = await supabase.from('wa_conversations' as any).update({ assigned_to: userId }).eq('id', selected.id);
     if (error) return toast.error(error.message);
     setConvs(prev => prev.map(c => c.id === selected.id ? { ...c, assigned_to: userId } : c));
-    toast.success(userId ? 'Assigned' : 'Unassigned');
+    if (userId) {
+      const m = members.find(mm => mm.user_id === userId);
+      toast.success(`Chat assigned to ${displayName(m)}`);
+    } else {
+      toast.success('Chat unassigned');
+    }
+  };
+
+  const saveNotes = async (notes: string) => {
+    if (!selected) return;
+    setConvs(prev => prev.map(c => c.id === selected.id ? { ...c, notes } : c));
+    await supabase.from('wa_conversations' as any).update({ notes }).eq('id', selected.id);
+  };
+
+  const saveTags = async (tags: string[]) => {
+    if (!selected) return;
+    setConvs(prev => prev.map(c => c.id === selected.id ? { ...c, tags } : c));
+    await supabase.from('wa_conversations' as any).update({ tags }).eq('id', selected.id);
   };
 
   const toggleStatus = async () => {
