@@ -115,6 +115,8 @@ const Templates = () => {
   const renderedPreview = detectedVars.length
     ? form.body.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_m, v: string) => previewValues[v] || `{{${v}}}`)
     : form.body;
+
+  const load = async (silent = false) => {
     if (!user) return;
     if (!silent) setLoading(true);
     const id = await resolveWorkspaceId(user.id, profile);
