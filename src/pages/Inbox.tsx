@@ -84,7 +84,7 @@ const Inbox = () => {
     const ch = supabase
       .channel(`inbox-${wsId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_conversations', filter: `workspace_id=eq.${wsId}` }, async () => {
-        const { data } = await supabase.from('wa_conversations' as any).select('*').eq('workspace_id', wsId).order('last_message_at', { ascending: false });
+        const { data } = await supabase.from('wa_conversations' as any).select('*').eq('workspace_id', wsId).is('deleted_at', null).order('last_message_at', { ascending: false });
         setConvs((data as any) || []);
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'wa_messages', filter: `workspace_id=eq.${wsId}` }, (payload: any) => {
