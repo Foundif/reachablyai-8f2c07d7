@@ -22,16 +22,16 @@ export default defineConfig(({ mode }) => ({
       },
       includeAssets: ["favicon.ico", "icon-192.png", "icon-512.png"],
       manifest: {
-        name: "Chatarly — Business Messaging Platform",
-        short_name: "Chatarly",
-        description: "Unified inbox, WhatsApp campaigns, AI agents, billing, appointments and analytics for modern businesses.",
-        theme_color: "#7c3aed",
+        name: "Reachably — WhatsApp CRM & Campaigns",
+        short_name: "Reachably",
+        description: "Reachably is an all-in-one WhatsApp business platform — leads, inbox, campaigns, automation and analytics for growing teams.",
+        theme_color: "#0f0f0f",
         background_color: "#ffffff",
         display: "standalone",
         orientation: "portrait-primary",
         scope: "/",
         start_url: "/",
-        categories: ["finance", "business", "productivity"],
+        categories: ["business", "productivity", "communication"],
         icons: [
           {
             src: "/icon-192.png",
