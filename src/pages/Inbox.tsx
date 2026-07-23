@@ -274,7 +274,7 @@ const Inbox = () => {
                     </SelectContent>
                   </Select>
                   <Button size="sm" variant="outline" onClick={toggleStatus}>{selected.status === 'open' ? 'Close' : 'Reopen'}</Button>
-                  <Button size="sm" variant="ghost" onClick={deleteConversation} title="Delete chat"><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                  <Button size="sm" variant="ghost" onClick={() => setPendingDelete(selected)} title="Delete chat"><Trash2 className="w-4 h-4 text-destructive" /></Button>
                 </div>
               </div>
 
