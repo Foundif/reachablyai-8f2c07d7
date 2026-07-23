@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Inbox as InboxIcon, Send, Search, User, Clock, MessageSquareText, ArrowLeft } from 'lucide-react';
+import { Inbox as InboxIcon, Send, Search, User, Clock, MessageSquareText, ArrowLeft, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { resolveWorkspaceId } from '@/lib/workspace';
 
 interface Conversation {
   id: string;
@@ -38,7 +39,7 @@ interface Member { user_id: string; email: string; full_name: string | null; }
 interface Template { id: string; name: string; status: string; }
 
 const Inbox = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [wsId, setWsId] = useState<string | null>(null);
   const [convs, setConvs] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -57,8 +58,7 @@ const Inbox = () => {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data: ws } = await supabase.from('workspaces' as any).select('id').eq('owner_id', user.id).order('created_at').limit(1).maybeSingle();
-      const id = (ws as any)?.id;
+      const id = await resolveWorkspaceId(user.id, profile);
       if (!id) return;
       setWsId(id);
 
@@ -71,7 +71,7 @@ const Inbox = () => {
       setMembers(((ms as any[]) || []).map(m => ({ user_id: m.user_id, email: m.profiles?.email, full_name: m.profiles?.full_name })));
       setTemplates((ts as any) || []);
     })();
-  }, [user]);
+  }, [user, profile]);
 
   // Realtime for conversations & messages
   useEffect(() => {
@@ -142,14 +142,31 @@ const Inbox = () => {
 
   const assign = async (userId: string | null) => {
     if (!selected) return;
-    await supabase.from('wa_conversations' as any).update({ assigned_to: userId }).eq('id', selected.id);
+    const { error } = await supabase.from('wa_conversations' as any).update({ assigned_to: userId }).eq('id', selected.id);
+    if (error) return toast.error(error.message);
+    setConvs(prev => prev.map(c => c.id === selected.id ? { ...c, assigned_to: userId } : c));
     toast.success(userId ? 'Assigned' : 'Unassigned');
   };
 
   const toggleStatus = async () => {
     if (!selected) return;
     const next = selected.status === 'open' ? 'closed' : 'open';
-    await supabase.from('wa_conversations' as any).update({ status: next }).eq('id', selected.id);
+    const { error } = await supabase.from('wa_conversations' as any).update({ status: next }).eq('id', selected.id);
+    if (error) return toast.error(error.message);
+    setConvs(prev => prev.map(c => c.id === selected.id ? { ...c, status: next } : c));
+  };
+
+  const deleteConversation = async () => {
+    if (!selected) return;
+    if (!confirm(`Delete chat with ${selected.contact_name || selected.contact_phone}?`)) return;
+    const { error: msgErr } = await supabase.from('wa_messages' as any).delete().eq('conversation_id', selected.id);
+    if (msgErr) return toast.error(msgErr.message);
+    const { error } = await supabase.from('wa_conversations' as any).delete().eq('id', selected.id);
+    if (error) return toast.error(error.message);
+    setConvs(prev => prev.filter(c => c.id !== selected.id));
+    setSelectedId(null);
+    setShowMobileChat(false);
+    toast.success('Chat deleted');
   };
 
   return (
@@ -239,6 +256,7 @@ const Inbox = () => {
                     </SelectContent>
                   </Select>
                   <Button size="sm" variant="outline" onClick={toggleStatus}>{selected.status === 'open' ? 'Close' : 'Reopen'}</Button>
+                  <Button size="sm" variant="ghost" onClick={deleteConversation} title="Delete chat"><Trash2 className="w-4 h-4 text-destructive" /></Button>
                 </div>
               </div>
 

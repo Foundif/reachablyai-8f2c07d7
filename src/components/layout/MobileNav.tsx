@@ -1,23 +1,26 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, Inbox, Users, UserCircle, Sparkles } from 'lucide-react';
+import { LayoutDashboard, Inbox, Users, UserCircle, Megaphone } from 'lucide-react';
 import { useInboxUnreadCount } from '@/hooks/useInboxUnreadCount';
+import { useAuth } from '@/hooks/useAuth';
 
 const items = [
   { to: '/', icon: LayoutDashboard, label: 'Home' },
   { to: '/inbox', icon: Inbox, label: 'Inbox' },
-  { to: '/copilot', icon: Sparkles, label: 'AI', accent: true },
-  { to: '/customers', icon: Users, label: 'CRM' },
+  { to: '/leads', icon: Users, label: 'Leads' },
+  { to: '/campaigns', icon: Megaphone, label: 'Send', accent: true },
   { to: '/profile', icon: UserCircle, label: 'Profile' },
 ];
 
 const MobileNav = () => {
   const { pathname } = useLocation();
   const inboxUnread = useInboxUnreadCount();
+  const { canAccess } = useAuth();
+  const visibleItems = items.filter((item) => item.to === '/profile' || canAccess(item.to));
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 safe-area-pb px-3 pb-3 pointer-events-none">
       <div className="glass-floating glass-sheen px-2 py-2 flex items-center justify-around pointer-events-auto">
-        {items.map(({ to, icon: Icon, label, accent }) => {
+        {visibleItems.map(({ to, icon: Icon, label, accent }) => {
           const isActive = pathname === to;
           const badge = to === '/inbox' ? inboxUnread : 0;
           return (

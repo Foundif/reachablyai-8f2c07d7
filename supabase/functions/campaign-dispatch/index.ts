@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
           const varNames: string[] = template.variables || [];
           const components = varNames.length > 0 ? [{
             type: 'body',
-            parameters: varNames.map((v) => ({ type: 'text', text: String((r.variables || {})[v] ?? '') })),
+            parameters: varNames.map((v) => ({ type: 'text', text: String((r.variables || {})[v] ?? (v === 'name' ? r.name : '-') || '-') })),
           }] : [];
           const resp = await metaSend(creds, {
             messaging_product: 'whatsapp', to: r.phone, type: 'template',

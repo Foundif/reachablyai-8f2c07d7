@@ -3,6 +3,7 @@ import { AlertTriangle, CreditCard, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { resolveWorkspaceId } from '@/lib/workspace';
 
 const ACTIVE = ['active', 'starter', 'growth', 'business', 'pro', 'professional', 'enterprise'];
 
@@ -19,14 +20,13 @@ const PaymentAlertBanner = () => {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data: ws } = await supabase.from('workspaces' as any).select('id').eq('owner_id', user.id).order('created_at').limit(1).maybeSingle();
-      const wsId = (ws as any)?.id;
+      const wsId = await resolveWorkspaceId(user.id, profile);
       if (!wsId) return;
       const { data: cred } = await supabase.from('whatsapp_credentials' as any).select('*').eq('workspace_id', wsId).maybeSingle();
       const due = (cred as any)?.last_error ? null : (cred as any)?.balance_due ?? null;
       setMetaDue(typeof due === 'number' ? due : null);
     })();
-  }, [user]);
+  }, [user, profile]);
 
   if (dismissed) return null;
   const status = (profile as any)?.subscription_status;

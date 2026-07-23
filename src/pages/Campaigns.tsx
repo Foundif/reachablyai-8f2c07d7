@@ -21,6 +21,7 @@ import {
   Plus, Megaphone, Send, ArrowLeft, Trash2, Upload, Image as ImageIcon,
   CheckCircle2, AlertTriangle, Clock, ShieldCheck, X,
 } from 'lucide-react';
+import { resolveWorkspaceId } from '@/lib/workspace';
 
 // ---------- Types ----------
 interface Campaign {
@@ -47,12 +48,6 @@ const STATUS_STYLES: Record<string, string> = {
   delivered: 'bg-blue-500/15 text-blue-600', read: 'bg-emerald-500/15 text-emerald-600',
   replied: 'bg-emerald-500/15 text-emerald-600', skipped: 'bg-orange-500/15 text-orange-600',
 };
-
-async function getWorkspaceId(userId: string): Promise<string | null> {
-  const { data } = await supabase.from('workspaces' as any)
-    .select('id').eq('owner_id', userId).order('created_at').limit(1).maybeSingle();
-  return (data as any)?.id || null;
-}
 
 const cleanPhone = (v: string) => v.replace(/[^\d]/g, '');
 
@@ -424,7 +419,7 @@ function BulkWizard({
 
 // ---------- List page ----------
 const CampaignsList = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [wsId, setWsId] = useState<string | null>(null);
   const [items, setItems] = useState<Campaign[]>([]);
@@ -436,7 +431,7 @@ const CampaignsList = () => {
   const load = async () => {
     if (!user) return;
     setLoading(true);
-    const id = await getWorkspaceId(user.id);
+    const id = await resolveWorkspaceId(user.id, profile);
     setWsId(id);
     if (!id) { setLoading(false); return; }
     const [{ data: cs }, { data: ts }, { data: ls }] = await Promise.all([
@@ -456,7 +451,7 @@ const CampaignsList = () => {
         setTemplates((ts2 as any) || []);
       }).catch(() => {});
   };
-  useEffect(() => { load(); }, [user]);
+  useEffect(() => { load(); }, [user, profile]);
 
   const remove = async (id: string) => {
     if (!confirm('Delete campaign?')) return;

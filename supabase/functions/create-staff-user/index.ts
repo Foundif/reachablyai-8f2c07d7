@@ -24,6 +24,13 @@ Deno.serve(async (req) => {
     const { data: userData, error: uErr } = await anon.auth.getUser()
     if (uErr || !userData.user) return json({ error: 'unauthorized' }, 401)
     const ownerId = userData.user.id
+    const { data: ownerWorkspace } = await admin.from('workspaces')
+      .select('id')
+      .eq('owner_id', ownerId)
+      .order('created_at')
+      .limit(1)
+      .maybeSingle()
+    if (!ownerWorkspace?.id) return json({ error: 'workspace_not_found' }, 400)
 
     // Only real owners (not staff themselves) can create users
     const { data: ownerProfile } = await admin.from('profiles').select('is_staff').eq('user_id', ownerId).maybeSingle()
@@ -83,11 +90,22 @@ Deno.serve(async (req) => {
       user_id: newId, email, full_name: full_name || '',
       role: finalRole, owner_id: ownerId, is_staff: true,
       allowed_modules: finalRole === 'admin' ? [] : mods,
+      active_workspace_id: ownerWorkspace.id,
       onboarding_completed: true,
     }, { onConflict: 'user_id' })
     if (pErr) {
       await admin.auth.admin.deleteUser(newId)
       return json({ error: pErr.message }, 500)
+    }
+
+    const { error: wmErr } = await admin.from('workspace_members').upsert({
+      workspace_id: ownerWorkspace.id,
+      user_id: newId,
+      role: 'owner',
+    }, { onConflict: 'workspace_id,user_id' })
+    if (wmErr) {
+      await admin.auth.admin.deleteUser(newId)
+      return json({ error: wmErr.message }, 500)
     }
 
     return json({ ok: true, user_id: newId, email })

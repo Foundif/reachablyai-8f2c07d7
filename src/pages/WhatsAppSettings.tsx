@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Settings, ShieldCheck, ShieldAlert, Copy, Bug, RefreshCw, CheckCircle2, XCircle, MinusCircle, Inbox as InboxIcon, Facebook, Zap, Unplug } from 'lucide-react';
 import { META_APP_ID, META_CONFIG_ID } from '@/lib/metaConfig';
+import { resolveWorkspaceId } from '@/lib/workspace';
 
 interface Creds {
   workspace_id: string;
@@ -33,7 +34,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const mask = (s: string | null) => s && s.length > 6 ? `••••${s.slice(-4)}` : (s || '');
 
 const WhatsAppSettings = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [wsId, setWsId] = useState<string | null>(null);
   const [creds, setCreds] = useState<Creds | null>(null);
   const [loading, setLoading] = useState(true);
@@ -97,9 +98,7 @@ const WhatsAppSettings = () => {
   const load = async () => {
     if (!user) return;
     setLoading(true);
-    const { data: ws } = await supabase.from('workspaces' as any)
-      .select('id').eq('owner_id', user.id).order('created_at').limit(1).maybeSingle();
-    const id = (ws as any)?.id || null;
+    const id = await resolveWorkspaceId(user.id, profile);
     setWsId(id);
     if (!id) { setLoading(false); return; }
     const { data } = await supabase.from('whatsapp_credentials' as any)
@@ -118,7 +117,7 @@ const WhatsAppSettings = () => {
     }
     setLoading(false);
   };
-  useEffect(() => { load(); }, [user]);
+  useEffect(() => { load(); }, [user, profile]);
 
   const save = async () => {
     if (!wsId) return;

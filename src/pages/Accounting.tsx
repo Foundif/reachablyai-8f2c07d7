@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Wallet, TrendingUp, MessageCircle, RefreshCw, Plus, Trash2, Loader2, IndianRupee, ArrowUpRight, ArrowDownRight, Info } from 'lucide-react';
+import { resolveWorkspaceId } from '@/lib/workspace';
 
 const fmt = (n: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(n || 0);
 
@@ -27,7 +28,7 @@ interface Entry {
 interface Lead { id: string; name: string; }
 
 const Accounting = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [wsId, setWsId] = useState<string | null>(null);
   const [range, setRange] = useState<'7' | '30' | '90'>('30');
   const [tab, setTab] = useState<'sales' | 'meta'>('sales');
@@ -48,16 +49,14 @@ const Accounting = () => {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data: ws } = await supabase.from('workspaces' as any)
-        .select('id').eq('owner_id', user.id).order('created_at').limit(1).maybeSingle();
-      const id = (ws as any)?.id || null;
+      const id = await resolveWorkspaceId(user.id, profile);
       setWsId(id);
       if (id) {
         const { data: ls } = await supabase.from('leads' as any).select('id,name').eq('workspace_id', id).order('created_at', { ascending: false }).limit(500);
         setLeads((ls as any) || []);
       }
     })();
-  }, [user]);
+  }, [user, profile]);
 
   const loadEntries = async () => {
     if (!wsId) return;
