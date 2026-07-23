@@ -439,15 +439,75 @@ const Templates = () => {
                 <Button variant="outline" size="sm" onClick={addCard} disabled={form.carousel_cards.length >= 10}><Plus className="w-4 h-4 mr-1" /> Add card</Button>
               </TabsContent>
             </Tabs>
+
+            {/* Live preview + validation */}
+            <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm font-medium"><Eye className="w-4 h-4" /> Preview</div>
+                <Button type="button" size="sm" variant="ghost" onClick={() => setShowPreview(s => !s)}>{showPreview ? 'Hide' : 'Show'}</Button>
+              </div>
+              {showPreview && (
+                <>
+                  {detectedVars.length > 0 && (
+                    <div className="grid grid-cols-2 gap-2">
+                      {detectedVars.map(v => (
+                        <div key={v}>
+                          <Label className="text-[11px]">Sample for {`{{${v}}}`}</Label>
+                          <Input value={previewValues[v] || ''} onChange={e => setPreviewValues(p => ({ ...p, [v]: e.target.value }))} placeholder={`e.g. ${v === 'name' ? 'Aisha' : 'value'}`} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="rounded-md bg-[#e5ddd5] p-3 max-w-sm mx-auto">
+                    <div className="rounded-lg bg-white shadow-sm p-3 text-sm text-slate-800 space-y-1.5">
+                      {form.header_type === 'text' && form.header && <div className="font-semibold">{form.header}</div>}
+                      {form.header_type === 'image' && form.header_media_url && <img src={form.header_media_url} alt="" className="rounded max-h-32 w-full object-cover" />}
+                      <div className="whitespace-pre-wrap break-words">{renderedPreview || <span className="text-slate-400">Your message body will appear here…</span>}</div>
+                      {form.footer && <div className="text-[11px] text-slate-500 pt-1">{form.footer}</div>}
+                      {form.buttons?.length > 0 && (
+                        <div className="pt-2 border-t border-slate-200 mt-2 space-y-1">
+                          {form.buttons.map((b, i) => (
+                            <div key={i} className="text-center text-[13px] text-blue-600 font-medium py-1">{b.text || '(button)'}</div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+              {validationErrors.length > 0 && (
+                <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400 space-y-1">
+                  <div className="flex items-center gap-1 font-semibold"><AlertTriangle className="w-3.5 h-3.5" /> Meta will reject this — fix before submitting:</div>
+                  <ul className="list-disc pl-5 space-y-0.5">
+                    {validationErrors.map((e, i) => <li key={i}>{e}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setOpen(false)} disabled={submitting}>Cancel</Button>
-            <Button onClick={submitToMeta} disabled={submitting}>
+            <Button onClick={submitToMeta} disabled={submitting || validationErrors.length > 0}>
               {submitting ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Submitting…</> : editingMetaId ? 'Update on Meta' : 'Submit to Meta'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete template locally?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Removes <b>{pendingDelete?.name}</b> from Reachably. The template stays on Meta — click <b>Sync from Meta</b> to bring it back.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRemove} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 };
