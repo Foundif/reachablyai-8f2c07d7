@@ -70,7 +70,7 @@ const Guide = () => {
           </div>
           <div className="flex-1">
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-              How to use Chatarly messaging
+              How to use Reachably messaging
             </h1>
             <p className="text-muted-foreground mt-2 max-w-2xl">
               Four real scenarios, end-to-end. Follow any of these to start sending templates,
@@ -87,8 +87,8 @@ const Guide = () => {
           </div>
           <ul className="text-sm text-muted-foreground space-y-1.5">
             <li>• Connect your WhatsApp Business number in <Link to="/whatsapp-settings" className="text-foreground underline underline-offset-2">WhatsApp Settings</Link>.</li>
-            <li>• Add at least one customer in <Link to="/customers" className="text-foreground underline underline-offset-2">CRM</Link> (or import a CSV).</li>
-            <li>• Optionally create an AI agent in <Link to="/ai-studio" className="text-foreground underline underline-offset-2">AI Studio</Link> for smart replies.</li>
+            <li>• Add at least one lead in <Link to="/leads" className="text-foreground underline underline-offset-2">Leads</Link> (or import a CSV).</li>
+            <li>• Create or sync approved templates in <Link to="/templates" className="text-foreground underline underline-offset-2">Templates</Link>.</li>
           </ul>
         </Card>
 
@@ -97,19 +97,19 @@ const Guide = () => {
           icon={MessageSquare}
           badge="Scenario 1"
           title="Send a one-off template message"
-          subtitle="Reach a specific customer with a pre-approved WhatsApp template."
+          subtitle="Reach a specific lead with a pre-approved WhatsApp template."
           cta={{ label: 'Open Inbox', to: '/inbox' }}
         >
-          <Step n={1} title="Open the customer's thread">
+          <Step n={1} title="Open the lead's thread">
             Go to <Link to="/inbox" className="text-foreground underline">Unified Inbox</Link> and pick the contact from the left list.
-            New contact? Add them first in <Link to="/customers" className="text-foreground underline">CRM</Link>, then click the WhatsApp icon next to their row.
+            New contact? Add them first in <Link to="/leads" className="text-foreground underline">Leads</Link>, then start or continue the WhatsApp conversation.
           </Step>
           <Step n={2} title="Pick a template or type freely">
             Inside the conversation, click <Code>+ Template</Code> to insert an approved template, or type a free-form
-            message (only works if the 24-hour customer-care window is open).
+            message (only works if the 24-hour conversation window is open).
           </Step>
           <Step n={3} title="Personalise & send">
-            Replace placeholders like <Code>{`{{name}}`}</Code> from the customer record, then hit <Code>Send</Code>.
+            Replace placeholders like <Code>{`{{name}}`}</Code> from the lead record, then hit <Code>Send</Code>.
             Delivery status updates appear in real time via the webhook.
           </Step>
         </Scenario>
@@ -119,7 +119,7 @@ const Guide = () => {
           icon={GitBranch}
           badge="Scenario 2"
           title="Build a template with flow buttons"
-          subtitle='Send a message with tappable reply buttons like "Book Now" or "Call Us" that route the customer through your flow.'
+          subtitle='Send a message with tappable reply buttons like "Interested" or "Call Us" that routes the lead through your flow.'
           cta={{ label: 'Open Flow Builder', to: '/flows' }}
         >
           <Step n={1} title="Create a new flow">
@@ -138,7 +138,7 @@ const Guide = () => {
           <Step n={4} title="Branch on the reply">
             Drag a <Code>Branch</Code> node, connect from Message. Add rules:
             <ul className="pl-4 mt-2 space-y-1 list-disc">
-              <li>If reply = "Book Now" → Message "Great! Pick a time:" → Action "Create booking draft"</li>
+              <li>If reply = "Interested" → Message "Great! Our team will reach out shortly" → Action "Create follow-up task"</li>
               <li>If reply = "Maybe later" → Wait 48h → re-send</li>
               <li>If reply = "Talk to us" → Action "Assign to human"</li>
             </ul>
@@ -153,7 +153,7 @@ const Guide = () => {
         <Scenario
           icon={Zap}
           badge="Scenario 3"
-          title='Auto-reply when a customer texts "hi"'
+          title='Auto-reply when a lead texts "hi"'
           subtitle="The classic welcome bot: any inbound 'hi', 'hello', 'menu' starts a flow that greets and routes them."
           cta={{ label: 'Build the welcome flow', to: '/flows' }}
         >
@@ -175,7 +175,7 @@ Reply with a number:
 2️⃣ Book an appointment
 3️⃣ Talk to a human`}</pre>
           </Step>
-          <Step n={3} title="Branch on the customer's number">
+          <Step n={3} title="Branch on the lead's number">
             Add a <Code>Branch</Code> node with three paths:
             <ul className="pl-4 mt-2 space-y-1 list-disc">
               <li><b>1</b> → Message with services list (pull from <Link to="/services" className="text-foreground underline">Services & Tariff</Link>)</li>
@@ -197,7 +197,7 @@ Reply with a number:
         <Scenario
           icon={Send}
           badge="Scenario 4"
-          title="Run a broadcast campaign to many customers"
+          title="Run a broadcast campaign to many leads"
           subtitle="Send a template to a segmented audience and watch the funnel: Sent → Delivered → Replied → Converted."
           cta={{ label: 'Open Campaigns', to: '/campaigns' }}
         >
@@ -205,7 +205,7 @@ Reply with a number:
             <Link to="/campaigns" className="text-foreground underline">Campaigns</Link> → <Code>New Campaign</Code> → name + description.
           </Step>
           <Step n={2} title="Pick an audience">
-            Filter your CRM by tag (e.g. <Code>inactive_45d</Code>), last visit date, or upload a CSV.
+            Filter your leads by tag, status, source, or upload a CSV.
             Preview the count before continuing.
           </Step>
           <Step n={3} title="Attach a published flow">
@@ -235,7 +235,7 @@ Reply with a number:
             </div>
             <div className="flex gap-3">
               <Users className="w-4 h-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
-              <p><b className="text-foreground">Tag your customers</b> in CRM. Better tags = sharper audiences = higher conversion in campaigns.</p>
+              <p><b className="text-foreground">Tag your leads</b> in Leads. Better tags = sharper audiences = higher conversion in campaigns.</p>
             </div>
             <div className="flex gap-3">
               <PlayCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
@@ -243,7 +243,7 @@ Reply with a number:
             </div>
             <div className="flex gap-3">
               <Inbox className="w-4 h-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
-              <p><b className="text-foreground">Keep an eye on Inbox</b> — even with full automation, human escalation makes loyal customers.</p>
+              <p><b className="text-foreground">Keep an eye on Inbox</b> — even with full automation, human escalation improves lead conversion.</p>
             </div>
           </div>
         </Card>
