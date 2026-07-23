@@ -282,7 +282,7 @@ const Templates = () => {
                       <Button size="sm" variant="ghost" onClick={() => openEdit(t)} title={canEdit(t) ? 'Edit & resubmit to Meta' : 'View / duplicate'}>
                         <Pencil className="w-4 h-4" />
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => remove(t)}><Trash2 className="w-4 h-4" /></Button>
+                      <Button size="sm" variant="ghost" onClick={() => setPendingDelete(t)}><Trash2 className="w-4 h-4" /></Button>
                     </TableCell>
                   </TableRow>
                 ))}
