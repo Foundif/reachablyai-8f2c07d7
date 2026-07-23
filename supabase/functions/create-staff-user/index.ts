@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
     const { error: wmErr } = await admin.from('workspace_members').upsert({
       workspace_id: ownerWorkspace.id,
       user_id: newId,
-      role: 'owner',
+      role: finalRole === 'admin' ? 'admin' : 'agent',
     }, { onConflict: 'workspace_id,user_id' })
     if (wmErr) {
       await admin.auth.admin.deleteUser(newId)

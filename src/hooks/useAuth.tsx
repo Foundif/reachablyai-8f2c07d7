@@ -30,23 +30,20 @@ interface Profile {
   allowed_modules?: string[] | null;
 }
 
-// Role permission map
-// owner = full access (salon owner), staff = receptionist alias
+// Role permission map for Reachably modules.
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   admin: ['*'],
   freelancer: ['*'],
   owner: ['*'],
   manager: [
-    '/', '/shop-info', '/create-bill', '/pos-billing', '/bookings', '/customers',
-    '/services', '/employees', '/staffs', '/expenses',
-    '/gst-sales', '/without-gst-sales', '/analytics', '/inventory',
-    '/suppliers', '/purchases', '/profile', '/pricing',
+    '/', '/inbox', '/leads', '/templates', '/campaigns', '/automation',
+    '/analytics', '/accounting', '/whatsapp-settings', '/team', '/profile', '/pricing',
   ],
   receptionist: [
-    '/', '/create-bill', '/pos-billing', '/bookings', '/customers', '/inventory', '/profile',
+    '/', '/inbox', '/leads', '/campaigns', '/profile',
   ],
   staff: [
-    '/', '/create-bill', '/pos-billing', '/bookings', '/customers', '/inventory', '/profile',
+    '/', '/inbox', '/leads', '/campaigns', '/profile',
   ],
 };
 

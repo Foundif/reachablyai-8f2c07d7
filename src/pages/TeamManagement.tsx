@@ -36,7 +36,7 @@ const TeamManagement = () => {
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [role, setRole] = useState<'admin' | 'staff'>('staff');
-  const [mods, setMods] = useState<string[]>(['/', '/bookings', '/customers']);
+  const [mods, setMods] = useState<string[]>(['/', '/inbox', '/leads']);
 
   const call = async (body: Record<string, unknown>) => {
     const { data, error } = await supabase.functions.invoke('create-staff-user', { body });
@@ -58,7 +58,7 @@ const TeamManagement = () => {
 
   const resetForm = () => {
     setEditing(null); setFullName(''); setEmail(''); setPassword('');
-    setRole('staff'); setMods(['/', '/bookings', '/customers']); setShowPass(false);
+    setRole('staff'); setMods(['/', '/inbox', '/leads']); setShowPass(false);
   };
 
   const openCreate = () => { resetForm(); setOpen(true); };
