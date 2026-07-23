@@ -20,6 +20,7 @@ import {
   Plus, Search, Upload, MessageCircle, LayoutGrid, List, Trash2, Tag, Globe, Loader2, Sparkles,
 } from 'lucide-react';
 import { resolveWorkspaceId } from '@/lib/workspace';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 type LeadStatus = 'new' | 'contacted' | 'converted' | 'lost';
 type LeadSource = 'manual' | 'csv' | 'meta_ads' | 'scraped' | 'booking';
@@ -90,6 +91,7 @@ const Leads = () => {
   const [addOpen, setAddOpen] = useState(false);
   const [wsId, setWsId] = useState<string | null>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
+  const [pendingDelete, setPendingDelete] = useState<Lead | null>(null);
 
   const [form, setForm] = useState({ name: '', phone: '', email: '', tags: '' });
 
@@ -148,12 +150,15 @@ const Leads = () => {
     setLeads(prev => prev.map(l => l.id === id ? { ...l, status } : l));
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this lead?')) return;
-    const { error } = await supabase.from('leads' as any).delete().eq('id', id);
+  const handleDelete = (l: Lead) => setPendingDelete(l);
+  const confirmDelete = async () => {
+    const l = pendingDelete;
+    if (!l) return;
+    setPendingDelete(null);
+    const { error } = await supabase.from('leads' as any).delete().eq('id', l.id);
     if (error) return toast.error(error.message);
-    setLeads(prev => prev.filter(l => l.id !== id));
-    toast.success('Deleted');
+    setLeads(prev => prev.filter(x => x.id !== l.id));
+    toast.success('Lead deleted');
   };
 
   const handleOpenWhatsApp = (l: Lead) => {
@@ -335,7 +340,7 @@ const Leads = () => {
                       <Button variant="ghost" size="icon" onClick={() => handleOpenWhatsApp(l)} title="Open WhatsApp">
                         <MessageCircle className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(l.id)} title="Delete">
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(l)} title="Delete">
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </TableCell>
@@ -365,7 +370,7 @@ const Leads = () => {
                   <Button size="sm" variant="outline" className="flex-1" onClick={() => handleOpenWhatsApp(l)}>
                     <MessageCircle className="w-3 h-3 mr-1" /> WhatsApp
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => handleDelete(l.id)}>
+                  <Button size="sm" variant="ghost" onClick={() => handleDelete(l)}>
                     <Trash2 className="w-3 h-3" />
                   </Button>
                 </div>
@@ -378,6 +383,14 @@ const Leads = () => {
           {filtered.length} of {leads.length} lead(s) · New bookings automatically create leads.
         </p>
       </div>
+      <ConfirmDialog
+        open={!!pendingDelete}
+        onOpenChange={(o) => !o && setPendingDelete(null)}
+        title="Delete this lead?"
+        description={<>Lead <b>{pendingDelete?.name}</b> will be permanently removed. This cannot be undone.</>}
+        confirmLabel="Delete lead"
+        onConfirm={confirmDelete}
+      />
     </AppLayout>
   );
 };

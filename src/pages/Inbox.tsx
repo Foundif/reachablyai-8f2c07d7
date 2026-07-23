@@ -69,11 +69,23 @@ const Inbox = () => {
 
       const [{ data: cs }, { data: ms }, { data: ts }] = await Promise.all([
         supabase.from('wa_conversations' as any).select('*').eq('workspace_id', id).is('deleted_at', null).order('last_message_at', { ascending: false }),
-        supabase.from('workspace_members' as any).select('user_id, profiles!inner(email, full_name)').eq('workspace_id', id),
+        supabase.from('workspace_members' as any).select('user_id').eq('workspace_id', id),
         supabase.from('templates' as any).select('id,name,status').eq('workspace_id', id).eq('status', 'approved'),
       ]);
       setConvs((cs as any) || []);
-      setMembers(((ms as any[]) || []).map(m => ({ user_id: m.user_id, email: m.profiles?.email, full_name: m.profiles?.full_name })));
+      const memberIds = ((ms as any[]) || []).map(m => m.user_id).filter(Boolean);
+      if (memberIds.length) {
+        const { data: profs } = await supabase.from('profiles' as any)
+          .select('user_id, email, full_name').in('user_id', memberIds);
+        const byId = new Map(((profs as any[]) || []).map(p => [p.user_id, p]));
+        setMembers(memberIds.map(uid => ({
+          user_id: uid,
+          email: byId.get(uid)?.email || uid,
+          full_name: byId.get(uid)?.full_name || null,
+        })));
+      } else {
+        setMembers([]);
+      }
       setTemplates((ts as any) || []);
     })();
   }, [user, profile]);

@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Plus, Workflow, Trash2 } from 'lucide-react';
 import { resolveWorkspaceId } from '@/lib/workspace';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 type TriggerType = 'new_lead' | 'tag_added' | 'status_changed' | 'keyword_match' | 'no_reply_24h';
 type ActionType = 'send_template' | 'add_tag' | 'set_status' | 'assign_agent';
@@ -109,9 +110,13 @@ const Automations = () => {
     await supabase.from('automations' as any).update({ enabled: !a.enabled }).eq('id', a.id);
     load();
   };
-  const remove = async (id: string) => {
-    if (!confirm('Delete automation?')) return;
-    await supabase.from('automations' as any).delete().eq('id', id);
+  const [pendingDelete, setPendingDelete] = useState<Automation | null>(null);
+  const confirmDelete = async () => {
+    const a = pendingDelete;
+    if (!a) return;
+    setPendingDelete(null);
+    await supabase.from('automations' as any).delete().eq('id', a.id);
+    toast.success('Automation deleted');
     load();
   };
 
@@ -215,7 +220,7 @@ const Automations = () => {
                     <TableCell>{a.run_count}</TableCell>
                     <TableCell className="text-xs">{a.last_run_at ? new Date(a.last_run_at).toLocaleString() : '—'}</TableCell>
                     <TableCell><Switch checked={a.enabled} onCheckedChange={() => toggle(a)} /></TableCell>
-                    <TableCell><Button size="sm" variant="ghost" onClick={() => remove(a.id)}><Trash2 className="w-4 h-4" /></Button></TableCell>
+                    <TableCell><Button size="sm" variant="ghost" onClick={() => setPendingDelete(a)}><Trash2 className="w-4 h-4" /></Button></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -223,6 +228,14 @@ const Automations = () => {
           )}
         </Card>
       </div>
+      <ConfirmDialog
+        open={!!pendingDelete}
+        onOpenChange={(o) => !o && setPendingDelete(null)}
+        title="Delete automation?"
+        description={<>Automation <b>{pendingDelete?.name}</b> will be removed. Runs history stays intact.</>}
+        confirmLabel="Delete automation"
+        onConfirm={confirmDelete}
+      />
     </AppLayout>
   );
 };
