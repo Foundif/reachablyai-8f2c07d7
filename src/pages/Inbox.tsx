@@ -68,7 +68,7 @@ const Inbox = () => {
       setWsId(id);
 
       const [{ data: cs }, { data: ms }, { data: ts }] = await Promise.all([
-        supabase.from('wa_conversations' as any).select('*').eq('workspace_id', id).order('last_message_at', { ascending: false }),
+        supabase.from('wa_conversations' as any).select('*').eq('workspace_id', id).is('deleted_at', null).order('last_message_at', { ascending: false }),
         supabase.from('workspace_members' as any).select('user_id, profiles!inner(email, full_name)').eq('workspace_id', id),
         supabase.from('templates' as any).select('id,name,status').eq('workspace_id', id).eq('status', 'approved'),
       ]);
