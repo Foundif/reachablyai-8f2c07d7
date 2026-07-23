@@ -7,6 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Inbox as InboxIcon, Send, Search, User, Clock, MessageSquareText, ArrowLeft, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -51,6 +55,7 @@ const Inbox = () => {
   const [sending, setSending] = useState(false);
   const [filter, setFilter] = useState<'all' | 'mine' | 'unassigned' | 'unread'>('all');
   const [showMobileChat, setShowMobileChat] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<Conversation | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const selected = useMemo(() => convs.find(c => c.id === selectedId) || null, [convs, selectedId]);
@@ -63,7 +68,7 @@ const Inbox = () => {
       setWsId(id);
 
       const [{ data: cs }, { data: ms }, { data: ts }] = await Promise.all([
-        supabase.from('wa_conversations' as any).select('*').eq('workspace_id', id).order('last_message_at', { ascending: false }),
+        supabase.from('wa_conversations' as any).select('*').eq('workspace_id', id).is('deleted_at', null).order('last_message_at', { ascending: false }),
         supabase.from('workspace_members' as any).select('user_id, profiles!inner(email, full_name)').eq('workspace_id', id),
         supabase.from('templates' as any).select('id,name,status').eq('workspace_id', id).eq('status', 'approved'),
       ]);
@@ -79,7 +84,7 @@ const Inbox = () => {
     const ch = supabase
       .channel(`inbox-${wsId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_conversations', filter: `workspace_id=eq.${wsId}` }, async () => {
-        const { data } = await supabase.from('wa_conversations' as any).select('*').eq('workspace_id', wsId).order('last_message_at', { ascending: false });
+        const { data } = await supabase.from('wa_conversations' as any).select('*').eq('workspace_id', wsId).is('deleted_at', null).order('last_message_at', { ascending: false });
         setConvs((data as any) || []);
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'wa_messages', filter: `workspace_id=eq.${wsId}` }, (payload: any) => {
@@ -156,17 +161,30 @@ const Inbox = () => {
     setConvs(prev => prev.map(c => c.id === selected.id ? { ...c, status: next } : c));
   };
 
-  const deleteConversation = async () => {
-    if (!selected) return;
-    if (!confirm(`Delete chat with ${selected.contact_name || selected.contact_phone}?`)) return;
-    const { error: msgErr } = await supabase.from('wa_messages' as any).delete().eq('conversation_id', selected.id);
-    if (msgErr) return toast.error(msgErr.message);
-    const { error } = await supabase.from('wa_conversations' as any).delete().eq('id', selected.id);
+  const confirmDelete = async () => {
+    const target = pendingDelete;
+    if (!target) return;
+    setPendingDelete(null);
+    // Soft delete — history preserved so we can undo
+    const { error } = await supabase.from('wa_conversations' as any)
+      .update({ deleted_at: new Date().toISOString() }).eq('id', target.id);
     if (error) return toast.error(error.message);
-    setConvs(prev => prev.filter(c => c.id !== selected.id));
-    setSelectedId(null);
-    setShowMobileChat(false);
-    toast.success('Chat deleted');
+    setConvs(prev => prev.filter(c => c.id !== target.id));
+    if (selectedId === target.id) { setSelectedId(null); setShowMobileChat(false); }
+    toast.success('Chat deleted', {
+      description: target.contact_name || target.contact_phone,
+      action: {
+        label: 'Undo',
+        onClick: async () => {
+          const { error: e } = await supabase.from('wa_conversations' as any)
+            .update({ deleted_at: null }).eq('id', target.id);
+          if (e) return toast.error(e.message);
+          setConvs(prev => prev.some(c => c.id === target.id) ? prev : [{ ...target, deleted_at: null } as any, ...prev]);
+          toast.success('Chat restored');
+        },
+      },
+      duration: 8000,
+    });
   };
 
   return (
@@ -256,7 +274,7 @@ const Inbox = () => {
                     </SelectContent>
                   </Select>
                   <Button size="sm" variant="outline" onClick={toggleStatus}>{selected.status === 'open' ? 'Close' : 'Reopen'}</Button>
-                  <Button size="sm" variant="ghost" onClick={deleteConversation} title="Delete chat"><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                  <Button size="sm" variant="ghost" onClick={() => setPendingDelete(selected)} title="Delete chat"><Trash2 className="w-4 h-4 text-destructive" /></Button>
                 </div>
               </div>
 
@@ -311,6 +329,22 @@ const Inbox = () => {
           )}
         </Card>
       </div>
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this chat?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Chat with <b>{pendingDelete?.contact_name || pendingDelete?.contact_phone}</b> will be hidden.
+              Message history is preserved and you can undo this action for a few seconds.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete chat</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 };

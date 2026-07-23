@@ -8,12 +8,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { Plus, Trash2, MessageSquareText, RefreshCw, Info, Loader2, Upload, Pencil, X } from 'lucide-react';
+import { Plus, Trash2, MessageSquareText, RefreshCw, Info, Loader2, Upload, Pencil, X, Eye, AlertTriangle } from 'lucide-react';
 import { resolveWorkspaceId } from '@/lib/workspace';
 
 type TplStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'paused' | 'disabled' | 'in_appeal' | 'pending_deletion' | 'deleted';
@@ -53,6 +57,43 @@ const emptyForm = () => ({
   carousel_cards: [] as CarouselCard[],
 });
 
+const extractVars = (s: string): string[] => {
+  const set: string[] = [];
+  (s || '').replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_m, v: string) => { if (!set.includes(v)) set.push(v); return _m; });
+  return set;
+};
+
+// Meta rejects templates where a variable is at the very start or end of the body/header.
+const validateTemplateForm = (form: ReturnType<typeof emptyForm>) => {
+  const errors: string[] = [];
+  if (!form.name.trim() || !/^[a-z0-9_]+$/.test(form.name)) {
+    errors.push('Name must be lowercase letters, digits, or underscores.');
+  }
+  const isCarousel = form.category === 'carousel' || form.header_type === 'carousel';
+  if (!isCarousel && !form.body.trim()) errors.push('Body is required.');
+
+  const body = (form.body || '').trim();
+  if (body) {
+    if (/^\{\{\s*[a-zA-Z0-9_]+\s*\}\}/.test(body)) errors.push('Body can\'t start with a variable — add some text before {{...}}.');
+    if (/\{\{\s*[a-zA-Z0-9_]+\s*\}\}$/.test(body)) errors.push('Body can\'t end with a variable — add text or punctuation after {{...}}.');
+  }
+  if (form.header_type === 'text' && form.header) {
+    const h = form.header.trim();
+    if (/^\{\{\s*[a-zA-Z0-9_]+\s*\}\}/.test(h) || /\{\{\s*[a-zA-Z0-9_]+\s*\}\}$/.test(h)) {
+      errors.push('Header text can\'t start or end with a variable.');
+    }
+  }
+  if (['image', 'video', 'document'].includes(form.header_type) && !form.header_media_url) {
+    errors.push('Upload or paste a public URL for the header media.');
+  }
+  for (const b of form.buttons || []) {
+    if (!b.text?.trim()) errors.push('Every button needs text.');
+    if (b.type === 'URL' && !b.url?.trim()) errors.push('URL buttons need a URL.');
+    if (b.type === 'PHONE_NUMBER' && !b.phone_number?.trim()) errors.push('Call buttons need a phone number.');
+  }
+  return errors;
+};
+
 const Templates = () => {
   const { user, profile } = useAuth();
   const [wsId, setWsId] = useState<string | null>(null);
@@ -65,6 +106,15 @@ const Templates = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingMetaId, setEditingMetaId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm());
+  const [pendingDelete, setPendingDelete] = useState<Template | null>(null);
+  const [showPreview, setShowPreview] = useState(true);
+
+  const validationErrors = validateTemplateForm(form);
+  const detectedVars = extractVars(form.body);
+  const [previewValues, setPreviewValues] = useState<Record<string, string>>({});
+  const renderedPreview = detectedVars.length
+    ? form.body.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_m, v: string) => previewValues[v] || `{{${v}}}`)
+    : form.body;
 
   const load = async (silent = false) => {
     if (!user) return;
@@ -122,16 +172,28 @@ const Templates = () => {
 
   const submitToMeta = async () => {
     if (!wsId) return;
-    if (!form.name.trim()) return toast.error('Name is required');
-    if (form.category !== 'carousel' && !form.body.trim()) return toast.error('Body is required');
+    const errs = validateTemplateForm(form);
+    if (errs.length) {
+      toast.error(errs[0], { description: errs.length > 1 ? `+${errs.length - 1} more issue(s)` : undefined });
+      return;
+    }
     setSubmitting(true);
     const { data, error } = await supabase.functions.invoke('template-create', {
       body: { workspace_id: wsId, template_id: editingMetaId, ...form },
     });
     setSubmitting(false);
-    if (error || (data as any)?.error) {
-      return toast.error((data as any)?.error || error!.message);
+    // Extract friendly Meta error even when supabase-js wraps the response as FunctionsHttpError
+    let errBody: any = (data as any)?.error ? data : null;
+    if (error && (error as any)?.context?.json) {
+      try { errBody = await (error as any).context.json(); } catch {}
     }
+    if (errBody?.error) {
+      const meta = errBody.meta;
+      const friendly = meta?.error_user_msg || meta?.error_user_title || errBody.error || 'Meta rejected this template.';
+      toast.error('Template not accepted', { description: friendly, duration: 10000 });
+      return;
+    }
+    if (error) return toast.error(error.message);
     toast.success(`${editingMetaId ? 'Update' : 'Submission'} sent to Meta — status: ${(data as any).status}`);
     setOpen(false);
     load();
@@ -147,9 +209,13 @@ const Templates = () => {
     load();
   };
 
-  const remove = async (t: Template) => {
-    if (!confirm(`Delete template "${t.name}"? This only removes it locally, not from Meta.`)) return;
-    await supabase.from('templates' as any).delete().eq('id', t.id);
+  const confirmRemove = async () => {
+    const t = pendingDelete;
+    if (!t) return;
+    setPendingDelete(null);
+    const { error } = await supabase.from('templates' as any).delete().eq('id', t.id);
+    if (error) return toast.error(error.message);
+    toast.success('Template removed locally');
     load();
   };
 
@@ -221,7 +287,7 @@ const Templates = () => {
                       <Button size="sm" variant="ghost" onClick={() => openEdit(t)} title={canEdit(t) ? 'Edit & resubmit to Meta' : 'View / duplicate'}>
                         <Pencil className="w-4 h-4" />
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => remove(t)}><Trash2 className="w-4 h-4" /></Button>
+                      <Button size="sm" variant="ghost" onClick={() => setPendingDelete(t)}><Trash2 className="w-4 h-4" /></Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -378,15 +444,75 @@ const Templates = () => {
                 <Button variant="outline" size="sm" onClick={addCard} disabled={form.carousel_cards.length >= 10}><Plus className="w-4 h-4 mr-1" /> Add card</Button>
               </TabsContent>
             </Tabs>
+
+            {/* Live preview + validation */}
+            <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm font-medium"><Eye className="w-4 h-4" /> Preview</div>
+                <Button type="button" size="sm" variant="ghost" onClick={() => setShowPreview(s => !s)}>{showPreview ? 'Hide' : 'Show'}</Button>
+              </div>
+              {showPreview && (
+                <>
+                  {detectedVars.length > 0 && (
+                    <div className="grid grid-cols-2 gap-2">
+                      {detectedVars.map(v => (
+                        <div key={v}>
+                          <Label className="text-[11px]">Sample for {`{{${v}}}`}</Label>
+                          <Input value={previewValues[v] || ''} onChange={e => setPreviewValues(p => ({ ...p, [v]: e.target.value }))} placeholder={`e.g. ${v === 'name' ? 'Aisha' : 'value'}`} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="rounded-md bg-[#e5ddd5] p-3 max-w-sm mx-auto">
+                    <div className="rounded-lg bg-white shadow-sm p-3 text-sm text-slate-800 space-y-1.5">
+                      {form.header_type === 'text' && form.header && <div className="font-semibold">{form.header}</div>}
+                      {form.header_type === 'image' && form.header_media_url && <img src={form.header_media_url} alt="" className="rounded max-h-32 w-full object-cover" />}
+                      <div className="whitespace-pre-wrap break-words">{renderedPreview || <span className="text-slate-400">Your message body will appear here…</span>}</div>
+                      {form.footer && <div className="text-[11px] text-slate-500 pt-1">{form.footer}</div>}
+                      {form.buttons?.length > 0 && (
+                        <div className="pt-2 border-t border-slate-200 mt-2 space-y-1">
+                          {form.buttons.map((b, i) => (
+                            <div key={i} className="text-center text-[13px] text-blue-600 font-medium py-1">{b.text || '(button)'}</div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+              {validationErrors.length > 0 && (
+                <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400 space-y-1">
+                  <div className="flex items-center gap-1 font-semibold"><AlertTriangle className="w-3.5 h-3.5" /> Meta will reject this — fix before submitting:</div>
+                  <ul className="list-disc pl-5 space-y-0.5">
+                    {validationErrors.map((e, i) => <li key={i}>{e}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setOpen(false)} disabled={submitting}>Cancel</Button>
-            <Button onClick={submitToMeta} disabled={submitting}>
+            <Button onClick={submitToMeta} disabled={submitting || validationErrors.length > 0}>
               {submitting ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Submitting…</> : editingMetaId ? 'Update on Meta' : 'Submit to Meta'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete template locally?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Removes <b>{pendingDelete?.name}</b> from Reachably. The template stays on Meta — click <b>Sync from Meta</b> to bring it back.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRemove} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 };
