@@ -83,11 +83,15 @@ const Inbox = () => {
         const { data: profs } = await supabase.from('profiles' as any)
           .select('user_id, email, full_name').in('user_id', memberIds);
         const byId = new Map(((profs as any[]) || []).map(p => [p.user_id, p]));
-        setMembers(memberIds.map(uid => ({
-          user_id: uid,
-          email: byId.get(uid)?.email || uid,
-          full_name: byId.get(uid)?.full_name || null,
-        })));
+        setMembers(memberIds.map(uid => {
+          const p = byId.get(uid);
+          return {
+            user_id: uid,
+            email: p?.email || '',
+            full_name: p?.full_name || null,
+            hasProfile: !!p,
+          };
+        }));
       } else {
         setMembers([]);
       }
