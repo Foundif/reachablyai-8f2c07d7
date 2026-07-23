@@ -172,15 +172,22 @@ const Templates = () => {
 
   const submitToMeta = async () => {
     if (!wsId) return;
-    if (!form.name.trim()) return toast.error('Name is required');
-    if (form.category !== 'carousel' && !form.body.trim()) return toast.error('Body is required');
+    const errs = validateTemplateForm(form);
+    if (errs.length) {
+      toast.error(errs[0], { description: errs.length > 1 ? `+${errs.length - 1} more issue(s)` : undefined });
+      return;
+    }
     setSubmitting(true);
     const { data, error } = await supabase.functions.invoke('template-create', {
       body: { workspace_id: wsId, template_id: editingMetaId, ...form },
     });
     setSubmitting(false);
-    if (error || (data as any)?.error) {
-      return toast.error((data as any)?.error || error!.message);
+    const errPayload: any = (data as any)?.error || error?.message;
+    if (errPayload || (data as any)?.error) {
+      const meta = (data as any)?.meta;
+      const friendly = meta?.error_user_msg || meta?.error_user_title || (data as any)?.error || error?.message || 'Meta rejected this template.';
+      toast.error('Template not accepted', { description: friendly, duration: 10000 });
+      return;
     }
     toast.success(`${editingMetaId ? 'Update' : 'Submission'} sent to Meta — status: ${(data as any).status}`);
     setOpen(false);
@@ -197,9 +204,13 @@ const Templates = () => {
     load();
   };
 
-  const remove = async (t: Template) => {
-    if (!confirm(`Delete template "${t.name}"? This only removes it locally, not from Meta.`)) return;
-    await supabase.from('templates' as any).delete().eq('id', t.id);
+  const confirmRemove = async () => {
+    const t = pendingDelete;
+    if (!t) return;
+    setPendingDelete(null);
+    const { error } = await supabase.from('templates' as any).delete().eq('id', t.id);
+    if (error) return toast.error(error.message);
+    toast.success('Template removed locally');
     load();
   };
 
