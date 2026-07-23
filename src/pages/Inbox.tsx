@@ -55,6 +55,7 @@ const Inbox = () => {
   const [sending, setSending] = useState(false);
   const [filter, setFilter] = useState<'all' | 'mine' | 'unassigned' | 'unread'>('all');
   const [showMobileChat, setShowMobileChat] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<Conversation | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const selected = useMemo(() => convs.find(c => c.id === selectedId) || null, [convs, selectedId]);
