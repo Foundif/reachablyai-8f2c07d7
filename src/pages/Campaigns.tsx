@@ -522,6 +522,14 @@ const CampaignsList = () => {
           )}
         </Card>
       </div>
+      <ConfirmDialog
+        open={!!pendingDelete}
+        onOpenChange={(o) => !o && setPendingDelete(null)}
+        title="Delete campaign?"
+        description={<>Campaign <b>{pendingDelete?.name}</b> and its recipient log will be permanently deleted.</>}
+        confirmLabel="Delete campaign"
+        onConfirm={confirmDelete}
+      />
     </AppLayout>
   );
 };
