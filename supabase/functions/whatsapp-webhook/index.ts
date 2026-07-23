@@ -105,6 +105,7 @@ Deno.serve(async (req) => {
                 window_expires_at: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
                 status: 'open',
                 lead_id: existing.lead_id || leadId,
+                deleted_at: null,
               }).eq('id', convId);
             } else {
               const { data: created, error: cErr } = await admin.from('wa_conversations').insert({
