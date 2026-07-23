@@ -424,4 +424,86 @@ const Inbox = () => {
   );
 };
 
+function NotesPanel({
+  conversation, onSaveNotes, onSaveTags,
+}: {
+  conversation: Conversation;
+  onSaveNotes: (v: string) => void | Promise<void>;
+  onSaveTags: (v: string[]) => void | Promise<void>;
+}) {
+  const [notes, setNotes] = useState(conversation.notes || '');
+  const [tags, setTags] = useState<string[]>(conversation.tags || []);
+  const [tagDraft, setTagDraft] = useState('');
+  const notesDirty = useRef(false);
+
+  useEffect(() => {
+    setNotes(conversation.notes || '');
+    setTags(conversation.tags || []);
+    notesDirty.current = false;
+  }, [conversation.id]);
+
+  useEffect(() => {
+    if (!notesDirty.current) return;
+    const t = setTimeout(() => { onSaveNotes(notes); notesDirty.current = false; }, 700);
+    return () => clearTimeout(t);
+  }, [notes]);
+
+  const addTag = () => {
+    const v = tagDraft.trim();
+    if (!v || tags.includes(v)) { setTagDraft(''); return; }
+    const next = [...tags, v];
+    setTags(next); setTagDraft('');
+    onSaveTags(next);
+  };
+  const removeTag = (t: string) => {
+    const next = tags.filter(x => x !== t);
+    setTags(next); onSaveTags(next);
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="p-3 border-b flex items-center gap-2">
+        <StickyNote className="w-4 h-4 text-primary" />
+        <h3 className="font-semibold text-sm">Lead details</h3>
+      </div>
+      <div className="p-3 space-y-4 overflow-y-auto flex-1">
+        <div>
+          <div className="text-xs font-medium mb-1.5 flex items-center gap-1.5">
+            <Tag className="w-3 h-3" /> Tags
+          </div>
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {tags.length === 0 && <span className="text-[11px] text-muted-foreground">No tags yet</span>}
+            {tags.map(t => (
+              <Badge key={t} variant="secondary" className="gap-1 pr-1">
+                {t}
+                <button onClick={() => removeTag(t)} className="hover:text-destructive"><X className="w-3 h-3" /></button>
+              </Badge>
+            ))}
+          </div>
+          <div className="flex gap-1.5">
+            <Input
+              value={tagDraft}
+              onChange={e => setTagDraft(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
+              placeholder="Add tag (e.g. VIP, hot-lead)"
+              className="h-8 text-xs"
+            />
+            <Button size="sm" variant="outline" className="h-8" onClick={addTag}>Add</Button>
+          </div>
+        </div>
+        <div>
+          <div className="text-xs font-medium mb-1.5">Notes</div>
+          <Textarea
+            value={notes}
+            onChange={e => { setNotes(e.target.value); notesDirty.current = true; }}
+            placeholder="Write anything about this lead — preferences, follow-ups, quoted price…"
+            className="text-sm min-h-[220px] resize-none"
+          />
+          <div className="text-[10px] text-muted-foreground mt-1">Auto-saves as you type</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default Inbox;
