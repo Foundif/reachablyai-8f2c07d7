@@ -736,7 +736,9 @@ export type Database = {
           last_message_direction: string | null
           last_message_text: string | null
           lead_id: string | null
+          notes: string | null
           status: string
+          tags: string[]
           unread_count: number
           updated_at: string
           window_expires_at: string | null
@@ -753,7 +755,9 @@ export type Database = {
           last_message_direction?: string | null
           last_message_text?: string | null
           lead_id?: string | null
+          notes?: string | null
           status?: string
+          tags?: string[]
           unread_count?: number
           updated_at?: string
           window_expires_at?: string | null
@@ -770,7 +774,9 @@ export type Database = {
           last_message_direction?: string | null
           last_message_text?: string | null
           lead_id?: string | null
+          notes?: string | null
           status?: string
+          tags?: string[]
           unread_count?: number
           updated_at?: string
           window_expires_at?: string | null

@@ -11,7 +11,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Inbox as InboxIcon, Send, Search, User, Clock, MessageSquareText, ArrowLeft, Trash2 } from 'lucide-react';
+import { Inbox as InboxIcon, Send, Search, User, Clock, MessageSquareText, ArrowLeft, Trash2, Tag, StickyNote, X } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { resolveWorkspaceId } from '@/lib/workspace';
@@ -27,6 +28,8 @@ interface Conversation {
   last_message_direction: string | null;
   unread_count: number;
   window_expires_at: string | null;
+  notes?: string | null;
+  tags?: string[] | null;
 }
 interface Message {
   id: string;
@@ -39,8 +42,11 @@ interface Message {
   sent_by: string | null;
   error: string | null;
 }
-interface Member { user_id: string; email: string; full_name: string | null; }
+interface Member { user_id: string; email: string; full_name: string | null; hasProfile: boolean; }
 interface Template { id: string; name: string; status: string; }
+
+const displayName = (m?: Member | null) =>
+  m ? (m.full_name?.trim() || (m.email?.includes('@') ? m.email.split('@')[0] : m.email) || 'Teammate') : 'Unassigned';
 
 const Inbox = () => {
   const { user, profile } = useAuth();
@@ -78,11 +84,15 @@ const Inbox = () => {
         const { data: profs } = await supabase.from('profiles' as any)
           .select('user_id, email, full_name').in('user_id', memberIds);
         const byId = new Map(((profs as any[]) || []).map(p => [p.user_id, p]));
-        setMembers(memberIds.map(uid => ({
-          user_id: uid,
-          email: byId.get(uid)?.email || uid,
-          full_name: byId.get(uid)?.full_name || null,
-        })));
+        setMembers(memberIds.map(uid => {
+          const p = byId.get(uid);
+          return {
+            user_id: uid,
+            email: p?.email || '',
+            full_name: p?.full_name || null,
+            hasProfile: !!p,
+          };
+        }));
       } else {
         setMembers([]);
       }
@@ -157,12 +167,36 @@ const Inbox = () => {
     toast.success('Template sent');
   };
 
+  const canAssign = !profile?.is_staff || profile?.role === 'admin';
+  const assignedMember = useMemo(
+    () => members.find(m => m.user_id === selected?.assigned_to) || null,
+    [members, selected?.assigned_to],
+  );
+
   const assign = async (userId: string | null) => {
     if (!selected) return;
+    if (!canAssign) return toast.error('Only owners/admins can assign chats');
     const { error } = await supabase.from('wa_conversations' as any).update({ assigned_to: userId }).eq('id', selected.id);
     if (error) return toast.error(error.message);
     setConvs(prev => prev.map(c => c.id === selected.id ? { ...c, assigned_to: userId } : c));
-    toast.success(userId ? 'Assigned' : 'Unassigned');
+    if (userId) {
+      const m = members.find(mm => mm.user_id === userId);
+      toast.success(`Chat assigned to ${displayName(m)}`);
+    } else {
+      toast.success('Chat unassigned');
+    }
+  };
+
+  const saveNotes = async (notes: string) => {
+    if (!selected) return;
+    setConvs(prev => prev.map(c => c.id === selected.id ? { ...c, notes } : c));
+    await supabase.from('wa_conversations' as any).update({ notes }).eq('id', selected.id);
+  };
+
+  const saveTags = async (tags: string[]) => {
+    if (!selected) return;
+    setConvs(prev => prev.map(c => c.id === selected.id ? { ...c, tags } : c));
+    await supabase.from('wa_conversations' as any).update({ tags }).eq('id', selected.id);
   };
 
   const toggleStatus = async () => {
@@ -278,17 +312,34 @@ const Inbox = () => {
                   <div className="text-xs text-muted-foreground">{selected.contact_phone}</div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Select value={selected.assigned_to || 'none'} onValueChange={(v) => assign(v === 'none' ? null : v)}>
-                    <SelectTrigger className="h-8 w-[160px] text-xs"><User className="w-3 h-3 mr-1" /><SelectValue placeholder="Assign" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Unassigned</SelectItem>
-                      {members.map(m => <SelectItem key={m.user_id} value={m.user_id}>{m.full_name || m.email}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  {canAssign ? (
+                    <Select value={selected.assigned_to || 'none'} onValueChange={(v) => assign(v === 'none' ? null : v)}>
+                      <SelectTrigger className="h-8 w-[180px] text-xs"><User className="w-3 h-3 mr-1" /><SelectValue placeholder="Assign" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Unassigned</SelectItem>
+                        {members
+                          .filter(m => m.hasProfile)
+                          .map(m => <SelectItem key={m.user_id} value={m.user_id}>{displayName(m)}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Badge variant="outline" className="h-8 px-3 gap-1">
+                      <User className="w-3 h-3" />{assignedMember ? displayName(assignedMember) : 'Unassigned'}
+                    </Badge>
+                  )}
                   <Button size="sm" variant="outline" onClick={toggleStatus}>{selected.status === 'open' ? 'Close' : 'Reopen'}</Button>
-                  <Button size="sm" variant="ghost" onClick={() => setPendingDelete(selected)} title="Delete chat"><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                  {canAssign && (
+                    <Button size="sm" variant="ghost" onClick={() => setPendingDelete(selected)} title="Delete chat"><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                  )}
                 </div>
               </div>
+
+              {selected.assigned_to && (
+                <div className="px-4 py-2 border-b bg-primary/5 text-xs text-muted-foreground flex items-center gap-2">
+                  <User className="w-3 h-3" />
+                  This chat is assigned to <span className="font-medium text-foreground">{displayName(assignedMember)}</span>
+                </div>
+              )}
 
               <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-2 bg-muted/20">
                 {messages.map(m => (
@@ -340,6 +391,18 @@ const Inbox = () => {
             </>
           )}
         </Card>
+
+        {/* Notes & Tags */}
+        {selected && (
+          <Card className={cn('w-72 hidden lg:flex flex-col')}>
+            <NotesPanel
+              key={selected.id}
+              conversation={selected}
+              onSaveNotes={saveNotes}
+              onSaveTags={saveTags}
+            />
+          </Card>
+        )}
       </div>
 
       <AlertDialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>
@@ -360,5 +423,87 @@ const Inbox = () => {
     </AppLayout>
   );
 };
+
+function NotesPanel({
+  conversation, onSaveNotes, onSaveTags,
+}: {
+  conversation: Conversation;
+  onSaveNotes: (v: string) => void | Promise<void>;
+  onSaveTags: (v: string[]) => void | Promise<void>;
+}) {
+  const [notes, setNotes] = useState(conversation.notes || '');
+  const [tags, setTags] = useState<string[]>(conversation.tags || []);
+  const [tagDraft, setTagDraft] = useState('');
+  const notesDirty = useRef(false);
+
+  useEffect(() => {
+    setNotes(conversation.notes || '');
+    setTags(conversation.tags || []);
+    notesDirty.current = false;
+  }, [conversation.id]);
+
+  useEffect(() => {
+    if (!notesDirty.current) return;
+    const t = setTimeout(() => { onSaveNotes(notes); notesDirty.current = false; }, 700);
+    return () => clearTimeout(t);
+  }, [notes]);
+
+  const addTag = () => {
+    const v = tagDraft.trim();
+    if (!v || tags.includes(v)) { setTagDraft(''); return; }
+    const next = [...tags, v];
+    setTags(next); setTagDraft('');
+    onSaveTags(next);
+  };
+  const removeTag = (t: string) => {
+    const next = tags.filter(x => x !== t);
+    setTags(next); onSaveTags(next);
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="p-3 border-b flex items-center gap-2">
+        <StickyNote className="w-4 h-4 text-primary" />
+        <h3 className="font-semibold text-sm">Lead details</h3>
+      </div>
+      <div className="p-3 space-y-4 overflow-y-auto flex-1">
+        <div>
+          <div className="text-xs font-medium mb-1.5 flex items-center gap-1.5">
+            <Tag className="w-3 h-3" /> Tags
+          </div>
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {tags.length === 0 && <span className="text-[11px] text-muted-foreground">No tags yet</span>}
+            {tags.map(t => (
+              <Badge key={t} variant="secondary" className="gap-1 pr-1">
+                {t}
+                <button onClick={() => removeTag(t)} className="hover:text-destructive"><X className="w-3 h-3" /></button>
+              </Badge>
+            ))}
+          </div>
+          <div className="flex gap-1.5">
+            <Input
+              value={tagDraft}
+              onChange={e => setTagDraft(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
+              placeholder="Add tag (e.g. VIP, hot-lead)"
+              className="h-8 text-xs"
+            />
+            <Button size="sm" variant="outline" className="h-8" onClick={addTag}>Add</Button>
+          </div>
+        </div>
+        <div>
+          <div className="text-xs font-medium mb-1.5">Notes</div>
+          <Textarea
+            value={notes}
+            onChange={e => { setNotes(e.target.value); notesDirty.current = true; }}
+            placeholder="Write anything about this lead — preferences, follow-ups, quoted price…"
+            className="text-sm min-h-[220px] resize-none"
+          />
+          <div className="text-[10px] text-muted-foreground mt-1">Auto-saves as you type</div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default Inbox;
