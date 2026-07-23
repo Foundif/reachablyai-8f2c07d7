@@ -161,17 +161,30 @@ const Inbox = () => {
     setConvs(prev => prev.map(c => c.id === selected.id ? { ...c, status: next } : c));
   };
 
-  const deleteConversation = async () => {
-    if (!selected) return;
-    if (!confirm(`Delete chat with ${selected.contact_name || selected.contact_phone}?`)) return;
-    const { error: msgErr } = await supabase.from('wa_messages' as any).delete().eq('conversation_id', selected.id);
-    if (msgErr) return toast.error(msgErr.message);
-    const { error } = await supabase.from('wa_conversations' as any).delete().eq('id', selected.id);
+  const confirmDelete = async () => {
+    const target = pendingDelete;
+    if (!target) return;
+    setPendingDelete(null);
+    // Soft delete — history preserved so we can undo
+    const { error } = await supabase.from('wa_conversations' as any)
+      .update({ deleted_at: new Date().toISOString() }).eq('id', target.id);
     if (error) return toast.error(error.message);
-    setConvs(prev => prev.filter(c => c.id !== selected.id));
-    setSelectedId(null);
-    setShowMobileChat(false);
-    toast.success('Chat deleted');
+    setConvs(prev => prev.filter(c => c.id !== target.id));
+    if (selectedId === target.id) { setSelectedId(null); setShowMobileChat(false); }
+    toast.success('Chat deleted', {
+      description: target.contact_name || target.contact_phone,
+      action: {
+        label: 'Undo',
+        onClick: async () => {
+          const { error: e } = await supabase.from('wa_conversations' as any)
+            .update({ deleted_at: null }).eq('id', target.id);
+          if (e) return toast.error(e.message);
+          setConvs(prev => prev.some(c => c.id === target.id) ? prev : [{ ...target, deleted_at: null } as any, ...prev]);
+          toast.success('Chat restored');
+        },
+      },
+      duration: 8000,
+    });
   };
 
   return (
