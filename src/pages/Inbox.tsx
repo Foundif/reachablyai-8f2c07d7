@@ -390,6 +390,18 @@ const Inbox = () => {
             </>
           )}
         </Card>
+
+        {/* Notes & Tags */}
+        {selected && (
+          <Card className={cn('w-72 hidden lg:flex flex-col')}>
+            <NotesPanel
+              key={selected.id}
+              conversation={selected}
+              onSaveNotes={saveNotes}
+              onSaveTags={saveTags}
+            />
+          </Card>
+        )}
       </div>
 
       <AlertDialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>
