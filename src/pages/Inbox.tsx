@@ -311,17 +311,34 @@ const Inbox = () => {
                   <div className="text-xs text-muted-foreground">{selected.contact_phone}</div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Select value={selected.assigned_to || 'none'} onValueChange={(v) => assign(v === 'none' ? null : v)}>
-                    <SelectTrigger className="h-8 w-[160px] text-xs"><User className="w-3 h-3 mr-1" /><SelectValue placeholder="Assign" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Unassigned</SelectItem>
-                      {members.map(m => <SelectItem key={m.user_id} value={m.user_id}>{m.full_name || m.email}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  {canAssign ? (
+                    <Select value={selected.assigned_to || 'none'} onValueChange={(v) => assign(v === 'none' ? null : v)}>
+                      <SelectTrigger className="h-8 w-[180px] text-xs"><User className="w-3 h-3 mr-1" /><SelectValue placeholder="Assign" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Unassigned</SelectItem>
+                        {members
+                          .filter(m => m.hasProfile)
+                          .map(m => <SelectItem key={m.user_id} value={m.user_id}>{displayName(m)}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Badge variant="outline" className="h-8 px-3 gap-1">
+                      <User className="w-3 h-3" />{assignedMember ? displayName(assignedMember) : 'Unassigned'}
+                    </Badge>
+                  )}
                   <Button size="sm" variant="outline" onClick={toggleStatus}>{selected.status === 'open' ? 'Close' : 'Reopen'}</Button>
-                  <Button size="sm" variant="ghost" onClick={() => setPendingDelete(selected)} title="Delete chat"><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                  {canAssign && (
+                    <Button size="sm" variant="ghost" onClick={() => setPendingDelete(selected)} title="Delete chat"><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                  )}
                 </div>
               </div>
+
+              {selected.assigned_to && (
+                <div className="px-4 py-2 border-b bg-primary/5 text-xs text-muted-foreground flex items-center gap-2">
+                  <User className="w-3 h-3" />
+                  This chat is assigned to <span className="font-medium text-foreground">{displayName(assignedMember)}</span>
+                </div>
+              )}
 
               <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-2 bg-muted/20">
                 {messages.map(m => (
