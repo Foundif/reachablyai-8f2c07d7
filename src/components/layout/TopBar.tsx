@@ -34,7 +34,7 @@ const TopBar = () => {
       const activeId = (profile as any)?.active_workspace_id;
       const workspaceId = activeId || await resolveWorkspaceId(user.id, profile);
       const { data: ws } = workspaceId
-        ? await supabase.from('workspaces' as any).select('id,name').eq('id', activeId).maybeSingle()
+        ? await supabase.from('workspaces' as any).select('id,name').eq('id', workspaceId).maybeSingle()
         : await supabase.from('workspaces' as any).select('id,name').eq('owner_id', user.id).order('created_at').limit(1).maybeSingle();
       const name = (ws as any)?.name;
       if (name && name.toLowerCase() !== 'my salon') setWsName(name);

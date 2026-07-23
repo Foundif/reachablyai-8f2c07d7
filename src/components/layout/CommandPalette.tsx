@@ -22,7 +22,6 @@ const CommandPalette = ({ open, onOpenChange }: Props) => {
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput placeholder="Search modules, customers, bookings…" />
       <CommandInput placeholder="Search modules, leads, campaigns…" />
       <CommandList className="custom-scrollbar">
         <CommandEmpty>No results found.</CommandEmpty>
