@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Plus, Workflow, Trash2 } from 'lucide-react';
 import { resolveWorkspaceId } from '@/lib/workspace';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 type TriggerType = 'new_lead' | 'tag_added' | 'status_changed' | 'keyword_match' | 'no_reply_24h';
 type ActionType = 'send_template' | 'add_tag' | 'set_status' | 'assign_agent';
@@ -109,9 +110,13 @@ const Automations = () => {
     await supabase.from('automations' as any).update({ enabled: !a.enabled }).eq('id', a.id);
     load();
   };
-  const remove = async (id: string) => {
-    if (!confirm('Delete automation?')) return;
-    await supabase.from('automations' as any).delete().eq('id', id);
+  const [pendingDelete, setPendingDelete] = useState<Automation | null>(null);
+  const confirmDelete = async () => {
+    const a = pendingDelete;
+    if (!a) return;
+    setPendingDelete(null);
+    await supabase.from('automations' as any).delete().eq('id', a.id);
+    toast.success('Automation deleted');
     load();
   };
 

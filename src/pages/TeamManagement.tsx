@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { MODULE_GROUPS } from '@/lib/modules';
 import { useAuth } from '@/hooks/useAuth';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 type Member = {
   user_id: string;
@@ -87,8 +88,12 @@ const TeamManagement = () => {
     } catch (e: any) { toast.error(e.message); }
   };
 
-  const remove = async (m: Member) => {
-    if (!confirm(`Delete ${m.email}? This cannot be undone.`)) return;
+  const [pendingDelete, setPendingDelete] = useState<Member | null>(null);
+  const remove = (m: Member) => setPendingDelete(m);
+  const confirmDelete = async () => {
+    const m = pendingDelete;
+    if (!m) return;
+    setPendingDelete(null);
     try { await call({ action: 'delete', user_id: m.user_id }); toast.success('Deleted'); load(); }
     catch (e: any) { toast.error(e.message); }
   };

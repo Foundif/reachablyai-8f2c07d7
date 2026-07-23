@@ -22,6 +22,7 @@ import {
   CheckCircle2, AlertTriangle, Clock, ShieldCheck, X,
 } from 'lucide-react';
 import { resolveWorkspaceId } from '@/lib/workspace';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 // ---------- Types ----------
 interface Campaign {
@@ -453,10 +454,14 @@ const CampaignsList = () => {
   };
   useEffect(() => { load(); }, [user, profile]);
 
-  const remove = async (id: string) => {
-    if (!confirm('Delete campaign?')) return;
-    const { error } = await supabase.from('campaigns' as any).delete().eq('id', id);
+  const [pendingDelete, setPendingDelete] = useState<Campaign | null>(null);
+  const confirmDelete = async () => {
+    const c = pendingDelete;
+    if (!c) return;
+    setPendingDelete(null);
+    const { error } = await supabase.from('campaigns' as any).delete().eq('id', c.id);
     if (error) return toast.error(error.message);
+    toast.success('Campaign deleted');
     load();
   };
 
@@ -508,7 +513,7 @@ const CampaignsList = () => {
                     <TableCell>{c.skipped_count || 0}</TableCell>
                     <TableCell>{c.failed_count}</TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
-                      <Button size="sm" variant="ghost" onClick={() => remove(c.id)}><Trash2 className="w-4 h-4" /></Button>
+                      <Button size="sm" variant="ghost" onClick={() => setPendingDelete(c)}><Trash2 className="w-4 h-4" /></Button>
                     </TableCell>
                   </TableRow>
                 ))}
