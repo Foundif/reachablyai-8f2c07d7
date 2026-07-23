@@ -27,6 +27,8 @@ interface Conversation {
   last_message_direction: string | null;
   unread_count: number;
   window_expires_at: string | null;
+  notes?: string | null;
+  tags?: string[] | null;
 }
 interface Message {
   id: string;
@@ -39,8 +41,11 @@ interface Message {
   sent_by: string | null;
   error: string | null;
 }
-interface Member { user_id: string; email: string; full_name: string | null; }
+interface Member { user_id: string; email: string; full_name: string | null; hasProfile: boolean; }
 interface Template { id: string; name: string; status: string; }
+
+const displayName = (m?: Member | null) =>
+  m ? (m.full_name?.trim() || (m.email?.includes('@') ? m.email.split('@')[0] : m.email) || 'Teammate') : 'Unassigned';
 
 const Inbox = () => {
   const { user, profile } = useAuth();
