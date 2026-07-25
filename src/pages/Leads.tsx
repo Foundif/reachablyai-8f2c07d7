@@ -202,8 +202,8 @@ const Leads = () => {
       <div className="p-4 md:p-8 space-y-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold">Leads</h1>
-            <p className="text-muted-foreground text-sm mt-1">Manage prospects across all channels — WhatsApp, ads, imports, bookings.</p>
+            <h1 className="text-2xl md:text-3xl font-bold">Contacts</h1>
+            <p className="text-muted-foreground text-sm mt-1">Your unified contact book — WhatsApp chats, ads, imports and scraped businesses.</p>
           </div>
           <div className="flex gap-2">
             <input
@@ -220,11 +220,11 @@ const Leads = () => {
             <Dialog open={addOpen} onOpenChange={setAddOpen}>
               <DialogTrigger asChild>
                 <Button>
-                  <Plus className="w-4 h-4 mr-2" /> Add Lead
+                  <Plus className="w-4 h-4 mr-2" /> Add Contact
                 </Button>
               </DialogTrigger>
               <DialogContent>
-                <DialogHeader><DialogTitle>Add lead</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>Add contact</DialogTitle></DialogHeader>
                 <div className="space-y-3">
                   <div>
                     <label className="text-xs text-muted-foreground">Name *</label>
@@ -245,7 +245,7 @@ const Leads = () => {
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
-                  <Button onClick={handleAdd}>Add Lead</Button>
+                  <Button onClick={handleAdd}>Add Contact</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -296,8 +296,8 @@ const Leads = () => {
           <Card className="p-12 text-center text-muted-foreground">Loading…</Card>
         ) : filtered.length === 0 ? (
           <Card className="p-12 text-center">
-            <p className="text-muted-foreground">No leads yet.</p>
-            <p className="text-xs text-muted-foreground mt-1">Add one manually, import a CSV, or wait for bookings to auto-create leads.</p>
+            <p className="text-muted-foreground">No contacts yet.</p>
+            <p className="text-xs text-muted-foreground mt-1">Add one manually, import a CSV, or wait for inbound WhatsApp messages to auto-create contacts.</p>
           </Card>
         ) : view === 'table' ? (
           <Card className="overflow-hidden">
@@ -380,15 +380,15 @@ const Leads = () => {
         )}
 
         <p className="text-xs text-muted-foreground text-center">
-          {filtered.length} of {leads.length} lead(s) · New bookings automatically create leads.
+          {filtered.length} of {leads.length} contact(s) · Inbound WhatsApp messages automatically create contacts.
         </p>
       </div>
       <ConfirmDialog
         open={!!pendingDelete}
         onOpenChange={(o) => !o && setPendingDelete(null)}
-        title="Delete this lead?"
-        description={<>Lead <b>{pendingDelete?.name}</b> will be permanently removed. This cannot be undone.</>}
-        confirmLabel="Delete lead"
+        title="Delete this contact?"
+        description={<>Contact <b>{pendingDelete?.name}</b> will be permanently removed. This cannot be undone.</>}
+        confirmLabel="Delete contact"
         onConfirm={confirmDelete}
       />
     </AppLayout>
@@ -436,11 +436,11 @@ function ScrapeLeadsDialog({ wsId, onDone }: { wsId: string | null; onDone: () =
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="gap-1"><Sparkles className="w-4 h-4" /> Scrape Leads</Button>
+        <Button variant="outline" className="gap-1"><Sparkles className="w-4 h-4" /> Scrape Contacts</Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Scrape Google Maps leads</DialogTitle>
+          <DialogTitle>Scrape Google Maps contacts</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
@@ -484,7 +484,7 @@ function ScrapeLeadsDialog({ wsId, onDone }: { wsId: string | null; onDone: () =
           </div>
           {result && (
             <div className="text-xs bg-muted/40 border rounded-md p-3">
-              Found <b>{result.total_found}</b>, matched filters <b>{result.matched}</b>, new leads added <b>{result.inserted}</b>.
+              Found <b>{result.total_found}</b>, matched filters <b>{result.matched}</b>, new contacts added <b>{result.inserted}</b>.
             </div>
           )}
           <p className="text-[11px] text-muted-foreground">
