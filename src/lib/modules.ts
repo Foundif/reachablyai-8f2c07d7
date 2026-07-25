@@ -20,7 +20,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
     items: [
       { to: '/', icon: LayoutDashboard, label: 'Dashboard', status: 'live' },
       { to: '/inbox', icon: Inbox, label: 'Team Inbox', status: 'live' },
-      { to: '/leads', icon: Contact, label: 'Leads', status: 'live' },
+      { to: '/leads', icon: Contact, label: 'Contacts', status: 'live' },
     ],
   },
   {

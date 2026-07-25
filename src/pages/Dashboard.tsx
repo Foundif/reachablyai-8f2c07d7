@@ -127,11 +127,11 @@ const Dashboard = () => {
       <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Welcome back{profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}</h1>
-          <p className="text-muted-foreground text-sm mt-1">Reachably · WhatsApp CRM · Leads · Campaigns · Automation</p>
+          <p className="text-muted-foreground text-sm mt-1">Reachably · WhatsApp CRM · Contacts · Campaigns · Automation</p>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-          <ModuleTile icon={Contact} label="Leads" value={stats.leadsNew} hint={`${stats.leadsTotal} total · new this week`} gradient="bg-gradient-to-br from-fuchsia-500 to-pink-500" to="/leads" navigate={navigate} />
+          <ModuleTile icon={Contact} label="Contacts" value={stats.leadsNew} hint={`${stats.leadsTotal} total · new this week`} gradient="bg-gradient-to-br from-fuchsia-500 to-pink-500" to="/leads" navigate={navigate} />
           <ModuleTile icon={Inbox} label="Inbox" value={stats.inboxUnread} hint={`${stats.inboxConversations} chats · ${stats.messagesToday} msgs today`} gradient="bg-gradient-to-br from-blue-500 to-indigo-500" to="/inbox" navigate={navigate} />
           <ModuleTile icon={Megaphone} label="Campaigns" value={stats.campaignsMonth} hint={`${stats.messagesSent} messages this month`} gradient="bg-gradient-to-br from-orange-500 to-rose-500" to="/campaigns" navigate={navigate} />
           <ModuleTile icon={Workflow} label="Automation" value={stats.automationsActive} hint="Active flows" gradient="bg-gradient-to-br from-emerald-500 to-teal-500" to="/automation" navigate={navigate} />
@@ -141,11 +141,11 @@ const Dashboard = () => {
         <div className="grid md:grid-cols-2 gap-4">
           <Card className="p-5">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold flex items-center gap-2"><Contact className="w-4 h-4" /> Recent leads</h3>
+              <h3 className="font-semibold flex items-center gap-2"><Contact className="w-4 h-4" /> Recent contacts</h3>
               <button onClick={() => navigate('/leads')} className="text-xs text-primary hover:underline">View all</button>
             </div>
             {loading ? <p className="text-sm text-muted-foreground">Loading…</p>
-              : recentLeads.length === 0 ? <p className="text-sm text-muted-foreground">No leads yet. Import a CSV to get started.</p>
+              : recentLeads.length === 0 ? <p className="text-sm text-muted-foreground">No contacts yet. Import a CSV to get started.</p>
               : (
                 <div className="space-y-2">
                   {recentLeads.map(l => (
