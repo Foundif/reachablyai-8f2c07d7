@@ -33,6 +33,8 @@ import ComingSoonModule from "./pages/ComingSoonModule";
 import Templates from "./pages/Templates";
 import Campaigns, { CampaignDetail } from "./pages/Campaigns";
 import Automations from "./pages/Automations";
+import AutoReplies from "./pages/AutoReplies";
+
 
 
 const queryClient = new QueryClient();
