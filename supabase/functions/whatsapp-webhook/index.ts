@@ -3,6 +3,67 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const json = (b: any, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
+// Send a WhatsApp free-form text and log it as an outbound message + auto_reply_log entry
+async function sendAutoReply(admin: any, creds: any, workspace_id: string, convId: string, to: string, text: string, ruleKind: string, ruleRef: string | null) {
+  try {
+    const resp = await fetch(`https://graph.facebook.com/v20.0/${creds.phone_number_id}/messages`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${creds.access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'text', text: { body: text } }),
+    });
+    const rb = await resp.json();
+    const ok = resp.ok;
+    const wamid = rb?.messages?.[0]?.id || null;
+    const err = ok ? null : (rb?.error?.message || `HTTP ${resp.status}`);
+    await admin.from('wa_messages').insert({
+      workspace_id, conversation_id: convId, direction: 'outbound', wa_message_id: wamid,
+      from_phone: creds.business_phone, to_phone: to, body: text, message_type: 'text',
+      status: ok ? 'sent' : 'failed', error: err,
+    });
+    if (ok) {
+      await admin.from('wa_conversations').update({
+        last_message_at: new Date().toISOString(),
+        last_message_text: text.slice(0, 200),
+        last_message_direction: 'outbound',
+      }).eq('id', convId);
+      await admin.from('auto_reply_log').insert({ workspace_id, contact_phone: to, rule_kind: ruleKind, rule_ref: ruleRef });
+    }
+    await admin.from('wa_webhook_events').insert({
+      workspace_id, phone_number_id: creds.phone_number_id, event_type: 'auto_reply',
+      status: ok ? 'ok' : 'error', summary: `${ruleKind} → ${to}: ${text.slice(0, 60)}`, error: err, payload: { rule_ref: ruleRef },
+    });
+  } catch (e: any) {
+    await admin.from('wa_webhook_events').insert({
+      workspace_id, phone_number_id: creds.phone_number_id, event_type: 'auto_reply',
+      status: 'error', summary: `auto-reply exception (${ruleKind})`, error: String(e?.message || e),
+    });
+  }
+}
+
+function isWithinBusinessHours(bh: any, timezone: string): boolean {
+  if (!bh) return true;
+  try {
+    const fmt = new Intl.DateTimeFormat('en-US', { timeZone: timezone || 'UTC', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
+    const parts = fmt.formatToParts(new Date());
+    const wd = (parts.find(p => p.type === 'weekday')?.value || '').toLowerCase().slice(0, 3);
+    const hh = parts.find(p => p.type === 'hour')?.value || '00';
+    const mm = parts.find(p => p.type === 'minute')?.value || '00';
+    const now = `${hh === '24' ? '00' : hh}:${mm}`;
+    const day = bh[wd];
+    if (!day || !day.enabled) return false;
+    return now >= (day.start || '00:00') && now <= (day.end || '23:59');
+  } catch { return true; }
+}
+
+async function alreadySentRecently(admin: any, workspace_id: string, phone: string, ruleKind: string, hours = 24): Promise<boolean> {
+  const since = new Date(Date.now() - hours * 3600 * 1000).toISOString();
+  const { data } = await admin.from('auto_reply_log').select('id')
+    .eq('workspace_id', workspace_id).eq('contact_phone', phone).eq('rule_kind', ruleKind)
+    .gte('sent_at', since).limit(1).maybeSingle();
+  return !!data;
+}
+
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
