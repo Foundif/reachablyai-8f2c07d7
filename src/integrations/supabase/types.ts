@@ -345,6 +345,292 @@ export type Database = {
           },
         ]
       }
+      chatbot_chunks: {
+        Row: {
+          chatbot_id: string
+          content: string
+          created_at: string
+          embedding: string
+          id: string
+          source_id: string | null
+          token_count: number | null
+          workspace_id: string
+        }
+        Insert: {
+          chatbot_id: string
+          content: string
+          created_at?: string
+          embedding: string
+          id?: string
+          source_id?: string | null
+          token_count?: number | null
+          workspace_id: string
+        }
+        Update: {
+          chatbot_id?: string
+          content?: string
+          created_at?: string
+          embedding?: string
+          id?: string
+          source_id?: string | null
+          token_count?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbot_chunks_chatbot_id_fkey"
+            columns: ["chatbot_id"]
+            isOneToOne: false
+            referencedRelation: "chatbots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chatbot_chunks_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "chatbot_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chatbot_chunks_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chatbot_conversations: {
+        Row: {
+          chatbot_id: string
+          created_at: string
+          human_takeover: boolean
+          id: string
+          last_message_at: string | null
+          last_message_preview: string | null
+          page_url: string | null
+          updated_at: string
+          visitor_email: string | null
+          visitor_id: string
+          visitor_name: string | null
+          workspace_id: string
+        }
+        Insert: {
+          chatbot_id: string
+          created_at?: string
+          human_takeover?: boolean
+          id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          page_url?: string | null
+          updated_at?: string
+          visitor_email?: string | null
+          visitor_id: string
+          visitor_name?: string | null
+          workspace_id: string
+        }
+        Update: {
+          chatbot_id?: string
+          created_at?: string
+          human_takeover?: boolean
+          id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          page_url?: string | null
+          updated_at?: string
+          visitor_email?: string | null
+          visitor_id?: string
+          visitor_name?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbot_conversations_chatbot_id_fkey"
+            columns: ["chatbot_id"]
+            isOneToOne: false
+            referencedRelation: "chatbots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chatbot_conversations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chatbot_messages: {
+        Row: {
+          chatbot_id: string
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          role: string
+          workspace_id: string
+        }
+        Insert: {
+          chatbot_id: string
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          role: string
+          workspace_id: string
+        }
+        Update: {
+          chatbot_id?: string
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbot_messages_chatbot_id_fkey"
+            columns: ["chatbot_id"]
+            isOneToOne: false
+            referencedRelation: "chatbots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chatbot_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chatbot_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chatbot_messages_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chatbot_sources: {
+        Row: {
+          chars_ingested: number
+          chatbot_id: string
+          created_at: string
+          error: string | null
+          id: string
+          source_ref: string | null
+          status: string
+          title: string | null
+          type: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          chars_ingested?: number
+          chatbot_id: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          source_ref?: string | null
+          status?: string
+          title?: string | null
+          type: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          chars_ingested?: number
+          chatbot_id?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          source_ref?: string | null
+          status?: string
+          title?: string | null
+          type?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbot_sources_chatbot_id_fkey"
+            columns: ["chatbot_id"]
+            isOneToOne: false
+            referencedRelation: "chatbots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chatbot_sources_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chatbots: {
+        Row: {
+          avatar_url: string | null
+          brand_color: string
+          created_at: string
+          created_by: string | null
+          enabled: boolean
+          id: string
+          launcher_text: string
+          name: string
+          position: string
+          public_key: string
+          system_prompt: string
+          tone: string
+          updated_at: string
+          welcome_message: string
+          workspace_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          brand_color?: string
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          id?: string
+          launcher_text?: string
+          name: string
+          position?: string
+          public_key?: string
+          system_prompt?: string
+          tone?: string
+          updated_at?: string
+          welcome_message?: string
+          workspace_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          brand_color?: string
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          id?: string
+          launcher_text?: string
+          name?: string
+          position?: string
+          public_key?: string
+          system_prompt?: string
+          tone?: string
+          updated_at?: string
+          welcome_message?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbots_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_transactions: {
         Row: {
           amount_paise: number
@@ -1131,6 +1417,18 @@ export type Database = {
       is_workspace_member: {
         Args: { _uid: string; _ws: string }
         Returns: boolean
+      }
+      match_chatbot_chunks: {
+        Args: {
+          _chatbot_id: string
+          match_count?: number
+          query_embedding: string
+        }
+        Returns: {
+          content: string
+          id: string
+          similarity: number
+        }[]
       }
     }
     Enums: {
