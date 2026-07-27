@@ -17,7 +17,7 @@ import { resolveWorkspaceId } from '@/lib/workspace';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 type TriggerType = 'new_lead' | 'tag_added' | 'status_changed' | 'keyword_match' | 'no_reply_24h';
-type ActionType = 'send_template' | 'add_tag' | 'set_status' | 'assign_agent';
+type ActionType = 'send_template' | 'send_text' | 'add_tag' | 'set_status' | 'assign_agent';
 
 interface Automation {
   id: string; name: string; enabled: boolean;
@@ -36,10 +36,12 @@ const TRIGGER_LABELS: Record<TriggerType, string> = {
 };
 const ACTION_LABELS: Record<ActionType, string> = {
   send_template: 'Send WhatsApp template',
+  send_text: 'Send text reply',
   add_tag: 'Add tag',
   set_status: 'Change lead status',
   assign_agent: 'Assign to agent',
 };
+
 
 const Automations = () => {
   const { user, profile } = useAuth();
@@ -77,17 +79,20 @@ const Automations = () => {
     if (!wsId) return;
     if (!form.name.trim()) return toast.error('Name required');
     if (form.action_type === 'send_template' && !form.template_id) return toast.error('Pick a template');
+    if (form.action_type === 'send_text' && !form.action_value.trim()) return toast.error('Enter reply text');
     if (form.action_type === 'add_tag' && !form.action_value.trim()) return toast.error('Enter tag');
     if (form.action_type === 'set_status' && !form.action_value.trim()) return toast.error('Pick status');
 
     const trigger_config: any = {};
     if (form.trigger_type === 'tag_added') trigger_config.tag = form.trigger_value.trim();
     if (form.trigger_type === 'status_changed') trigger_config.status = form.trigger_value.trim();
-    if (form.trigger_type === 'keyword_match') trigger_config.keyword = form.trigger_value.trim();
+    if (form.trigger_type === 'keyword_match') { trigger_config.keyword = form.trigger_value.trim(); trigger_config.match = 'contains'; }
 
     const action_config: any = {};
     if (form.action_type === 'add_tag') action_config.tag = form.action_value.trim();
     if (form.action_type === 'set_status') action_config.status = form.action_value.trim();
+    if (form.action_type === 'send_text') action_config.text = form.action_value.trim();
+
 
     const { error } = await supabase.from('automations' as any).insert({
       workspace_id: wsId,
@@ -172,6 +177,10 @@ const Automations = () => {
                       </SelectContent>
                     </Select>
                   )}
+                  {form.action_type === 'send_text' && (
+                    <Input className="mt-2" placeholder="Reply text sent to the customer" value={form.action_value} onChange={e => setForm({ ...form, action_value: e.target.value })} maxLength={1000} />
+                  )}
+
                   {form.action_type === 'add_tag' && (
                     <Input className="mt-2" placeholder="Tag to add" value={form.action_value} onChange={e => setForm({ ...form, action_value: e.target.value })} />
                   )}

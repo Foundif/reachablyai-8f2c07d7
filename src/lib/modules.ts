@@ -1,8 +1,9 @@
 import {
   Inbox, Contact, MessageSquareText,
   UserCog, Settings, UserCircle,
-  LayoutDashboard, BarChart3, Wallet, Megaphone, Workflow,
+  LayoutDashboard, BarChart3, Wallet, Megaphone, Workflow, Bot,
 } from 'lucide-react';
+
 
 export type ModuleItem = {
   to: string;
@@ -29,8 +30,10 @@ export const MODULE_GROUPS: ModuleGroup[] = [
       { to: '/templates', icon: MessageSquareText, label: 'Templates', status: 'live' },
       { to: '/campaigns', icon: Megaphone, label: 'Campaigns', status: 'live' },
       { to: '/automation', icon: Workflow, label: 'Automation', status: 'live' },
+      { to: '/auto-replies', icon: Bot, label: 'Auto-replies', status: 'live' },
     ],
   },
+
   {
     label: 'Insights',
     items: [

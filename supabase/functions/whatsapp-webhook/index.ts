@@ -3,6 +3,67 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const json = (b: any, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
+// Send a WhatsApp free-form text and log it as an outbound message + auto_reply_log entry
+async function sendAutoReply(admin: any, creds: any, workspace_id: string, convId: string, to: string, text: string, ruleKind: string, ruleRef: string | null) {
+  try {
+    const resp = await fetch(`https://graph.facebook.com/v20.0/${creds.phone_number_id}/messages`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${creds.access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'text', text: { body: text } }),
+    });
+    const rb = await resp.json();
+    const ok = resp.ok;
+    const wamid = rb?.messages?.[0]?.id || null;
+    const err = ok ? null : (rb?.error?.message || `HTTP ${resp.status}`);
+    await admin.from('wa_messages').insert({
+      workspace_id, conversation_id: convId, direction: 'outbound', wa_message_id: wamid,
+      from_phone: creds.business_phone, to_phone: to, body: text, message_type: 'text',
+      status: ok ? 'sent' : 'failed', error: err,
+    });
+    if (ok) {
+      await admin.from('wa_conversations').update({
+        last_message_at: new Date().toISOString(),
+        last_message_text: text.slice(0, 200),
+        last_message_direction: 'outbound',
+      }).eq('id', convId);
+      await admin.from('auto_reply_log').insert({ workspace_id, contact_phone: to, rule_kind: ruleKind, rule_ref: ruleRef });
+    }
+    await admin.from('wa_webhook_events').insert({
+      workspace_id, phone_number_id: creds.phone_number_id, event_type: 'auto_reply',
+      status: ok ? 'ok' : 'error', summary: `${ruleKind} → ${to}: ${text.slice(0, 60)}`, error: err, payload: { rule_ref: ruleRef },
+    });
+  } catch (e: any) {
+    await admin.from('wa_webhook_events').insert({
+      workspace_id, phone_number_id: creds.phone_number_id, event_type: 'auto_reply',
+      status: 'error', summary: `auto-reply exception (${ruleKind})`, error: String(e?.message || e),
+    });
+  }
+}
+
+function isWithinBusinessHours(bh: any, timezone: string): boolean {
+  if (!bh) return true;
+  try {
+    const fmt = new Intl.DateTimeFormat('en-US', { timeZone: timezone || 'UTC', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
+    const parts = fmt.formatToParts(new Date());
+    const wd = (parts.find(p => p.type === 'weekday')?.value || '').toLowerCase().slice(0, 3);
+    const hh = parts.find(p => p.type === 'hour')?.value || '00';
+    const mm = parts.find(p => p.type === 'minute')?.value || '00';
+    const now = `${hh === '24' ? '00' : hh}:${mm}`;
+    const day = bh[wd];
+    if (!day || !day.enabled) return false;
+    return now >= (day.start || '00:00') && now <= (day.end || '23:59');
+  } catch { return true; }
+}
+
+async function alreadySentRecently(admin: any, workspace_id: string, phone: string, ruleKind: string, hours = 24): Promise<boolean> {
+  const since = new Date(Date.now() - hours * 3600 * 1000).toISOString();
+  const { data } = await admin.from('auto_reply_log').select('id')
+    .eq('workspace_id', workspace_id).eq('contact_phone', phone).eq('rule_kind', ruleKind)
+    .gte('sent_at', since).limit(1).maybeSingle();
+  return !!data;
+}
+
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -72,6 +133,7 @@ Deno.serve(async (req) => {
 
             // Auto-create/find lead so every inbound customer shows in Leads
             let leadId: string | null = null;
+            let isNewContact = false;
             try {
               const { data: existingLead } = await admin.from('leads')
                 .select('id').eq('workspace_id', workspace_id).eq('phone', from).maybeSingle();
@@ -81,6 +143,7 @@ Deno.serve(async (req) => {
                   await admin.from('leads').update({ name: contactName }).eq('id', leadId).eq('name', from);
                 }
               } else {
+                isNewContact = true;
                 const { data: newLead } = await admin.from('leads').insert({
                   workspace_id, name: contactName || from, phone: from,
                   source: 'manual', status: 'new', tags: ['whatsapp'],
@@ -89,6 +152,7 @@ Deno.serve(async (req) => {
                 leadId = newLead?.id || null;
               }
             } catch (_) { /* non-fatal */ }
+
 
             const { data: existing } = await admin.from('wa_conversations')
               .select('id, unread_count, lead_id').eq('workspace_id', workspace_id).eq('contact_phone', from).maybeSingle();
@@ -140,23 +204,64 @@ Deno.serve(async (req) => {
               status: 'ok', summary: `Inbound ${m.type}: ${(bodyText || '').slice(0, 80)}`, payload: m,
             });
 
-            // Automations (keyword_match) — non-fatal
+            // ===== Auto-replies pipeline: keyword rules → welcome → away =====
             try {
+              let repliedThisTurn = false;
+
+              // 1) Keyword automations (send free-form text if action_type=send_text, else just log run)
               const { data: autos } = await admin.from('automations')
                 .select('*').eq('workspace_id', workspace_id).eq('enabled', true).eq('trigger_type', 'keyword_match');
               for (const a of autos || []) {
-                const kw = (a.trigger_config?.keyword || '').toLowerCase();
-                if (kw && (bodyText || '').toLowerCase().includes(kw)) {
-                  await admin.from('automation_runs').insert({
-                    workspace_id, automation_id: a.id, status: 'matched',
-                    context: { message: bodyText, from },
-                  });
-                  await admin.from('automations').update({
-                    run_count: (a.run_count || 0) + 1, last_run_at: new Date().toISOString(),
-                  }).eq('id', a.id);
+                const kw = (a.trigger_config?.keyword || '').toLowerCase().trim();
+                if (!kw) continue;
+                const matchMode = a.trigger_config?.match || 'contains'; // 'contains' | 'exact'
+                const hay = (bodyText || '').toLowerCase();
+                const matched = matchMode === 'exact' ? hay.trim() === kw : hay.includes(kw);
+                if (!matched) continue;
+
+                await admin.from('automation_runs').insert({
+                  workspace_id, automation_id: a.id, status: 'matched',
+                  detail: `keyword "${kw}" matched`,
+                });
+                await admin.from('automations').update({
+                  run_count: (a.run_count || 0) + 1, last_run_at: new Date().toISOString(),
+                }).eq('id', a.id);
+
+                const replyText = a.action_config?.reply_text || (a.action_type === 'send_text' ? a.action_config?.text : null);
+                if (replyText && !(await alreadySentRecently(admin, workspace_id, from, `keyword:${a.id}`, 1))) {
+                  await sendAutoReply(admin, creds, workspace_id, convId, from, replyText, `keyword:${a.id}`, a.id);
+                  repliedThisTurn = true;
                 }
               }
-            } catch (_) {}
+
+              // 2) Welcome + business-hours auto-reply (only if no keyword rule already replied)
+              if (!repliedThisTurn) {
+                const { data: settings } = await admin.from('workspace_settings')
+                  .select('*').eq('workspace_id', workspace_id).maybeSingle();
+                if (settings) {
+                  const withinHours = isWithinBusinessHours(settings.business_hours, settings.timezone);
+
+                  if (settings.welcome_enabled && isNewContact) {
+                    if (!(await alreadySentRecently(admin, workspace_id, from, 'welcome', 24 * 365))) {
+                      await sendAutoReply(admin, creds, workspace_id, convId, from, settings.welcome_message, 'welcome', null);
+                      repliedThisTurn = true;
+                    }
+                  }
+
+                  if (!repliedThisTurn && settings.away_enabled && !withinHours) {
+                    if (!(await alreadySentRecently(admin, workspace_id, from, 'away', 24))) {
+                      await sendAutoReply(admin, creds, workspace_id, convId, from, settings.away_message, 'away', null);
+                    }
+                  }
+                }
+              }
+            } catch (autoErr: any) {
+              await admin.from('wa_webhook_events').insert({
+                workspace_id, phone_number_id: phoneId, event_type: 'auto_reply',
+                status: 'error', summary: 'auto-reply pipeline failed', error: String(autoErr?.message || autoErr),
+              });
+            }
+
           } catch (msgErr: any) {
             await admin.from('wa_webhook_events').insert({
               workspace_id, phone_number_id: phoneId, event_type: 'message', from_phone: m.from,
