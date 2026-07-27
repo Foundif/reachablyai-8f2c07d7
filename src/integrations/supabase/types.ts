@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      auto_reply_log: {
+        Row: {
+          contact_phone: string
+          id: string
+          rule_kind: string
+          rule_ref: string | null
+          sent_at: string
+          workspace_id: string
+        }
+        Insert: {
+          contact_phone: string
+          id?: string
+          rule_kind: string
+          rule_ref?: string | null
+          sent_at?: string
+          workspace_id: string
+        }
+        Update: {
+          contact_phone?: string
+          id?: string
+          rule_kind?: string
+          rule_ref?: string | null
+          sent_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auto_reply_log_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       automation_runs: {
         Row: {
           automation_id: string
@@ -1004,6 +1039,50 @@ export type Database = {
             foreignKeyName: "workspace_members_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_settings: {
+        Row: {
+          away_enabled: boolean
+          away_message: string
+          business_hours: Json
+          created_at: string
+          timezone: string
+          updated_at: string
+          welcome_enabled: boolean
+          welcome_message: string
+          workspace_id: string
+        }
+        Insert: {
+          away_enabled?: boolean
+          away_message?: string
+          business_hours?: Json
+          created_at?: string
+          timezone?: string
+          updated_at?: string
+          welcome_enabled?: boolean
+          welcome_message?: string
+          workspace_id: string
+        }
+        Update: {
+          away_enabled?: boolean
+          away_message?: string
+          business_hours?: Json
+          created_at?: string
+          timezone?: string
+          updated_at?: string
+          welcome_enabled?: boolean
+          welcome_message?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
