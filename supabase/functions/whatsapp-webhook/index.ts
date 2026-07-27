@@ -133,6 +133,7 @@ Deno.serve(async (req) => {
 
             // Auto-create/find lead so every inbound customer shows in Leads
             let leadId: string | null = null;
+            let isNewContact = false;
             try {
               const { data: existingLead } = await admin.from('leads')
                 .select('id').eq('workspace_id', workspace_id).eq('phone', from).maybeSingle();
@@ -142,6 +143,7 @@ Deno.serve(async (req) => {
                   await admin.from('leads').update({ name: contactName }).eq('id', leadId).eq('name', from);
                 }
               } else {
+                isNewContact = true;
                 const { data: newLead } = await admin.from('leads').insert({
                   workspace_id, name: contactName || from, phone: from,
                   source: 'manual', status: 'new', tags: ['whatsapp'],
@@ -150,6 +152,7 @@ Deno.serve(async (req) => {
                 leadId = newLead?.id || null;
               }
             } catch (_) { /* non-fatal */ }
+
 
             const { data: existing } = await admin.from('wa_conversations')
               .select('id, unread_count, lead_id').eq('workspace_id', workspace_id).eq('contact_phone', from).maybeSingle();
