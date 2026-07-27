@@ -34,6 +34,8 @@ import Templates from "./pages/Templates";
 import Campaigns, { CampaignDetail } from "./pages/Campaigns";
 import Automations from "./pages/Automations";
 import AutoReplies from "./pages/AutoReplies";
+import Chatbots from "./pages/Chatbots";
+import ChatbotDetail from "./pages/ChatbotDetail";
 
 
 
@@ -80,6 +82,8 @@ const App = () => (
                 <Route path="/campaigns/:id" element={<ProtectedRoute><CampaignDetail /></ProtectedRoute>} />
                 <Route path="/automation" element={<ProtectedRoute><Automations /></ProtectedRoute>} />
                 <Route path="/auto-replies" element={<ProtectedRoute><AutoReplies /></ProtectedRoute>} />
+                <Route path="/chatbots" element={<ProtectedRoute><Chatbots /></ProtectedRoute>} />
+                <Route path="/chatbots/:id" element={<ProtectedRoute><ChatbotDetail /></ProtectedRoute>} />
 
                 <Route path="/scraper" element={<ProtectedRoute><ComingSoonModule title="Lead Scraper" description="Google Maps / GMB lead scraper with location, keyword and 'website missing' filters — shipping in step 2h." /></ProtectedRoute>} />
                 <Route path="/templates" element={<ProtectedRoute><Templates /></ProtectedRoute>} />

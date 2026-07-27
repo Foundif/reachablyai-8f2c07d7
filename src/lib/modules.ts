@@ -31,6 +31,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
       { to: '/campaigns', icon: Megaphone, label: 'Campaigns', status: 'live' },
       { to: '/automation', icon: Workflow, label: 'Automation', status: 'live' },
       { to: '/auto-replies', icon: Bot, label: 'Auto-replies', status: 'live' },
+      { to: '/chatbots', icon: Bot, label: 'AI Chatbots', status: 'live' },
     ],
   },
 

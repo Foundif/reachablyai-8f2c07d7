@@ -1,70 +1,355 @@
+Perfect — this is **exactly the right direction**.  
+I’ve now rewritten your prompt so **Lovable extends your existing WhatsApp CRM (Reachably-style)** instead of building a new app from scratch.
 
-# Reachably WATI-parity roadmap
-
-Three sprints, shipped in order. Each sprint lands fully working before the next starts.
-
----
-
-## Sprint 1 — Auto-replies, Business Hours, Keywords (this turn)
-
-**Goal:** every inbound WhatsApp message hits a lightweight rules engine before it just sits in the inbox.
-
-### What you'll get
-- **Business hours** per workspace (per-weekday open/close + timezone).
-- **Away message** — auto-sent to inbound messages outside business hours (once per 24h per contact).
-- **Welcome message** — auto-sent the first time a phone number ever messages you.
-- **Keyword replies** — already partly in `automations`; upgraded to send free-form text replies (not just log a run) and match phrases + exact words + case-insensitive.
-- **New Settings tab: "Auto-replies"** with toggles, message editor, business-hours grid, and a live preview of what the customer will see.
-
-### Technical
-- New table `workspace_settings` (1:1 with workspace): `business_hours jsonb`, `timezone`, `away_enabled`, `away_message`, `welcome_enabled`, `welcome_message`.
-- Extend `automations.action_type` to allow `send_text` (free-form). Existing `send_template` keeps working.
-- New `auto_reply_log` table to enforce "once per 24h per contact per rule".
-- `whatsapp-webhook` gains an `evaluateAutoReplies()` step that runs after message insert, uses the existing `whatsapp-send` function to reply, and logs the event.
+This is now a **feature module: “AI Chatbots” inside your current system** 👇
 
 ---
 
-## Sprint 2 — No-code Flow Builder
+# 🚀 LOVABLE MASTER PROMPT (EXTEND EXISTING WHATSAPP CRM)
 
-**Goal:** WATI-style drag-drop chatbot builder.
+**IMPORTANT:**  
+Do NOT create a new app.  
+Extend the **existing WhatsApp CRM system** and reuse:
 
-### What you'll get
-- Canvas at `/flows` using React Flow (already Lovable-friendly).
-- Node types: **Message**, **Question** (waits for reply, stores answer in variable), **Condition** (if/else on variable or contact tag), **Delay**, **API Call** (HTTP request to any URL), **Handoff to human** (assigns chat to an agent/team).
-- Publish/unpublish per flow. Trigger via keyword, new-contact, or manual "start flow" button from inbox.
-- Live-run state stored in a new `flow_sessions` table so a conversation can resume across days.
-
-### Technical
-- Tables: `flows`, `flow_nodes` (or nodes stored inside `flows.graph jsonb`), `flow_sessions`, `flow_variables`.
-- Runtime engine in an edge function `flow-runtime` called from `whatsapp-webhook` when an inbound message matches a running session or a trigger.
-- Reuses `whatsapp-send` for outbound.
+- workspaces
+- workspace_members
+- auth
+- sidebar layout
+- inbox/conversations logic
+- UI components (shadcn, AppLayout)
 
 ---
 
-## Sprint 3 — Native CRM integrations
+# 🧠 FEATURE: AI CUSTOMER SUPPORT PLATFORM (ADD-ON MODULE)
 
-**Goal:** Reachably becomes the WhatsApp layer on top of the tools you already use.
+Build an **AI Chatbot module inside the existing CRM**, similar to Intercom/Tidio, powered by **Gemini via Lovable AI Gateway**.
 
-### Providers (all five, day-one)
-| Provider | How it connects | What it does |
-|---|---|---|
-| **Shopify** | `shopify--enable` (Lovable's native Shopify integration) | Abandoned-cart recovery → WhatsApp template; order-created & order-fulfilled → WhatsApp update; customer sync to Contacts. |
-| **WooCommerce** | `standard_connectors` (gateway-backed) | Same event set via WooCommerce REST + webhooks. |
-| **HubSpot** | `standard_connectors` (gateway-backed) | Two-way contact sync; deal-stage change → WhatsApp template; inbound WhatsApp reply → HubSpot timeline note. |
-| **Zoho CRM** | `standard_connectors` (gateway-backed) | Contact sync + lead-status change → WhatsApp template. |
-| **Google Sheets** | `google_sheets` App User Connector (per-user OAuth) | Two-way contact/lead sync to a chosen sheet; new row → optional WhatsApp send. |
-
-### Technical
-- New `integrations` table: `workspace_id`, `provider`, `status`, `config jsonb`, `last_sync_at`.
-- One edge function per provider (`integration-shopify`, `integration-woocommerce`, `integration-hubspot`, `integration-zoho`, `integration-sheets`) handling: connect callback, initial sync, webhook receiver, outbound trigger dispatcher.
-- Shared `integration-dispatch` helper that turns provider events (e.g. `abandoned_cart`) into WhatsApp sends via existing template/automation infra — so no duplicate messaging logic.
-- New `Integrations` page in Settings with a card per provider (Connect / Configure / Disconnect / last-sync timestamp).
+This should live as a **new feature**, not a separate product.
 
 ---
 
-## Order of delivery
-1. Sprint 1 starts now, single commit set, no waiting on secrets.
-2. Sprint 2 kicks off after you confirm Sprint 1 works end-to-end on a real inbound message.
-3. Sprint 3 goes provider-by-provider (Shopify & WooCommerce first — they only need webhook URLs; HubSpot & Zoho need connector approvals; Sheets needs the App User Connector client).
+# 📍 SIDEBAR PLACEMENT
 
-I'll start Sprint 1 as soon as you approve.
+Add a new sidebar item:
+
+👉 **Growth → AI Chatbots**
+
+Place it near:
+
+- Auto-replies
+- Campaigns
+
+---
+
+# 🧩 SCOPE (INTEGRATED MODE)
+
+## ✅ INCLUDE
+
+### 1. Chatbots Module (NEW)
+
+- Create / edit / delete chatbots
+- Each chatbot belongs to existing **workspace_id**
+- Reuse workspace isolation logic
+
+---
+
+### 2. Chatbot Capabilities
+
+Each chatbot should support:
+
+- Name
+- System prompt (AI behavior)
+- Tone (friendly / sales / support)
+- Brand color
+- Position (left/right)
+- Avatar
+- Welcome message
+- Launcher text
+- Enable/disable
+
+---
+
+### 3. AI TRAINING (RAG SYSTEM)
+
+Allow training using:
+
+- Website URLs (crawler)
+- PDF uploads
+- FAQ (Q&A pairs)
+- Custom instructions
+
+---
+
+### 4. GEMINI AI (REUSE LOVABLE AI GATEWAY)
+
+- Use existing `LOVABLE_API_KEY`
+- Model:
+  - `google/gemini-3.6-flash` (responses)
+  - `google/text-embedding-004` (embeddings)
+
+---
+
+### 5. EMBED SYSTEM
+
+Generate script:
+
+```html
+<script src="https://<project>.functions.supabase.co/widget-js?bot=BOT_PUBLIC_KEY" async></script>
+
+```
+
+- Works on any website
+- No auth required
+- Public access via bot key
+
+---
+
+### 6. LIVE CHAT + CONVERSATIONS
+
+Reuse CRM inbox concepts but separate entity:
+
+- AI chatbot conversations (web visitors)
+- NOT WhatsApp conversations
+
+---
+
+### Features:
+
+- Conversations list
+- Transcript view
+- “Reply as human” → disables AI for that thread
+- Store visitor name/email (lead capture)
+
+---
+
+# ❌ EXCLUDE (IMPORTANT)
+
+Do NOT build:
+
+- Payments / billing
+- WhatsApp features (already exists)
+- SLA / ticketing
+- Team routing
+- Voice / multilingual
+
+---
+
+# 🧱 ARCHITECTURE (INTEGRATED)
+
+```
+Website (widget.js)
+   ↓
+Edge Function: chatbot-message (public)
+   ↓
+Retrieve bot config + embeddings
+   ↓
+Gemini (via Lovable AI Gateway)
+   ↓
+Save conversation (Supabase)
+   ↓
+Return streamed response
+
+```
+
+---
+
+# 🗄️ DATABASE (NEW TABLES ONLY)
+
+Create NEW tables (do not modify existing ones):
+
+---
+
+### chatbots
+
+- id
+- workspace_id
+- name
+- system_prompt
+- welcome_message
+- tone
+- brand_color
+- position
+- avatar_url
+- launcher_text
+- enabled
+- public_key
+
+---
+
+### chatbot_sources
+
+- chatbot_id
+- type (url | pdf | faq | text)
+- status
+- chars_ingested
+
+---
+
+### chatbot_chunks
+
+- chatbot_id
+- content
+- embedding (vector)
+
+---
+
+### chatbot_conversations
+
+- chatbot_id
+- visitor_id
+- visitor_name
+- visitor_email
+- human_takeover (boolean)
+- last_message_at
+
+---
+
+### chatbot_messages
+
+- conversation_id
+- role (user | assistant | agent)
+- content
+
+---
+
+# ⚙️ EDGE FUNCTIONS
+
+## 1. chatbot-ingest
+
+- Crawl URL / parse PDF
+- Chunk text (~800 chars)
+- Generate embeddings
+- Store in `chatbot_chunks`
+
+---
+
+## 2. chatbot-message (PUBLIC API)
+
+- No auth required
+- Input: bot_public_key + message
+- Flow:
+  - Load chatbot config
+  - Retrieve top-K chunks
+  - Generate response using Gemini
+  - Save conversation + messages
+  - Stream response
+
+---
+
+## 3. widget-js
+
+- Returns JS widget
+- Renders floating chat bubble
+- Uses Shadow DOM
+- Sends messages to chatbot-message API
+
+---
+
+# 🖥️ DASHBOARD PAGES
+
+## /chatbots
+
+- List all bots
+- Create new bot
+
+---
+
+## /chatbots/:id
+
+Tabs:
+
+1. Overview → basic settings
+2. Train → upload URLs/PDF/FAQ
+3. Appearance → UI customization
+4. Test → live preview
+5. Install → embed script
+6. Conversations → chat history
+
+---
+
+# 🔁 INTEGRATION WITH EXISTING CRM
+
+### IMPORTANT LOGIC
+
+- Do NOT mix with WhatsApp messages
+- Keep chatbot conversations separate
+- BUT reuse:
+  - UI components
+  - layout
+  - auth
+  - workspace
+
+---
+
+# ⚡ PERFORMANCE + LIMITS
+
+- Rate limit:
+  - 20 messages / conversation / hour
+- Widget size:
+  - ~10KB gzipped
+- Cache widget:
+  - 5 minutes
+
+---
+
+# 🔐 SECURITY
+
+- Use public_key (NOT chatbot_id)
+- Gemini calls only via backend
+- RLS enforced via workspace_id
+- Edge functions use service role
+
+---
+
+# 🚀 DELIVERY ORDER (FOLLOW STRICTLY)
+
+1. DB migration (tables + vector support)
+2. Edge functions:
+  - chatbot-ingest
+  - chatbot-message
+  - widget-js
+3. Dashboard UI (all tabs)
+4. Sidebar integration
+5. End-to-end test
+
+---
+
+# 🎯 FINAL GOAL
+
+Extend your CRM into:
+
+👉 **WhatsApp CRM + AI Website Chatbot Platform**
+
+So you now sell:
+
+- WhatsApp automation (existing)
+- AI website chatbot (new)
+- Flow + automation (future sync)
+
+---
+
+## ✅ WHAT YOU SHOULD TELL LOVABLE
+
+Paste this and say:
+
+👉 **"Build this as an extension of my existing CRM, not a new project."**
+
+---
+
+## 🔥 REAL TALK (IMPORTANT)
+
+This architecture is 🔥
+
+You’re basically building:
+
+👉 **WATI (WhatsApp) + Intercom (Website AI chat) in one SaaS**
+
+You can easily price this at:
+
+- ₹2,999/month (starter)
+- ₹4,999/month (growth)
+- ₹7,999/month (pro)
+
+---
+
+&nbsp;
