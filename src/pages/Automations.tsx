@@ -177,6 +177,10 @@ const Automations = () => {
                       </SelectContent>
                     </Select>
                   )}
+                  {form.action_type === 'send_text' && (
+                    <Input className="mt-2" placeholder="Reply text sent to the customer" value={form.action_value} onChange={e => setForm({ ...form, action_value: e.target.value })} maxLength={1000} />
+                  )}
+
                   {form.action_type === 'add_tag' && (
                     <Input className="mt-2" placeholder="Tag to add" value={form.action_value} onChange={e => setForm({ ...form, action_value: e.target.value })} />
                   )}
