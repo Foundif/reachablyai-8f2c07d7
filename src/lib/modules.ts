@@ -1,8 +1,9 @@
 import {
   Inbox, Contact, MessageSquareText,
   UserCog, Settings, UserCircle,
-  LayoutDashboard, BarChart3, Wallet, Megaphone, Workflow,
+  LayoutDashboard, BarChart3, Wallet, Megaphone, Workflow, Bot,
 } from 'lucide-react';
+
 
 export type ModuleItem = {
   to: string;
