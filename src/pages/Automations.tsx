@@ -17,7 +17,7 @@ import { resolveWorkspaceId } from '@/lib/workspace';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 type TriggerType = 'new_lead' | 'tag_added' | 'status_changed' | 'keyword_match' | 'no_reply_24h';
-type ActionType = 'send_template' | 'add_tag' | 'set_status' | 'assign_agent';
+type ActionType = 'send_template' | 'send_text' | 'add_tag' | 'set_status' | 'assign_agent';
 
 interface Automation {
   id: string; name: string; enabled: boolean;
@@ -36,10 +36,12 @@ const TRIGGER_LABELS: Record<TriggerType, string> = {
 };
 const ACTION_LABELS: Record<ActionType, string> = {
   send_template: 'Send WhatsApp template',
+  send_text: 'Send text reply',
   add_tag: 'Add tag',
   set_status: 'Change lead status',
   assign_agent: 'Assign to agent',
 };
+
 
 const Automations = () => {
   const { user, profile } = useAuth();
