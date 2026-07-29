@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
     const apiKey = Deno.env.get('SERPAPI_API_KEY');
     if (!apiKey) return json({ error: 'SERPAPI_API_KEY not configured. Add it in Settings.' }, 400);
 
-
+    const effectiveMax = Math.min(maxResults, remaining);
     const query = location ? `${keyword} in ${location}` : keyword;
     const results: any[] = [];
     let start = 0;
