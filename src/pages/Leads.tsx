@@ -83,6 +83,7 @@ function parseCSV(text: string): string[][] {
 
 const Leads = () => {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'cards' | 'table'>('table');
@@ -165,7 +166,7 @@ const Leads = () => {
   const handleOpenWhatsApp = (l: Lead) => {
     if (!l.phone) return toast.error('No phone number');
     const digits = l.phone.replace(/\D/g, '');
-    window.open(`https://wa.me/${digits}`, '_blank');
+    navigate(`/inbox?phone=${encodeURIComponent(digits)}&name=${encodeURIComponent(l.name || '')}`);
   };
 
   const handleCsvUpload = async (file: File) => {
@@ -201,12 +202,12 @@ const Leads = () => {
   return (
     <AppLayout>
       <div className="p-4 md:p-8 space-y-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-3">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold">Contacts</h1>
             <p className="text-muted-foreground text-sm mt-1">Your unified contact book — WhatsApp chats, ads, imports and scraped businesses.</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <input
               type="file"
               accept=".csv"
@@ -214,13 +215,13 @@ const Leads = () => {
               ref={csvInputRef}
               onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCsvUpload(f); }}
             />
-            <Button variant="outline" onClick={() => csvInputRef.current?.click()}>
+            <Button variant="outline" className="flex-1 sm:flex-none min-w-[140px]" onClick={() => csvInputRef.current?.click()}>
               <Upload className="w-4 h-4 mr-2" /> Import CSV
             </Button>
             <ScrapeLeadsDialog wsId={wsId} onDone={loadLeads} />
             <Dialog open={addOpen} onOpenChange={setAddOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button className="flex-1 sm:flex-none min-w-[140px]">
                   <Plus className="w-4 h-4 mr-2" /> Add Contact
                 </Button>
               </DialogTrigger>

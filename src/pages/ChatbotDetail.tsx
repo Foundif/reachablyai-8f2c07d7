@@ -162,23 +162,23 @@ const ChatbotDetail = () => {
   return (
     <AppLayout>
       <div className="p-4 md:p-6 space-y-4 max-w-6xl mx-auto">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="ghost" size="sm" onClick={() => nav('/chatbots')}><ArrowLeft className="w-4 h-4" /></Button>
-          <div className="flex-1">
-            <h1 className="text-xl font-bold">{bot.name}</h1>
-            <div className="text-xs text-muted-foreground">Public key: <code>{bot.public_key}</code></div>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-bold truncate">{bot.name}</h1>
+            <div className="text-xs text-muted-foreground truncate">Public key: <code>{bot.public_key}</code></div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 ml-auto">
             <span className="text-sm">Enabled</span>
             <Switch checked={bot.enabled} onCheckedChange={v => save({ enabled: v })} />
+            <AlertDialog>
+              <AlertDialogTrigger asChild><Button variant="destructive" size="icon"><Trash2 className="w-4 h-4" /></Button></AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader><AlertDialogTitle>Delete chatbot?</AlertDialogTitle><AlertDialogDescription>All sources, chunks, and conversations will be permanently removed.</AlertDialogDescription></AlertDialogHeader>
+                <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={del}>Delete</AlertDialogAction></AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
-          <AlertDialog>
-            <AlertDialogTrigger asChild><Button variant="destructive" size="icon"><Trash2 className="w-4 h-4" /></Button></AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader><AlertDialogTitle>Delete chatbot?</AlertDialogTitle><AlertDialogDescription>All sources, chunks, and conversations will be permanently removed.</AlertDialogDescription></AlertDialogHeader>
-              <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={del}>Delete</AlertDialogAction></AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
         </div>
 
         <Tabs defaultValue="overview">
