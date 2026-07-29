@@ -135,14 +135,21 @@ Deno.serve(async (req) => {
         tags: [s.category].filter(Boolean),
         notes: [s.address, s.website, s.rating ? `⭐ ${s.rating} (${s.reviews || 0} reviews)` : null].filter(Boolean).join(' • '),
       }));
-      if (rows.length > 0) {
-        const { error, count } = await admin.from('leads').insert(rows, { count: 'exact' });
+      // Enforce remaining quota by trimming rows
+      const capped = rows.slice(0, remaining);
+      if (capped.length > 0) {
+        const { error, count } = await admin.from('leads').insert(capped, { count: 'exact' });
         if (error) return json({ error: error.message, scraped }, 400);
-        inserted = count || rows.length;
+        inserted = count || capped.length;
       }
     }
 
-    return json({ ok: true, total_found: results.length, matched: scraped.length, inserted, results: scraped });
+    return json({
+      ok: true, total_found: results.length, matched: scraped.length, inserted,
+      plan, used: used + inserted, allowance: totalAllowance,
+      remaining: Math.max(0, totalAllowance - (used + inserted)),
+      results: scraped,
+    });
   } catch (e: any) {
     return json({ error: String(e?.message || e) }, 500);
   }
