@@ -506,13 +506,13 @@ function NewChatDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Start new chat</DialogTitle>
-          <DialogDescription>Pick a contact or enter a new WhatsApp number.</DialogDescription>
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-md p-0 gap-0 max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="p-4 sm:p-5 pb-3 border-b shrink-0 text-left">
+          <DialogTitle className="text-base sm:text-lg">Start new chat</DialogTitle>
+          <DialogDescription className="text-xs sm:text-sm">Pick a contact or enter a new WhatsApp number.</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
           <div className="space-y-2">
             <div className="text-xs font-medium text-muted-foreground">New number</div>
             <div className="flex gap-2">
@@ -520,13 +520,14 @@ function NewChatDialog({
                 value={countryCode}
                 onChange={e => setCountryCode(e.target.value)}
                 placeholder="+91"
-                className="w-20"
+                className="w-16 sm:w-20 shrink-0"
               />
               <Input
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
                 placeholder="Phone number"
-                className="flex-1"
+                className="flex-1 min-w-0"
+                inputMode="tel"
               />
             </div>
             <Input value={name} onChange={e => setName(e.target.value)} placeholder="Contact name (optional)" />
@@ -545,7 +546,7 @@ function NewChatDialog({
               <Search className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Search contacts" className="pl-8 h-9" />
             </div>
-            <div className="max-h-64 overflow-y-auto border rounded-md divide-y">
+            <div className="max-h-[40vh] sm:max-h-64 overflow-y-auto border rounded-md divide-y">
               {loading && <div className="p-4 text-center text-xs text-muted-foreground">Loading…</div>}
               {!loading && filtered.length === 0 && (
                 <div className="p-4 text-center text-xs text-muted-foreground">No contacts found</div>
@@ -556,7 +557,7 @@ function NewChatDialog({
                   onClick={() => onStart(c.phone, c.name)}
                   className="w-full text-left p-2.5 hover:bg-muted/50 flex items-center gap-2"
                 >
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-fuchsia-500 to-pink-500 flex items-center justify-center text-white text-[11px] font-bold">
+                  <div className="w-7 h-7 shrink-0 rounded-full bg-gradient-to-br from-fuchsia-500 to-pink-500 flex items-center justify-center text-white text-[11px] font-bold">
                     {(c.name || c.phone)[0]?.toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -569,8 +570,8 @@ function NewChatDialog({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+        <DialogFooter className="p-3 sm:p-4 border-t shrink-0 flex-row justify-end">
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">Close</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
