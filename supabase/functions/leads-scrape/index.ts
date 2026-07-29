@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
     const query = location ? `${keyword} in ${location}` : keyword;
     const results: any[] = [];
     let start = 0;
-    while (results.length < maxResults && start < 100) {
+    while (results.length < effectiveMax && start < 100) {
       const url = new URL('https://serpapi.com/search.json');
       url.searchParams.set('engine', 'google_maps');
       url.searchParams.set('q', query);
@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
       if (minRating && (Number(r.rating || 0) < minRating)) return false;
       if (minReviews && (Number(r.reviews || 0) < minReviews)) return false;
       return true;
-    }).slice(0, maxResults);
+    }).slice(0, effectiveMax);
 
     const scraped = filtered.map((r: any) => ({
       name: r.title || 'Unknown',
