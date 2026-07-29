@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -52,6 +53,7 @@ const displayName = (m?: Member | null) =>
 const Inbox = () => {
   const { user, profile } = useAuth();
   const [wsId, setWsId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [convs, setConvs] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -261,6 +263,19 @@ const Inbox = () => {
     setNewChatOpen(false);
     toast.success('Chat ready — send an approved template to start the 24h window');
   };
+
+  // Auto-open chat from ?phone=&name= (e.g. deep-link from Contacts page)
+  useEffect(() => {
+    if (!wsId) return;
+    const phone = searchParams.get('phone');
+    if (!phone) return;
+    const name = searchParams.get('name') || null;
+    startChat(phone, name);
+    searchParams.delete('phone');
+    searchParams.delete('name');
+    setSearchParams(searchParams, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wsId]);
 
   return (
     <AppLayout>
