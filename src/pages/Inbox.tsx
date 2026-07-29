@@ -272,6 +272,9 @@ const Inbox = () => {
               <InboxIcon className="w-5 h-5 text-primary" />
               <h2 className="font-semibold">Team Inbox</h2>
               <Badge variant="outline" className="ml-auto">{convs.length}</Badge>
+              <Button size="icon" className="h-7 w-7 rounded-full" onClick={() => setNewChatOpen(true)} title="New chat">
+                <Plus className="w-4 h-4" />
+              </Button>
             </div>
             <div className="relative">
               <Search className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
