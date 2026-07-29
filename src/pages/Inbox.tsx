@@ -264,6 +264,19 @@ const Inbox = () => {
     toast.success('Chat ready — send an approved template to start the 24h window');
   };
 
+  // Auto-open chat from ?phone=&name= (e.g. deep-link from Contacts page)
+  useEffect(() => {
+    if (!wsId) return;
+    const phone = searchParams.get('phone');
+    if (!phone) return;
+    const name = searchParams.get('name') || null;
+    startChat(phone, name);
+    searchParams.delete('phone');
+    searchParams.delete('name');
+    setSearchParams(searchParams, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wsId]);
+
   return (
     <AppLayout>
       <div className="flex h-[calc(100vh-8rem)] md:h-[calc(100vh-6rem)] max-w-7xl mx-auto p-2 md:p-4 gap-3">
