@@ -11,7 +11,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Inbox as InboxIcon, Send, Search, User, Clock, MessageSquareText, ArrowLeft, Trash2, Tag, StickyNote, X } from 'lucide-react';
+import { Inbox as InboxIcon, Send, Search, User, Clock, MessageSquareText, ArrowLeft, Trash2, Tag, StickyNote, X, Plus } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -62,6 +63,7 @@ const Inbox = () => {
   const [filter, setFilter] = useState<'all' | 'mine' | 'unassigned' | 'unread'>('all');
   const [showMobileChat, setShowMobileChat] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Conversation | null>(null);
+  const [newChatOpen, setNewChatOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const selected = useMemo(() => convs.find(c => c.id === selectedId) || null, [convs, selectedId]);
@@ -233,6 +235,33 @@ const Inbox = () => {
     });
   };
 
+  const startChat = async (rawPhone: string, name?: string | null) => {
+    if (!wsId) return;
+    const phone = rawPhone.replace(/[^\d]/g, '');
+    if (phone.length < 8) return toast.error('Enter a valid phone number with country code');
+    // Check if conversation exists (including soft-deleted)
+    const { data: existing } = await supabase.from('wa_conversations' as any)
+      .select('*').eq('workspace_id', wsId).eq('contact_phone', phone).maybeSingle();
+    let conv = existing as any;
+    if (conv) {
+      if (conv.deleted_at) {
+        await supabase.from('wa_conversations' as any).update({ deleted_at: null }).eq('id', conv.id);
+        conv = { ...conv, deleted_at: null };
+      }
+    } else {
+      const { data: created, error } = await supabase.from('wa_conversations' as any)
+        .insert({ workspace_id: wsId, contact_phone: phone, contact_name: name || null, status: 'open' })
+        .select('*').single();
+      if (error) return toast.error(error.message);
+      conv = created;
+    }
+    setConvs(prev => prev.some(c => c.id === conv.id) ? prev : [conv as Conversation, ...prev]);
+    setSelectedId(conv.id);
+    setShowMobileChat(true);
+    setNewChatOpen(false);
+    toast.success('Chat ready — send an approved template to start the 24h window');
+  };
+
   return (
     <AppLayout>
       <div className="flex h-[calc(100vh-8rem)] md:h-[calc(100vh-6rem)] max-w-7xl mx-auto p-2 md:p-4 gap-3">
@@ -243,6 +272,9 @@ const Inbox = () => {
               <InboxIcon className="w-5 h-5 text-primary" />
               <h2 className="font-semibold">Team Inbox</h2>
               <Badge variant="outline" className="ml-auto">{convs.length}</Badge>
+              <Button size="icon" className="h-7 w-7 rounded-full" onClick={() => setNewChatOpen(true)} title="New chat">
+                <Plus className="w-4 h-4" />
+              </Button>
             </div>
             <div className="relative">
               <Search className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -420,9 +452,130 @@ const Inbox = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <NewChatDialog
+        open={newChatOpen}
+        onOpenChange={setNewChatOpen}
+        workspaceId={wsId}
+        onStart={startChat}
+      />
     </AppLayout>
   );
 };
+
+function NewChatDialog({
+  open, onOpenChange, workspaceId, onStart,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  workspaceId: string | null;
+  onStart: (phone: string, name?: string | null) => void;
+}) {
+  const [countryCode, setCountryCode] = useState('+91');
+  const [phone, setPhone] = useState('');
+  const [name, setName] = useState('');
+  const [q, setQ] = useState('');
+  const [contacts, setContacts] = useState<{ id: string; name: string | null; phone: string }[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open || !workspaceId) return;
+    setPhone(''); setName(''); setQ('');
+    (async () => {
+      setLoading(true);
+      const { data } = await supabase.from('leads' as any)
+        .select('id, name, phone').eq('workspace_id', workspaceId)
+        .not('phone', 'is', null).order('updated_at', { ascending: false }).limit(200);
+      setContacts((data as any) || []);
+      setLoading(false);
+    })();
+  }, [open, workspaceId]);
+
+  const filtered = contacts.filter(c => {
+    if (!q) return true;
+    const s = q.toLowerCase();
+    return (c.name || '').toLowerCase().includes(s) || (c.phone || '').includes(s);
+  });
+
+  const submitNew = () => {
+    const clean = phone.replace(/[^\d]/g, '');
+    const cc = countryCode.replace(/[^\d]/g, '');
+    if (!clean) return toast.error('Enter a phone number');
+    onStart(`${cc}${clean}`, name || null);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Start new chat</DialogTitle>
+          <DialogDescription>Pick a contact or enter a new WhatsApp number.</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <div className="text-xs font-medium text-muted-foreground">New number</div>
+            <div className="flex gap-2">
+              <Input
+                value={countryCode}
+                onChange={e => setCountryCode(e.target.value)}
+                placeholder="+91"
+                className="w-20"
+              />
+              <Input
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+                placeholder="Phone number"
+                className="flex-1"
+              />
+            </div>
+            <Input value={name} onChange={e => setName(e.target.value)} placeholder="Contact name (optional)" />
+            <Button onClick={submitNew} className="w-full" disabled={!phone.trim()}>Start chat</Button>
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+            <div className="relative flex justify-center text-[11px] uppercase">
+              <span className="bg-background px-2 text-muted-foreground">Or choose contact</span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Search contacts" className="pl-8 h-9" />
+            </div>
+            <div className="max-h-64 overflow-y-auto border rounded-md divide-y">
+              {loading && <div className="p-4 text-center text-xs text-muted-foreground">Loading…</div>}
+              {!loading && filtered.length === 0 && (
+                <div className="p-4 text-center text-xs text-muted-foreground">No contacts found</div>
+              )}
+              {filtered.map(c => (
+                <button
+                  key={c.id}
+                  onClick={() => onStart(c.phone, c.name)}
+                  className="w-full text-left p-2.5 hover:bg-muted/50 flex items-center gap-2"
+                >
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-fuchsia-500 to-pink-500 flex items-center justify-center text-white text-[11px] font-bold">
+                    {(c.name || c.phone)[0]?.toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{c.name || c.phone}</div>
+                    <div className="text-[11px] text-muted-foreground truncate">{c.phone}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function NotesPanel({
   conversation, onSaveNotes, onSaveTags,
