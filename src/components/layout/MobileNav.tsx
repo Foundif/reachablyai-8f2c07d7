@@ -7,8 +7,8 @@ import { useAuth } from '@/hooks/useAuth';
 const items = [
   { to: '/', icon: LayoutDashboard, label: 'Home' },
   { to: '/inbox', icon: Inbox, label: 'Inbox' },
-  { to: '/leads', icon: Users, label: 'Contacts' },
   { to: '/campaigns', icon: Megaphone, label: 'Send', accent: true },
+  { to: '/leads', icon: Users, label: 'Contacts' },
   { to: '/profile', icon: UserCircle, label: 'Profile' },
 ];
 
