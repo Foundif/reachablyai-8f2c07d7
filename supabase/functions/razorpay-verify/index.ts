@@ -99,6 +99,25 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (kind === 'scrape_topup') {
+      const { data: ws } = await admin.from('workspaces').select('id')
+        .eq('owner_id', user_id).order('created_at').limit(1).maybeSingle();
+      if (!ws?.id) {
+        return new Response(JSON.stringify({ error: 'No workspace' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const now = new Date();
+      const monthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+      await admin.from('scrape_topups').insert({
+        workspace_id: ws.id, user_id, leads_granted: 150, month_key: monthKey,
+        amount_paise: 29900, razorpay_order_id, razorpay_payment_id,
+      });
+      return new Response(JSON.stringify({ success: true, credited: 150, month_key: monthKey }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     if (kind === 'setup') {
       await admin.from('profiles').update({ services_concept: 'setup_paid' } as any).eq('user_id', user_id);
       return new Response(JSON.stringify({ success: true, kind }), {
