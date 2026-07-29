@@ -235,6 +235,33 @@ const Inbox = () => {
     });
   };
 
+  const startChat = async (rawPhone: string, name?: string | null) => {
+    if (!wsId) return;
+    const phone = rawPhone.replace(/[^\d]/g, '');
+    if (phone.length < 8) return toast.error('Enter a valid phone number with country code');
+    // Check if conversation exists (including soft-deleted)
+    const { data: existing } = await supabase.from('wa_conversations' as any)
+      .select('*').eq('workspace_id', wsId).eq('contact_phone', phone).maybeSingle();
+    let conv = existing as any;
+    if (conv) {
+      if (conv.deleted_at) {
+        await supabase.from('wa_conversations' as any).update({ deleted_at: null }).eq('id', conv.id);
+        conv = { ...conv, deleted_at: null };
+      }
+    } else {
+      const { data: created, error } = await supabase.from('wa_conversations' as any)
+        .insert({ workspace_id: wsId, contact_phone: phone, contact_name: name || null, status: 'open' })
+        .select('*').single();
+      if (error) return toast.error(error.message);
+      conv = created;
+    }
+    setConvs(prev => prev.some(c => c.id === conv.id) ? prev : [conv as Conversation, ...prev]);
+    setSelectedId(conv.id);
+    setShowMobileChat(true);
+    setNewChatOpen(false);
+    toast.success('Chat ready — send an approved template to start the 24h window');
+  };
+
   return (
     <AppLayout>
       <div className="flex h-[calc(100vh-8rem)] md:h-[calc(100vh-6rem)] max-w-7xl mx-auto p-2 md:p-4 gap-3">
