@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
     }
 
     const auth = btoa(`${key_id}:${key_secret}`);
-    const receiptBase = kind === 'recharge' ? pack_id : kind === 'setup' ? 'setup' : plan_id;
+    const receiptBase = kind === 'recharge' ? pack_id : kind === 'setup' ? 'setup' : kind === 'scrape_topup' ? 'scrape' : plan_id;
     const orderRes = await fetch('https://api.razorpay.com/v1/orders', {
       method: 'POST',
       headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/json' },
