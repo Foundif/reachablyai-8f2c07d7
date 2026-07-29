@@ -49,6 +49,11 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    if (kind === 'scrape_topup' && amount !== 299) {
+      return new Response(JSON.stringify({ error: 'Invalid scrape top-up amount' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const key_id = Deno.env.get('RAZORPAY_KEY_ID');
     const key_secret = Deno.env.get('RAZORPAY_KEY_SECRET');
@@ -59,7 +64,7 @@ Deno.serve(async (req) => {
     }
 
     const auth = btoa(`${key_id}:${key_secret}`);
-    const receiptBase = kind === 'recharge' ? pack_id : kind === 'setup' ? 'setup' : plan_id;
+    const receiptBase = kind === 'recharge' ? pack_id : kind === 'setup' ? 'setup' : kind === 'scrape_topup' ? 'scrape' : plan_id;
     const orderRes = await fetch('https://api.razorpay.com/v1/orders', {
       method: 'POST',
       headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/json' },

@@ -36,13 +36,53 @@ Deno.serve(async (req) => {
     const { data: mem } = await admin.from('workspace_members').select('user_id').eq('workspace_id', workspace_id).eq('user_id', user.id).maybeSingle();
     if (!mem) return json({ error: 'Not a workspace member' }, 403);
 
+    // ===== Plan quota enforcement =====
+    // Resolve owner + subscription
+    const { data: ws } = await admin.from('workspaces').select('owner_id').eq('id', workspace_id).maybeSingle();
+    const ownerId = ws?.owner_id;
+    const { data: ownerProfile } = ownerId
+      ? await admin.from('profiles').select('subscription_status').eq('user_id', ownerId).maybeSingle()
+      : { data: null };
+    const plan = String((ownerProfile as any)?.subscription_status || 'trial').toLowerCase();
+    const BASE_LIMITS: Record<string, number> = { starter: 150, growth: 1000, business: 5000, trial: 30 };
+    const baseAllowance = BASE_LIMITS[plan] ?? 30;
+
+    // Month window (UTC)
+    const now = new Date();
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+    const monthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+
+    // Used = leads inserted this month with source='scraped'
+    const { count: usedCount } = await admin.from('leads')
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', workspace_id).eq('source', 'scraped')
+      .gte('created_at', monthStart);
+
+    // Top-ups purchased this month
+    const { data: topups } = await admin.from('scrape_topups')
+      .select('leads_granted').eq('workspace_id', workspace_id).eq('month_key', monthKey);
+    const topupTotal = (topups || []).reduce((s: number, r: any) => s + (r.leads_granted || 0), 0);
+
+    const totalAllowance = baseAllowance + topupTotal;
+    const used = usedCount || 0;
+    const remaining = Math.max(0, totalAllowance - used);
+
+    if (remaining <= 0) {
+      return json({
+        error: 'quota_exceeded',
+        message: `Monthly scraping limit reached (${used}/${totalAllowance}). Upgrade your plan or unlock 150 more leads for ₹299.`,
+        plan, used, allowance: totalAllowance, remaining: 0,
+      }, 402);
+    }
+
     const apiKey = Deno.env.get('SERPAPI_API_KEY');
     if (!apiKey) return json({ error: 'SERPAPI_API_KEY not configured. Add it in Settings.' }, 400);
 
+    const effectiveMax = Math.min(maxResults, remaining);
     const query = location ? `${keyword} in ${location}` : keyword;
     const results: any[] = [];
     let start = 0;
-    while (results.length < maxResults && start < 100) {
+    while (results.length < effectiveMax && start < 100) {
       const url = new URL('https://serpapi.com/search.json');
       url.searchParams.set('engine', 'google_maps');
       url.searchParams.set('q', query);
@@ -67,7 +107,7 @@ Deno.serve(async (req) => {
       if (minRating && (Number(r.rating || 0) < minRating)) return false;
       if (minReviews && (Number(r.reviews || 0) < minReviews)) return false;
       return true;
-    }).slice(0, maxResults);
+    }).slice(0, effectiveMax);
 
     const scraped = filtered.map((r: any) => ({
       name: r.title || 'Unknown',
@@ -95,14 +135,21 @@ Deno.serve(async (req) => {
         tags: [s.category].filter(Boolean),
         notes: [s.address, s.website, s.rating ? `⭐ ${s.rating} (${s.reviews || 0} reviews)` : null].filter(Boolean).join(' • '),
       }));
-      if (rows.length > 0) {
-        const { error, count } = await admin.from('leads').insert(rows, { count: 'exact' });
+      // Enforce remaining quota by trimming rows
+      const capped = rows.slice(0, remaining);
+      if (capped.length > 0) {
+        const { error, count } = await admin.from('leads').insert(capped, { count: 'exact' });
         if (error) return json({ error: error.message, scraped }, 400);
-        inserted = count || rows.length;
+        inserted = count || capped.length;
       }
     }
 
-    return json({ ok: true, total_found: results.length, matched: scraped.length, inserted, results: scraped });
+    return json({
+      ok: true, total_found: results.length, matched: scraped.length, inserted,
+      plan, used: used + inserted, allowance: totalAllowance,
+      remaining: Math.max(0, totalAllowance - (used + inserted)),
+      results: scraped,
+    });
   } catch (e: any) {
     return json({ error: String(e?.message || e) }, 500);
   }

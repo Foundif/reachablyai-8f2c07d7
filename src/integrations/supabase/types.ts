@@ -938,6 +938,50 @@ export type Database = {
         }
         Relationships: []
       }
+      scrape_topups: {
+        Row: {
+          amount_paise: number
+          created_at: string
+          id: string
+          leads_granted: number
+          month_key: string
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
+          user_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          amount_paise?: number
+          created_at?: string
+          id?: string
+          leads_granted?: number
+          month_key: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          user_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          amount_paise?: number
+          created_at?: string
+          id?: string
+          leads_granted?: number
+          month_key?: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          user_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scrape_topups_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       super_admins: {
         Row: {
           created_at: string | null

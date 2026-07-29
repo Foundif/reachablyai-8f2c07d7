@@ -397,9 +397,21 @@ const Leads = () => {
 
 export default Leads;
 
+declare global { interface Window { Razorpay?: any } }
+const loadRazorpay = () => new Promise<boolean>((resolve) => {
+  if (window.Razorpay) return resolve(true);
+  const s = document.createElement('script');
+  s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+  s.onload = () => resolve(true);
+  s.onerror = () => resolve(false);
+  document.body.appendChild(s);
+});
+
 function ScrapeLeadsDialog({ wsId, onDone }: { wsId: string | null; onDone: () => void }) {
+  const { user, profile } = useAuth();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [payLoading, setPayLoading] = useState(false);
   const [form, setForm] = useState({
     keyword: '', location: '',
     hasWebsite: 'any' as 'any' | 'yes' | 'no',
@@ -408,6 +420,28 @@ function ScrapeLeadsDialog({ wsId, onDone }: { wsId: string | null; onDone: () =
     maxResults: 40,
   });
   const [result, setResult] = useState<any | null>(null);
+  const [quota, setQuota] = useState<{ used: number; allowance: number; plan: string } | null>(null);
+  const [unlockOpen, setUnlockOpen] = useState(false);
+
+  const refreshQuota = async () => {
+    if (!wsId) return;
+    const now = new Date();
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+    const monthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+    const plan = String((profile as any)?.subscription_status || 'trial').toLowerCase();
+    const BASE: Record<string, number> = { starter: 150, growth: 1000, business: 5000, trial: 30 };
+    const base = BASE[plan] ?? 30;
+    const [{ count }, { data: tops }] = await Promise.all([
+      supabase.from('leads').select('id', { count: 'exact', head: true })
+        .eq('workspace_id', wsId).eq('source', 'scraped').gte('created_at', monthStart),
+      supabase.from('scrape_topups' as any).select('leads_granted')
+        .eq('workspace_id', wsId).eq('month_key', monthKey),
+    ]);
+    const topTotal = ((tops as any[]) || []).reduce((s, r) => s + (r.leads_granted || 0), 0);
+    setQuota({ used: count || 0, allowance: base + topTotal, plan });
+  };
+
+  useEffect(() => { if (open) refreshQuota(); }, [open, wsId]);
 
   const run = async () => {
     if (!wsId) return toast.error('Workspace not ready');
@@ -426,14 +460,76 @@ function ScrapeLeadsDialog({ wsId, onDone }: { wsId: string | null; onDone: () =
       },
     });
     setLoading(false);
+    const payload = (data as any) || {};
+    if (payload?.error === 'quota_exceeded' || (error as any)?.context?.status === 402) {
+      setUnlockOpen(true);
+      return;
+    }
     if (error) return toast.error(error.message);
-    if ((data as any)?.error) return toast.error((data as any).error);
-    setResult(data);
-    toast.success(`Scraped ${(data as any).matched} matches, added ${(data as any).inserted} new leads`);
+    if (payload?.error) return toast.error(payload.error);
+    setResult(payload);
+    toast.success(`Scraped ${payload.matched} matches, added ${payload.inserted} new contacts`);
+    await refreshQuota();
     onDone();
   };
 
+  const unlockPay = async () => {
+    if (!user) return;
+    setPayLoading(true);
+    try {
+      const ok = await loadRazorpay();
+      if (!ok) throw new Error('Failed to load Razorpay');
+      const { data, error } = await supabase.functions.invoke('razorpay-create-order', {
+        body: { amount: 299, kind: 'scrape_topup' },
+      });
+      if (error || (data as any)?.error) throw new Error((data as any)?.error || error?.message || 'Order failed');
+      const { order, key_id } = data as any;
+      const rzp = new window.Razorpay({
+        key: key_id, amount: order.amount, currency: order.currency, order_id: order.id,
+        name: 'Reachably', description: 'Scrape Top-up — 150 leads',
+        prefill: {
+          email: user.email || '',
+          name: (profile as any)?.full_name || (profile as any)?.store_name || '',
+        },
+        theme: { color: '#d946ef' },
+        handler: async (resp: any) => {
+          try {
+            const { data: v, error: vErr } = await supabase.functions.invoke('razorpay-verify', {
+              body: {
+                razorpay_order_id: resp.razorpay_order_id,
+                razorpay_payment_id: resp.razorpay_payment_id,
+                razorpay_signature: resp.razorpay_signature,
+                kind: 'scrape_topup',
+              },
+            });
+            if (vErr || (v as any)?.error) throw new Error((v as any)?.error || vErr?.message || 'Verify failed');
+            toast.success('Unlocked 150 more leads for this month!');
+            setUnlockOpen(false);
+            await refreshQuota();
+          } catch (e: any) {
+            toast.error(e.message || 'Verification failed');
+          }
+        },
+        modal: { ondismiss: () => setPayLoading(false) },
+      });
+      rzp.on('payment.failed', (r: any) => {
+        toast.error(r?.error?.description || 'Payment failed');
+        setPayLoading(false);
+      });
+      rzp.open();
+    } catch (e: any) {
+      toast.error(e.message || 'Payment error');
+    } finally {
+      setPayLoading(false);
+    }
+  };
+
+  const remaining = quota ? Math.max(0, quota.allowance - quota.used) : null;
+  const pct = quota && quota.allowance ? Math.min(100, Math.round((quota.used / quota.allowance) * 100)) : 0;
+  const planLabel = quota?.plan ? quota.plan[0].toUpperCase() + quota.plan.slice(1) : '';
+
   return (
+    <>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" className="gap-1"><Sparkles className="w-4 h-4" /> Scrape Contacts</Button>
@@ -443,6 +539,23 @@ function ScrapeLeadsDialog({ wsId, onDone }: { wsId: string | null; onDone: () =
           <DialogTitle>Scrape Google Maps contacts</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
+          {quota && (
+            <div className="rounded-md border bg-muted/40 p-3 space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-medium">{planLabel} plan · this month</span>
+                <span className="text-muted-foreground">{quota.used} / {quota.allowance} used</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-fuchsia-500 to-pink-500 transition-all" style={{ width: `${pct}%` }} />
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                <span>{remaining} contacts remaining</span>
+                <button onClick={() => setUnlockOpen(true)} className="text-primary hover:underline font-medium">
+                  Unlock 150 more · ₹299
+                </button>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-muted-foreground">Keyword *</label>
@@ -488,16 +601,47 @@ function ScrapeLeadsDialog({ wsId, onDone }: { wsId: string | null; onDone: () =
             </div>
           )}
           <p className="text-[11px] text-muted-foreground">
-            Uses your SerpAPI key (free tier: 100 searches/mo). Configure once in project settings.
+            Starter plan includes 150 scraped contacts / month. Unlock 150 more anytime for ₹299 or upgrade your plan.
           </p>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>Close</Button>
-          <Button onClick={run} disabled={loading}>
+          <Button onClick={run} disabled={loading || remaining === 0}>
             {loading ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Scraping…</> : <><Globe className="w-4 h-4 mr-1" /> Scrape now</>}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <Dialog open={unlockOpen} onOpenChange={setUnlockOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Monthly scraping limit reached</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            You've used {quota?.used ?? 0} of {quota?.allowance ?? 0} scraped contacts this month on the <b>{planLabel}</b> plan.
+          </p>
+          <div className="rounded-lg border-2 border-primary/40 bg-primary/5 p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-semibold">Unlock 150 more leads</div>
+                <div className="text-xs text-muted-foreground">Valid for the current month</div>
+              </div>
+              <div className="text-2xl font-bold">₹299</div>
+            </div>
+            <Button className="w-full" onClick={unlockPay} disabled={payLoading}>
+              {payLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading…</> : 'Pay ₹299 & unlock'}
+            </Button>
+          </div>
+          <div className="text-center text-xs text-muted-foreground">— or —</div>
+          <Button variant="outline" className="w-full" onClick={() => { setUnlockOpen(false); setOpen(false); window.location.href = '/pricing'; }}>
+            Upgrade to a higher plan
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
+
