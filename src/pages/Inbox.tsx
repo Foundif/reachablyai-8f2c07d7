@@ -53,6 +53,7 @@ const displayName = (m?: Member | null) =>
 const Inbox = () => {
   const { user, profile } = useAuth();
   const [wsId, setWsId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [convs, setConvs] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
