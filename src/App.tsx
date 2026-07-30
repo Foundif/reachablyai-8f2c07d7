@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import InstallPrompt from "@/components/pwa/InstallPrompt";
 import TrialExpiredModal from "@/components/trial/TrialExpiredModal";
+import TrialModal from "@/components/trial/TrialModal";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -52,7 +53,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
   if (!user) return <Navigate to="/auth" replace />;
   if (profile && !profile.onboarding_completed) return <Navigate to="/onboarding" replace />;
-  return (<><TrialExpiredModal />{children}</>);
+  return (<><TrialExpiredModal /><TrialModal />{children}</>);
 };
 
 const App = () => (
