@@ -5,9 +5,11 @@ import AppLayout from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Check, X, Crown, Sparkles, Zap, Star, MessageSquare, ArrowLeft, Wrench, Battery, Loader2,
+  ShoppingBag, Building2, Users, Phone, Headset, Building,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -15,27 +17,58 @@ import { toast } from 'sonner';
 import { resolveWorkspaceId } from '@/lib/workspace';
 
 type PlanId = 'starter' | 'growth' | 'business';
+type Audience = 'shopify' | 'business';
 
 interface Plan {
   id: PlanId; name: string; tagline: string;
   monthly: number; yearly: number; credits: string;
   badge?: string; badgeIcon?: any; icon: any; popular?: boolean;
-  cta: string; features: string[];
+  cta: string; features: string[]; extra?: Record<Audience, string[]>;
 }
 
 const PLANS: Plan[] = [
-  { id: 'starter', name: 'Starter', tagline: 'Solo founders getting started with WhatsApp outreach',
+  {
+    id: 'starter', name: 'Basic', tagline: 'Essential tools to get started with WhatsApp',
     monthly: 999, yearly: 9990, credits: '~500 msgs / mo', badge: 'Basic', badgeIcon: Zap, icon: MessageSquare,
-    cta: 'Start with Starter',
-    features: ['1 team member', 'Unlimited templates', 'CRM Dashboard', 'Contact management', 'WhatsApp broadcast', 'Official Meta Cloud API', 'Website integration', 'Basic campaign analytics', 'Basic automation workflows'] },
-  { id: 'growth', name: 'Growth', tagline: 'Most popular — everything you need to scale outreach',
+    cta: 'Start free trial',
+    features: ['1 user', '1 WhatsApp account', 'Unlimited contacts', '3 automation flows', 'Bulk broadcast campaigns', 'Rich media messaging', 'Official Meta Cloud API', 'No markup on templates', 'WhatsApp chat support'],
+    extra: {
+      shopify: ['Store order sync', 'Abandoned cart reminders'],
+      business: ['CRM contact tags', 'Website chat widget'],
+    },
+  },
+  {
+    id: 'growth', name: 'Growth', tagline: 'Everything you need to scale outreach',
     monthly: 1999, yearly: 19990, credits: '~1,200 msgs / mo', badge: 'Most popular', badgeIcon: Crown, icon: Star, popular: true,
-    cta: 'Choose Growth',
-    features: ['Up to 3 team members', 'Everything in Starter, plus:', 'API access', 'Advanced campaign analytics', 'Advanced automation workflows', 'Priority support'] },
-  { id: 'business', name: 'Business', tagline: 'Agencies & high-volume teams with dedicated support',
+    cta: 'Start free trial',
+    features: ['3 users', 'Everything in Basic, plus:', 'AI chatbots & AI agents', '25 automation flows', 'Shared team inbox', 'Advanced campaign analytics', 'API access', 'Priority support'],
+    extra: {
+      shopify: ['Order status & COD confirm flows', 'Cart recovery automation', 'Product catalog messaging'],
+      business: ['Lead scraper (1,000 / mo)', 'Accounting & sales ledger'],
+    },
+  },
+  {
+    id: 'business', name: 'Pro', tagline: 'Advanced features for growing businesses',
     monthly: 3999, yearly: 39990, credits: '~2,800 msgs / mo', badge: 'Advanced', badgeIcon: Sparkles, icon: Crown,
-    cta: 'Choose Business',
-    features: ['Unlimited team members', 'Everything in Growth, plus:', 'Unlimited automation workflows', 'Dedicated account manager', 'Priority support · SLA'] },
+    cta: 'Start free trial',
+    features: ['Unlimited users', 'Everything in Growth, plus:', 'Unlimited automation flows', 'Unlimited webhooks', 'Dedicated account manager', 'Priority support · SLA'],
+    extra: {
+      shopify: ['Multi-store sync', 'Post-purchase upsell journeys'],
+      business: ['Lead scraper (5,000 / mo)', 'Custom integrations'],
+    },
+  },
+];
+
+const ENTERPRISE_FEATURES = [
+  'Custom users & WhatsApp numbers', 'Unlimited contacts & tags', 'Custom automation flows',
+  'Custom feature integration', 'Enterprise grade security', 'SLA-backed support',
+];
+
+interface AddOn { id: string; name: string; desc: string; price: string; unit: string; icon: any }
+const ADDONS: AddOn[] = [
+  { id: 'user', name: 'Extra user', desc: 'Scale your team as you grow', price: '₹499', unit: 'per user / month', icon: Users },
+  { id: 'rm', name: 'Dedicated relationship manager', desc: 'A dedicated expert for your account', price: '₹9,999', unit: 'per month', icon: Headset },
+  { id: 'wa', name: 'Additional WhatsApp number', desc: 'Add one more WhatsApp Business number', price: '₹2,499', unit: 'per month', icon: Phone },
 ];
 
 // Message recharge packs — priced above Meta's ~₹0.86/msg marketing rate
@@ -50,27 +83,42 @@ const PACKS: Pack[] = [
 
 const SETUP_FEE = 2999;
 
-const COMPARE: { label: string; values: [string | boolean, string | boolean, string | boolean] }[] = [
-  { label: 'Monthly Price', values: ['₹999', '₹1,999', '₹3,999'] },
-  { label: 'Annual Price (2 months free)', values: ['₹9,990', '₹19,990', '₹39,990'] },
-  { label: 'Included Message Credits*', values: ['~500', '~1,200', '~2,800'] },
-  { label: 'CRM Dashboard', values: [true, true, true] },
-  { label: 'Contact Management', values: [true, true, true] },
-  { label: 'WhatsApp Broadcast', values: [true, true, true] },
-  { label: 'Official Meta Cloud API', values: [true, true, true] },
-  { label: 'Campaign Analytics', values: ['Basic', 'Advanced', 'Advanced'] },
-  { label: 'Team Members', values: ['1', '3', 'Unlimited'] },
-  { label: 'Templates', values: ['Unlimited', 'Unlimited', 'Unlimited'] },
-  { label: 'Website Integration', values: [true, true, true] },
-  { label: 'API Access', values: [false, true, true] },
-  { label: 'Automation Workflows', values: ['Basic', 'Advanced', 'Unlimited'] },
-  { label: 'Priority Support', values: [false, true, true] },
-  { label: 'Dedicated Account Manager', values: [false, false, true] },
+type CmpVal = string | boolean;
+const COMPARE: { label: string; values: [CmpVal, CmpVal, CmpVal, CmpVal] }[] = [
+  { label: 'Monthly price', values: ['₹999', '₹1,999', '₹3,999', 'Custom'] },
+  { label: 'Annual price (2 months free)', values: ['₹9,990', '₹19,990', '₹39,990', 'Custom'] },
+  { label: 'Included message credits*', values: ['~500', '~1,200', '~2,800', 'Custom'] },
+  { label: 'Team members', values: ['1', '3', 'Unlimited', 'Custom'] },
+  { label: 'WhatsApp accounts', values: ['1', '1', '2', 'Custom'] },
+  { label: 'Contacts', values: ['Unlimited', 'Unlimited', 'Unlimited', 'Unlimited'] },
+  { label: 'Automation flows', values: ['3', '25', 'Unlimited', 'Custom'] },
+  { label: 'Template cost – Marketing', values: ['₹0.86', '₹0.86', '₹0.86', '₹0.86'] },
+  { label: 'Template cost – Utility', values: ['₹0.12', '₹0.12', '₹0.12', '₹0.12'] },
+  { label: '0% markup on templates', values: [true, true, true, true] },
+  { label: 'Broadcast messaging', values: [true, true, true, true] },
+  { label: 'Shared team inbox', values: [true, true, true, true] },
+  { label: 'Built-in CRM', values: [true, true, true, true] },
+  { label: 'Contact tags', values: ['5', '20', 'Unlimited', 'Unlimited'] },
+  { label: 'Rich media & carousels', values: [true, true, true, true] },
+  { label: 'AI chatbots', values: [false, true, true, true] },
+  { label: 'Webhooks', values: [false, false, true, true] },
+  { label: 'API access', values: [false, true, true, true] },
+  { label: 'Priority support', values: [false, true, true, true] },
+  { label: 'Dedicated relationship manager', values: [false, false, true, true] },
+];
+
+const FAQS = [
+  { q: 'Do I need my own Meta WhatsApp Business account?', a: 'Yes. Reachably connects to the official Meta Cloud API using your own WhatsApp Business number, so you fully own your number, templates and quality rating.' },
+  { q: 'What are message credits?', a: 'Each plan includes a monthly pool of message credits. Meta charges per conversation (approx ₹0.86 for marketing, ₹0.12 for utility). If you need more, buy a top-up pack anytime — credits never expire while your plan is active.' },
+  { q: 'Is there a free trial?', a: 'Every account gets a 7-day free trial with all features unlocked. No credit or debit card required to start.' },
+  { q: 'Why is there a one-time setup fee?', a: 'The ₹2,999 setup covers Meta Cloud API configuration, WhatsApp Business onboarding, webhook setup, CRM setup, contact import and team training. It is billed once, separately from your plan.' },
+  { q: 'Can I change plans later?', a: 'Yes — upgrade or downgrade at any time. Upgrades apply immediately and your remaining message credits carry over.' },
+  { q: 'Do you mark up WhatsApp template costs?', a: 'No. You pay Meta’s conversation rates at 0% markup. Reachably only charges the platform subscription and optional add-ons.' },
 ];
 
 const formatINR = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
-const Cell = ({ v }: { v: string | boolean }) => {
+const Cell = ({ v }: { v: CmpVal }) => {
   if (v === true) return <Check className="w-4 h-4 text-emerald-600 mx-auto" />;
   if (v === false) return <X className="w-4 h-4 text-muted-foreground/60 mx-auto" />;
   return <span className="text-sm">{v}</span>;
@@ -88,9 +136,15 @@ const loadRazorpay = () => new Promise<boolean>((resolve) => {
 const PricingContent = () => {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
-  const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
+  const [billing, setBilling] = useState<'monthly' | 'yearly'>('yearly');
+  const [audience, setAudience] = useState<Audience>('business');
   const [busy, setBusy] = useState<string | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
+
+  useEffect(() => {
+    const a = new URLSearchParams(window.location.search).get('audience');
+    if (a === 'shopify' || a === 'business') setAudience(a);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -103,6 +157,7 @@ const PricingContent = () => {
   }, [user, profile]);
 
   const priceFor = (p: Plan) => billing === 'yearly' ? p.yearly : p.monthly;
+  const perMonth = (p: Plan) => billing === 'yearly' ? Math.round(p.yearly / 12) : p.monthly;
   const savingsFor = (p: Plan) => p.monthly * 12 - p.yearly;
   const currentStatus = (profile as any)?.subscription_status;
   const activePlan = ['starter', 'growth', 'business'].includes(currentStatus) ? currentStatus : null;
@@ -171,18 +226,32 @@ const PricingContent = () => {
     <div className="relative overflow-hidden">
       <div className="relative">
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/5 via-background to-background" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-10 sm:pt-16 pb-8 text-center">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-14 pb-8 text-center">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-border mb-5">
-              <Sparkles className="w-3.5 h-3.5 text-primary" />
-              <span className="text-xs font-medium">Simple pricing · Safe WhatsApp automation</span>
+            {/* Audience switch */}
+            <div className="inline-flex items-center gap-1 p-1 rounded-full bg-muted border border-border mb-6">
+              {([
+                { id: 'shopify' as Audience, label: 'For Shopify', icon: ShoppingBag },
+                { id: 'business' as Audience, label: 'For Businesses', icon: Building2 },
+              ]).map(a => (
+                <button key={a.id} onClick={() => setAudience(a.id)}
+                  className={cn('px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5',
+                    audience === a.id ? 'bg-background shadow-sm' : 'text-muted-foreground')}>
+                  <a.icon className="w-3.5 h-3.5" /> {a.label}
+                </button>
+              ))}
             </div>
+
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
-              One plan to run all your <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">WhatsApp growth</span>
+              Pricing that <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">scales</span>
             </h1>
             <p className="mt-4 text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto">
-              Bulk campaigns, approved Meta templates, safe pacing, team inbox — plus top-up packs when you need more messages.
+              {audience === 'shopify'
+                ? 'Recover abandoned carts, confirm COD orders and drive repeat purchases on WhatsApp — synced with your store.'
+                : 'Automate your sales funnel and double your business growth with WhatsApp automation.'}
             </p>
+            <p className="mt-2 text-xs text-muted-foreground">7-day free trial. No credit or debit card required.</p>
+
             {balance !== null && (
               <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-xs">
                 <Battery className="w-3.5 h-3.5 text-emerald-600" />
@@ -192,19 +261,96 @@ const PricingContent = () => {
 
             <div className="mt-7 inline-flex items-center gap-1 p-1 rounded-full bg-muted border border-border">
               <button onClick={() => setBilling('monthly')} className={cn('px-4 py-1.5 rounded-full text-xs font-semibold transition-all', billing === 'monthly' ? 'bg-background shadow-sm' : 'text-muted-foreground')}>Monthly</button>
-              <button onClick={() => setBilling('yearly')} className={cn('px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5', billing === 'yearly' ? 'bg-background shadow-sm' : 'text-muted-foreground')}>Yearly <Badge variant="secondary" className="text-[10px] py-0 px-1.5">2 months free</Badge></button>
+              <button onClick={() => setBilling('yearly')} className={cn('px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5', billing === 'yearly' ? 'bg-background shadow-sm' : 'text-muted-foreground')}>Yearly <Badge variant="secondary" className="text-[10px] py-0 px-1.5">Save 2 months</Badge></button>
             </div>
           </motion.div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-16">
-        <Card className="mb-8 p-5 border-primary/30 bg-gradient-to-r from-primary/10 to-secondary/10">
+        {/* Plans */}
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4 items-stretch">
+          {PLANS.map((plan, i) => {
+            const Icon = plan.icon;
+            const BadgeIcon = plan.badgeIcon;
+            const isActive = activePlan === plan.id;
+            return (
+              <motion.div key={plan.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: i * 0.06 }}>
+                <Card className={cn('relative p-6 h-full flex flex-col border-2 transition-all',
+                  plan.popular ? 'border-primary shadow-2xl shadow-primary/20' : 'border-border hover:border-primary/30',
+                  isActive && 'ring-2 ring-emerald-500')}>
+                  {plan.badge && (
+                    <div className={cn('absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 whitespace-nowrap',
+                      plan.popular ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground border')}>
+                      {BadgeIcon && <BadgeIcon className="w-3 h-3" />} {plan.badge}
+                    </div>
+                  )}
+                  {isActive && (
+                    <div className="absolute -top-3 right-4 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-white flex items-center gap-1">
+                      <Check className="w-3 h-3" /> ACTIVE
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 mb-3 mt-1">
+                    <div className="p-2 rounded-lg bg-primary/10"><Icon className="w-5 h-5 text-primary" /></div>
+                    <h3 className="text-xl font-bold">{plan.name}</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4 min-h-[40px]">{plan.tagline}</p>
+                  <div className="mb-1">
+                    <span className="text-4xl font-bold">{formatINR(perMonth(plan))}</span>
+                    <span className="text-muted-foreground text-sm">/month</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    {billing === 'yearly'
+                      ? `${formatINR(priceFor(plan))} billed yearly · save ${formatINR(savingsFor(plan))}`
+                      : 'billed monthly'}
+                  </p>
+                  <div className="text-xs text-muted-foreground mb-5 flex items-center gap-1.5"><Zap className="w-3.5 h-3.5" /> {plan.credits}</div>
+                  <ul className="space-y-2 mb-6 flex-1">
+                    {[...plan.features, ...(plan.extra?.[audience] || [])].map((f, idx) => (
+                      <li key={idx} className="flex gap-2 text-sm">
+                        <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /><span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Button onClick={() => buyPlan(plan)} disabled={busy === `plan_${plan.id}` || isActive} className="w-full" variant={plan.popular ? 'default' : 'outline'}>
+                    {busy === `plan_${plan.id}` ? <Loader2 className="w-4 h-4 animate-spin" /> : isActive ? 'Current plan' : plan.cta}
+                  </Button>
+                  <p className="text-[11px] text-muted-foreground text-center mt-2">+ one-time {formatINR(SETUP_FEE)} setup</p>
+                </Card>
+              </motion.div>
+            );
+          })}
+
+          {/* Enterprise */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.24 }}>
+            <Card className="relative p-6 h-full flex flex-col border-2 border-border bg-muted/30">
+              <div className="flex items-center gap-2 mb-3 mt-1">
+                <div className="p-2 rounded-lg bg-primary/10"><Building className="w-5 h-5 text-primary" /></div>
+                <h3 className="text-xl font-bold">Enterprise</h3>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4 min-h-[40px]">For organisations operating at scale</p>
+              <div className="mb-1"><span className="text-4xl font-bold">Custom</span></div>
+              <p className="text-xs text-muted-foreground mb-3">Talk to us for volume pricing</p>
+              <div className="text-xs text-muted-foreground mb-5 flex items-center gap-1.5"><Zap className="w-3.5 h-3.5" /> Custom message credits</div>
+              <ul className="space-y-2 mb-6 flex-1">
+                {ENTERPRISE_FEATURES.map((f, i) => (
+                  <li key={i} className="flex gap-2 text-sm"><Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /><span>{f}</span></li>
+                ))}
+              </ul>
+              <Button variant="outline" className="w-full" asChild>
+                <a href="mailto:foundifinnovations@gmail.com?subject=Reachably%20Enterprise%20enquiry">Book a demo</a>
+              </Button>
+            </Card>
+          </motion.div>
+        </div>
+
+        {/* Setup fee */}
+        <Card className="mt-8 p-5 border-primary/30 bg-gradient-to-r from-primary/10 to-secondary/10">
           <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-primary/20"><Wrench className="w-5 h-5 text-primary" /></div>
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-semibold">One-time WhatsApp API &amp; CRM setup</h3>
                   <Badge variant="secondary" className="text-[10px]">Paid separately</Badge>
                 </div>
@@ -225,53 +371,26 @@ const PricingContent = () => {
           </div>
         </Card>
 
-        <div className="grid md:grid-cols-3 gap-6">
-          {PLANS.map((plan, i) => {
-            const Icon = plan.icon;
-            const BadgeIcon = plan.badgeIcon;
-            const isActive = activePlan === plan.id;
-            return (
-              <motion.div key={plan.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: i * 0.08 }}>
-                <Card className={cn('relative p-6 h-full flex flex-col border-2 transition-all',
-                  plan.popular ? 'border-primary shadow-2xl shadow-primary/20 md:scale-[1.03]' : 'border-border hover:border-primary/30',
-                  isActive && 'ring-2 ring-emerald-500')}>
-                  {plan.badge && (
-                    <div className={cn('absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1',
-                      plan.popular ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground border')}>
-                      {BadgeIcon && <BadgeIcon className="w-3 h-3" />} {plan.badge}
-                    </div>
-                  )}
-                  {isActive && (
-                    <div className="absolute -top-3 right-4 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-white flex items-center gap-1">
-                      <Check className="w-3 h-3" /> ACTIVE
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="p-2 rounded-lg bg-primary/10"><Icon className="w-5 h-5 text-primary" /></div>
-                    <h3 className="text-xl font-bold">{plan.name}</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4">{plan.tagline}</p>
-                  <div className="mb-2">
-                    <span className="text-4xl font-bold">{formatINR(priceFor(plan))}</span>
-                    <span className="text-muted-foreground text-sm">/{billing === 'yearly' ? 'year' : 'month'}</span>
-                  </div>
-                  {billing === 'yearly' && <p className="text-xs text-emerald-600 mb-3">You save {formatINR(savingsFor(plan))} /year</p>}
-                  <div className="text-xs text-muted-foreground mb-5 flex items-center gap-1.5"><Zap className="w-3.5 h-3.5" /> {plan.credits}</div>
-                  <ul className="space-y-2 mb-6 flex-1">
-                    {plan.features.map((f, idx) => (
-                      <li key={idx} className="flex gap-2 text-sm">
-                        <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /><span>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Button onClick={() => buyPlan(plan)} disabled={busy === `plan_${plan.id}` || isActive} className="w-full" variant={plan.popular ? 'default' : 'outline'}>
-                    {busy === `plan_${plan.id}` ? <Loader2 className="w-4 h-4 animate-spin" /> : isActive ? 'Current plan' : plan.cta}
-                  </Button>
-                  <p className="text-[11px] text-muted-foreground text-center mt-2">+ one-time {formatINR(SETUP_FEE)} setup</p>
-                </Card>
-              </motion.div>
-            );
-          })}
+        {/* Add-ons */}
+        <div className="mt-14">
+          <div className="text-center mb-6">
+            <div className="text-xs font-semibold uppercase tracking-wider text-primary">Flexible pricing</div>
+            <h2 className="text-2xl font-bold mt-1">Add-ons</h2>
+            <p className="text-sm text-muted-foreground mt-1">Extend your plan with exactly what you need, nothing more.</p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {ADDONS.map(a => (
+              <Card key={a.id} className="p-5 flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-primary/10 shrink-0"><a.icon className="w-5 h-5 text-primary" /></div>
+                <div className="min-w-0">
+                  <div className="font-semibold">{a.name}</div>
+                  <p className="text-xs text-muted-foreground mt-0.5">{a.desc}</p>
+                  <div className="mt-3 text-xl font-bold">{a.price}</div>
+                  <div className="text-[11px] text-muted-foreground">{a.unit}</div>
+                </div>
+              </Card>
+            ))}
+          </div>
         </div>
 
         {/* Message recharge packs */}
@@ -283,8 +402,8 @@ const PricingContent = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mt-6">
             {PACKS.map(p => (
               <Card key={p.id} className={cn('p-4 border-2 relative flex flex-col', p.badge === 'Best value' && 'border-primary')}>
-                {p.badge && <div className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold">{p.badge}</div>}
-                <div className="text-xs text-muted-foreground">Top-up</div>
+                {p.badge && <div className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold whitespace-nowrap">{p.badge}</div>}
+                <div className="text-xs text-muted-foreground mt-1">Top-up</div>
                 <div className="text-2xl font-bold">{p.msgs.toLocaleString('en-IN')}</div>
                 <div className="text-xs text-muted-foreground mb-3">messages · {p.perMsg}</div>
                 <div className="text-xl font-bold mb-3">{formatINR(p.price)}</div>
@@ -299,6 +418,7 @@ const PricingContent = () => {
           </p>
         </div>
 
+        {/* Compare */}
         <div className="mt-14">
           <h2 className="text-2xl font-bold text-center mb-2">Compare features</h2>
           <p className="text-center text-sm text-muted-foreground mb-6">Everything you get across all Reachably plans.</p>
@@ -306,12 +426,13 @@ const PricingContent = () => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/40">
-                  <th className="text-left px-4 py-3 font-semibold">Features</th>
+                  <th className="text-left px-4 py-3 font-semibold min-w-[200px]">Features</th>
                   {PLANS.map(p => (
                     <th key={p.id} className="px-4 py-3 font-semibold text-center min-w-[110px]">
                       {p.name}{p.popular && <Badge className="ml-2 text-[10px]" variant="default">Popular</Badge>}
                     </th>
                   ))}
+                  <th className="px-4 py-3 font-semibold text-center min-w-[110px]">Enterprise</th>
                 </tr>
               </thead>
               <tbody>
@@ -327,6 +448,24 @@ const PricingContent = () => {
           <p className="text-[11px] text-muted-foreground mt-3 text-center">
             *Plan credits reset monthly. Additional messages can be topped up anytime with recharge packs above.
           </p>
+        </div>
+
+        {/* FAQ */}
+        <div className="mt-14 max-w-3xl mx-auto">
+          <div className="text-center mb-6">
+            <div className="text-xs font-semibold uppercase tracking-wider text-primary">FAQ</div>
+            <h2 className="text-2xl font-bold mt-1">FAQs about pricing</h2>
+          </div>
+          <Card className="px-4 sm:px-6">
+            <Accordion type="single" collapsible className="w-full">
+              {FAQS.map((f, i) => (
+                <AccordionItem key={i} value={`faq-${i}`}>
+                  <AccordionTrigger className="text-left text-sm font-medium">{f.q}</AccordionTrigger>
+                  <AccordionContent className="text-sm text-muted-foreground">{f.a}</AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </Card>
         </div>
       </div>
     </div>
