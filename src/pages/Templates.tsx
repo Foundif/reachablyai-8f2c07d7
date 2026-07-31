@@ -463,7 +463,7 @@ const Templates = () => {
                       ))}
                     </div>
                   )}
-                  <div className="rounded-md bg-[#e5ddd5] p-3 max-w-sm mx-auto">
+                  <div className="rounded-md wa-doodle-bg border p-3 max-w-sm mx-auto">
                     <div className="rounded-lg bg-white shadow-sm p-3 text-sm text-slate-800 space-y-1.5">
                       {form.header_type === 'text' && form.header && <div className="font-semibold">{form.header}</div>}
                       {form.header_type === 'image' && form.header_media_url && <img src={form.header_media_url} alt="" className="rounded max-h-32 w-full object-cover" />}

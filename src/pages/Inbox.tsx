@@ -388,7 +388,7 @@ const Inbox = () => {
                 </div>
               )}
 
-              <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-2 bg-muted/20">
+              <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-2 wa-doodle-bg">
                 {messages.map(m => (
                   <div key={m.id} className={cn('flex', m.direction === 'outbound' ? 'justify-end' : 'justify-start')}>
                     <div className={cn(
