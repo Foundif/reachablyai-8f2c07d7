@@ -800,7 +800,9 @@ function ContactPanel({
           <div className="text-[10px] text-muted-foreground mt-1">Auto-saves as you type</div>
         </div>
       </div>
+      )}
     </div>
+
   );
 }
 
