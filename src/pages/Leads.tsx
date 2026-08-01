@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -54,8 +55,20 @@ const SOURCE_COLORS: Record<LeadSource, string> = {
   booking: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30',
 };
 
-// Tiny CSV parser (supports quoted fields, commas inside quotes)
-function parseCSV(text: string): string[][] {
+// Detect the delimiter actually used by the file (Excel/DB exports often use ; or tab)
+function detectDelimiter(text: string): string {
+  const firstLine = (text.split(/\r?\n/).find(l => l.trim()) || '');
+  const candidates = [',', ';', '\t', '|'];
+  let best = ',', bestCount = 0;
+  for (const d of candidates) {
+    const count = firstLine.split(d).length - 1;
+    if (count > bestCount) { best = d; bestCount = count; }
+  }
+  return best;
+}
+
+// Tiny CSV parser (supports quoted fields and custom delimiters)
+function parseCSV(text: string, delimiter = ','): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
   let cell = '';
@@ -68,7 +81,7 @@ function parseCSV(text: string): string[][] {
       else cell += c;
     } else {
       if (c === '"') inQuotes = true;
-      else if (c === ',') { row.push(cell); cell = ''; }
+      else if (c === delimiter) { row.push(cell); cell = ''; }
       else if (c === '\n' || c === '\r') {
         if (c === '\r' && text[i + 1] === '\n') i++;
         row.push(cell); cell = '';
@@ -80,6 +93,9 @@ function parseCSV(text: string): string[][] {
   if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
   return rows;
 }
+
+const isUuid = (v: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v.trim());
+
 
 const Leads = () => {
   const { user, profile } = useAuth();
@@ -94,6 +110,8 @@ const Leads = () => {
   const [wsId, setWsId] = useState<string | null>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
   const [pendingDelete, setPendingDelete] = useState<Lead | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const [form, setForm] = useState({ name: '', phone: '', email: '', tags: '' });
 
@@ -171,33 +189,76 @@ const Leads = () => {
 
   const handleCsvUpload = async (file: File) => {
     if (!wsId) return toast.error('Workspace not ready');
-    const text = await file.text();
-    const rows = parseCSV(text);
+    const raw = await file.text();
+    const text = raw.replace(/^\uFEFF/, '');
+    const rows = parseCSV(text, detectDelimiter(text));
     if (rows.length < 2) return toast.error('CSV appears empty');
-    const headers = rows[0].map(h => h.trim().toLowerCase());
-    const nameIdx = headers.findIndex(h => h.includes('name'));
-    const phoneIdx = headers.findIndex(h => h.includes('phone') || h.includes('mobile') || h.includes('whatsapp'));
-    const emailIdx = headers.findIndex(h => h.includes('email'));
-    if (nameIdx === -1 && phoneIdx === -1) return toast.error('Need a "name" or "phone" column');
+    const headers = rows[0].map(h => h.trim().toLowerCase().replace(/^"|"$/g, ''));
+    const find = (...keys: string[]) => headers.findIndex(h => keys.some(k => h === k || h.includes(k)));
+    const nameIdx = find('name', 'contact', 'business');
+    const phoneIdx = find('phone', 'mobile', 'whatsapp', 'number');
+    const emailIdx = find('email', 'mail');
+    const tagsIdx = find('tags', 'tag');
+    const notesIdx = find('notes', 'note', 'address');
+    const statusIdx = find('status');
+    if (nameIdx === -1 && phoneIdx === -1) {
+      return toast.error('Could not find a "name" or "phone" column. Make sure the first row is a header row.');
+    }
+    const val = (r: string[], i: number) => (i >= 0 ? (r[i] || '').trim().replace(/^"|"$/g, '') : '');
+    const validStatus = ['new', 'contacted', 'converted', 'lost'];
     const payload = rows.slice(1)
       .filter(r => r.some(c => c.trim()))
-      .map(r => ({
-        workspace_id: wsId,
-        name: (nameIdx >= 0 ? r[nameIdx] : r[phoneIdx] || '').trim() || 'Unnamed',
-        phone: phoneIdx >= 0 ? r[phoneIdx]?.trim() || null : null,
-        email: emailIdx >= 0 ? r[emailIdx]?.trim() || null : null,
-        source: 'csv' as const,
-      }));
+      .map(r => {
+        const phone = val(r, phoneIdx);
+        const status = val(r, statusIdx).toLowerCase();
+        const tags = val(r, tagsIdx)
+          .replace(/^[\[{]|[\]}]$/g, '')
+          .split(/[,;|]/).map(t => t.trim().replace(/^"|"$/g, '')).filter(Boolean);
+        return {
+          workspace_id: wsId,
+          name: val(r, nameIdx) || phone || 'Unnamed',
+          phone: phone && !isUuid(phone) ? phone : null,
+          email: val(r, emailIdx) || null,
+          notes: val(r, notesIdx) || null,
+          tags,
+          status: validStatus.includes(status) ? status : 'new',
+          source: 'csv' as const,
+        };
+      })
+      .filter(p => !isUuid(p.name) && (p.phone || p.email || p.name !== 'Unnamed'));
+    if (!payload.length) return toast.error('No valid rows found in this file');
     // batch insert in chunks of 100
     for (let i = 0; i < payload.length; i += 100) {
       const chunk = payload.slice(i, i + 100);
       const { error } = await supabase.from('leads' as any).insert(chunk);
       if (error) { toast.error('Import failed: ' + error.message); return; }
     }
-    toast.success(`Imported ${payload.length} lead(s)`);
+    toast.success(`Imported ${payload.length} contact(s)`);
     if (csvInputRef.current) csvInputRef.current.value = '';
     loadLeads();
   };
+
+  // ---- Bulk selection ----
+  const toggleSelect = (id: string) =>
+    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const allVisibleSelected = filtered.length > 0 && filtered.every(l => selected.has(l.id));
+  const toggleSelectAll = () =>
+    setSelected(allVisibleSelected ? new Set() : new Set(filtered.map(l => l.id)));
+
+  const confirmBulkDelete = async () => {
+    const ids = Array.from(selected);
+    setBulkOpen(false);
+    if (!ids.length) return;
+    for (let i = 0; i < ids.length; i += 200) {
+      const chunk = ids.slice(i, i + 200);
+      const { error } = await supabase.from('leads' as any).delete().in('id', chunk);
+      if (error) { toast.error(error.message); loadLeads(); return; }
+    }
+    setLeads(prev => prev.filter(l => !selected.has(l.id)));
+    setSelected(new Set());
+    toast.success(`${ids.length} contact(s) deleted`);
+  };
+
 
   return (
     <AppLayout>
@@ -293,6 +354,17 @@ const Leads = () => {
           </div>
         </Card>
 
+        {/* Bulk actions bar */}
+        {selected.size > 0 && (
+          <Card className="p-3 flex flex-wrap items-center gap-3 border-primary/40">
+            <span className="text-sm font-medium">{selected.size} selected</span>
+            <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>Clear</Button>
+            <Button variant="destructive" size="sm" className="ml-auto" onClick={() => setBulkOpen(true)}>
+              <Trash2 className="w-4 h-4 mr-2" /> Delete selected
+            </Button>
+          </Card>
+        )}
+
         {/* Results */}
         {loading ? (
           <Card className="p-12 text-center text-muted-foreground">Loading…</Card>
@@ -306,6 +378,9 @@ const Leads = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox checked={allVisibleSelected} onCheckedChange={toggleSelectAll} aria-label="Select all" />
+                  </TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Source</TableHead>
@@ -317,8 +392,12 @@ const Leads = () => {
               </TableHeader>
               <TableBody>
                 {filtered.map(l => (
-                  <TableRow key={l.id}>
+                  <TableRow key={l.id} data-state={selected.has(l.id) ? 'selected' : undefined}>
+                    <TableCell>
+                      <Checkbox checked={selected.has(l.id)} onCheckedChange={() => toggleSelect(l.id)} aria-label={`Select ${l.name}`} />
+                    </TableCell>
                     <TableCell className="font-medium">{l.name}</TableCell>
+
                     <TableCell className="text-sm text-muted-foreground">{l.phone || '—'}</TableCell>
                     <TableCell><Badge variant="outline" className={SOURCE_COLORS[l.source]}>{l.source}</Badge></TableCell>
                     <TableCell>
@@ -354,11 +433,14 @@ const Leads = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {filtered.map(l => (
-              <Card key={l.id} className="p-4 hover:shadow-glow transition-shadow">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-semibold">{l.name}</p>
-                    <p className="text-sm text-muted-foreground">{l.phone || l.email || '—'}</p>
+              <Card key={l.id} className={`p-4 hover:shadow-glow transition-shadow ${selected.has(l.id) ? 'ring-2 ring-primary' : ''}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-2 min-w-0">
+                    <Checkbox className="mt-1" checked={selected.has(l.id)} onCheckedChange={() => toggleSelect(l.id)} aria-label={`Select ${l.name}`} />
+                    <div className="min-w-0">
+                      <p className="font-semibold truncate">{l.name}</p>
+                      <p className="text-sm text-muted-foreground truncate">{l.phone || l.email || '—'}</p>
+                    </div>
                   </div>
                   <Badge variant="outline" className={SOURCE_COLORS[l.source]}>{l.source}</Badge>
                 </div>
@@ -392,6 +474,14 @@ const Leads = () => {
         description={<>Contact <b>{pendingDelete?.name}</b> will be permanently removed. This cannot be undone.</>}
         confirmLabel="Delete contact"
         onConfirm={confirmDelete}
+      />
+      <ConfirmDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        title={`Delete ${selected.size} contact(s)?`}
+        description={<>The selected contacts will be permanently removed. This cannot be undone.</>}
+        confirmLabel="Delete contacts"
+        onConfirm={confirmBulkDelete}
       />
     </AppLayout>
   );
