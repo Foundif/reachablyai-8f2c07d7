@@ -109,6 +109,8 @@ const Leads = () => {
   const [wsId, setWsId] = useState<string | null>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
   const [pendingDelete, setPendingDelete] = useState<Lead | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const [form, setForm] = useState({ name: '', phone: '', email: '', tags: '' });
 
