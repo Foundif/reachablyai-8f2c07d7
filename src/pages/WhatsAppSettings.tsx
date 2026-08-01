@@ -11,6 +11,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Settings, ShieldCheck, ShieldAlert, Copy, Bug, RefreshCw, CheckCircle2, XCircle, MinusCircle, Inbox as InboxIcon, Facebook, Zap, Unplug } from 'lucide-react';
 import { META_APP_ID, META_CONFIG_ID } from '@/lib/metaConfig';
+import { loadFacebookSdk } from '@/lib/facebookSdk';
+
 import { resolveWorkspaceId } from '@/lib/workspace';
 
 interface Creds {
