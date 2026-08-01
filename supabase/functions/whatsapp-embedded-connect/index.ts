@@ -47,16 +47,20 @@ Deno.serve(async (req) => {
     }
     const accessToken = tokenBody.access_token as string;
 
-    // 2. Get WABA(s) accessible to this token
-    const debugResp = await fetch(
-      `https://graph.facebook.com/v20.0/debug_token?input_token=${accessToken}&access_token=${appId}|${appSecret}`,
-    );
-    const debugBody = await debugResp.json();
-    const grantedScopes: string[] = debugBody?.data?.granular_scopes || [];
+    // 2. Get WABA(s) accessible to this token (popup signup already tells us which one)
     const wabaIds: string[] = [];
-    for (const g of grantedScopes as any[]) {
-      if (g?.scope === 'whatsapp_business_management' || g?.scope === 'whatsapp_business_messaging') {
-        for (const id of g.target_ids || []) if (!wabaIds.includes(id)) wabaIds.push(id);
+    if (hintWabaId) wabaIds.push(hintWabaId);
+
+    if (wabaIds.length === 0) {
+      const debugResp = await fetch(
+        `https://graph.facebook.com/v20.0/debug_token?input_token=${accessToken}&access_token=${appId}|${appSecret}`,
+      );
+      const debugBody = await debugResp.json();
+      const grantedScopes: any[] = debugBody?.data?.granular_scopes || [];
+      for (const g of grantedScopes) {
+        if (g?.scope === 'whatsapp_business_management' || g?.scope === 'whatsapp_business_messaging') {
+          for (const id of g.target_ids || []) if (!wabaIds.includes(id)) wabaIds.push(id);
+        }
       }
     }
 
@@ -84,12 +88,14 @@ Deno.serve(async (req) => {
       `https://graph.facebook.com/v20.0/${wabaId}/phone_numbers?access_token=${accessToken}`,
     );
     const phoneBody = await phoneResp.json();
-    if (!phoneResp.ok || !phoneBody?.data?.length) {
+    const phones: any[] = phoneBody?.data || [];
+    const phone = (hintPhoneId && phones.find((p) => p.id === hintPhoneId)) || phones[0];
+    if (!phone && !hintPhoneId) {
       return json({ error: phoneBody?.error?.message || 'No phone numbers found on WABA' }, 400);
     }
-    const phone = phoneBody.data[0];
-    const phoneNumberId = phone.id;
-    const displayPhone = phone.display_phone_number;
+    const phoneNumberId = phone?.id || hintPhoneId!;
+    const displayPhone = phone?.display_phone_number || null;
+
 
     // 4. Subscribe app to WABA webhooks
     await fetch(`https://graph.facebook.com/v20.0/${wabaId}/subscribed_apps`, {
