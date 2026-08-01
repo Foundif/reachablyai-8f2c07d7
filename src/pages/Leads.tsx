@@ -472,6 +472,14 @@ const Leads = () => {
         confirmLabel="Delete contact"
         onConfirm={confirmDelete}
       />
+      <ConfirmDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        title={`Delete ${selected.size} contact(s)?`}
+        description={<>The selected contacts will be permanently removed. This cannot be undone.</>}
+        confirmLabel="Delete contacts"
+        onConfirm={confirmBulkDelete}
+      />
     </AppLayout>
   );
 };
