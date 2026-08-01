@@ -631,6 +631,44 @@ export type Database = {
           },
         ]
       }
+      credit_settings: {
+        Row: {
+          auto_recharge: boolean
+          auto_recharge_pack: string | null
+          buffer_msgs: number
+          created_at: string
+          pause_on_exhausted: boolean
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          auto_recharge?: boolean
+          auto_recharge_pack?: string | null
+          buffer_msgs?: number
+          created_at?: string
+          pause_on_exhausted?: boolean
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          auto_recharge?: boolean
+          auto_recharge_pack?: string | null
+          buffer_msgs?: number
+          created_at?: string
+          pause_on_exhausted?: boolean
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_transactions: {
         Row: {
           amount_paise: number
@@ -807,6 +845,9 @@ export type Database = {
       message_credits: {
         Row: {
           balance: number
+          buffer_enabled: boolean
+          credit_limit: number
+          credit_used: number
           lifetime_purchased: number
           lifetime_used: number
           updated_at: string
@@ -814,6 +855,9 @@ export type Database = {
         }
         Insert: {
           balance?: number
+          buffer_enabled?: boolean
+          credit_limit?: number
+          credit_used?: number
           lifetime_purchased?: number
           lifetime_used?: number
           updated_at?: string
@@ -821,6 +865,9 @@ export type Database = {
         }
         Update: {
           balance?: number
+          buffer_enabled?: boolean
+          credit_limit?: number
+          credit_used?: number
           lifetime_purchased?: number
           lifetime_used?: number
           updated_at?: string

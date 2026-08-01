@@ -9,9 +9,11 @@ import { useGlobalAlerts } from '@/hooks/useGlobalAlerts';
 
 interface AppLayoutProps {
   children: ReactNode;
+  /** Edge-to-edge page (no top bar, no footer, no max-width) — used by the Inbox */
+  fullBleed?: boolean;
 }
 
-const AppLayout = ({ children }: AppLayoutProps) => {
+const AppLayout = ({ children, fullBleed = false }: AppLayoutProps) => {
   useGlobalAlerts();
   return (
     <div className="relative flex min-h-screen w-full">
@@ -19,12 +21,12 @@ const AppLayout = ({ children }: AppLayoutProps) => {
 
       <main className="relative flex-1 min-w-0 min-h-screen pb-28 md:pb-0 overflow-x-clip flex flex-col">
         <MobileHeader />
-        <TopBar />
+        {!fullBleed && <TopBar />}
         <PaymentAlertBanner />
-        <div className="relative max-w-[1600px] mx-auto flex-1 w-full">
+        <div className={fullBleed ? 'relative flex-1 w-full min-h-0' : 'relative max-w-[1600px] mx-auto flex-1 w-full'}>
           {children}
         </div>
-        <AppFooter />
+        {!fullBleed && <AppFooter />}
       </main>
 
       <MobileNav />

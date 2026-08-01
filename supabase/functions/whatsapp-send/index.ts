@@ -1,5 +1,6 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { chargeCredits, refundCredits } from '../_shared/credits.ts';
 
 const json = (b: any, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
@@ -56,6 +57,9 @@ Deno.serve(async (req) => {
         template: { name: tpl.name, language: { code: tpl.language || 'en' }, ...(components.length ? { components } : {}) },
       };
     }
+    // Charge the prepaid wallet (allows the credit buffer to go slightly negative)
+    const charge = await chargeCredits(admin, workspace_id, 1);
+    if (!charge.ok) return json({ error: charge.reason, code: 'insufficient_credits', balance: charge.balance }, 402);
 
     const resp = await fetch(`https://graph.facebook.com/v20.0/${creds.phone_number_id}/messages`, {
       method: 'POST',
@@ -64,6 +68,7 @@ Deno.serve(async (req) => {
     });
     const rbody = await resp.json();
     if (!resp.ok) {
+      await refundCredits(admin, workspace_id, 1);
       const err = rbody?.error?.message || `HTTP ${resp.status}`;
       await admin.from('wa_messages').insert({
         workspace_id, conversation_id: convId, direction: 'outbound',
