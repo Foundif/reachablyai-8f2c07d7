@@ -22,8 +22,12 @@ Deno.serve(async (req) => {
     if (userErr || !userRes?.user) return json({ error: 'Unauthorized' }, 401);
     const userId = userRes.user.id;
 
-    const { code, redirect_uri } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const { code, redirect_uri } = body as any;
+    const hintWabaId: string | undefined = body?.waba_id;
+    const hintPhoneId: string | undefined = body?.phone_number_id;
     if (!code) return json({ error: 'Missing OAuth code' }, 400);
+
 
     const appId = Deno.env.get('META_APP_ID');
     const appSecret = Deno.env.get('META_APP_SECRET');
