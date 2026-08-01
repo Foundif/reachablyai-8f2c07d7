@@ -193,8 +193,23 @@ const WhatsAppSettings = () => {
     load();
   };
 
+  const [repairing, setRepairing] = useState(false);
+  const repairWebhook = async () => {
+    setRepairing(true);
+    const { data, error } = await supabase.functions.invoke('meta-webhook-check', { body: { workspace_id: wsId, repair: true } });
+    setRepairing(false);
+    if (error) return toast.error(error.message);
+    const d = data as any;
+    if (d?.error) return toast.error(d.error);
+    if (d?.healthy) toast.success('Webhook delivery is active — send a WhatsApp message to test.');
+    else toast.warning('Repaired what we could. Check the debug panel after sending a message.', {
+      description: `App webhook: ${d?.app_webhook_ok ? 'ok' : 'fixed'} · WABA subscribed: ${d?.waba_subscribed ? 'yes' : 'fixed'} · Number: ${d?.phone_number?.status || 'unknown'}`,
+    });
+  };
+
   const webhookUrl = `${SUPABASE_URL}/functions/v1/whatsapp-webhook`;
   const copy = (s: string) => { navigator.clipboard.writeText(s); toast.success('Copied'); };
+
 
   return (
     <AppLayout>
@@ -225,11 +240,17 @@ const WhatsAppSettings = () => {
               {creds?.connected_at && <div className="text-xs text-muted-foreground">Connected {new Date(creds.connected_at).toLocaleString()}</div>}
             </div>
             {(creds?.status === 'connected' || creds?.verified) && (
+              <Button variant="outline" size="sm" onClick={repairWebhook} disabled={repairing} className="gap-1">
+                {repairing ? 'Checking…' : 'Repair webhook delivery'}
+              </Button>
+            )}
+            {(creds?.status === 'connected' || creds?.verified) && (
               <Button variant="outline" size="sm" onClick={disconnect} disabled={disconnecting} className="gap-1">
                 <Unplug className="w-3.5 h-3.5" /> {disconnecting ? 'Disconnecting…' : 'Disconnect'}
               </Button>
             )}
           </div>
+
           {creds?.last_error && <p className="text-sm text-red-600">{creds.last_error}</p>}
         </Card>
 
