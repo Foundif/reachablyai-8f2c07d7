@@ -671,13 +671,16 @@ function NewChatDialog({
   );
 }
 
-function NotesPanel({
-  conversation, onSaveNotes, onSaveTags,
+function ContactPanel({
+  conversation, assigneeName, onClose, onSaveNotes, onSaveTags,
 }: {
   conversation: Conversation;
+  assigneeName: string | null;
+  onClose: () => void;
   onSaveNotes: (v: string) => void | Promise<void>;
   onSaveTags: (v: string[]) => void | Promise<void>;
 }) {
+  const [view, setView] = useState<'info' | 'notes'>('info');
   const [notes, setNotes] = useState(conversation.notes || '');
   const [tags, setTags] = useState<string[]>(conversation.tags || []);
   const [tagDraft, setTagDraft] = useState('');
@@ -709,11 +712,59 @@ function NotesPanel({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-3 border-b flex items-center gap-2">
-        <StickyNote className="w-4 h-4 text-primary" />
-        <h3 className="font-semibold text-sm">Lead details</h3>
+      <div className="h-14 shrink-0 border-b flex items-center gap-1 px-2">
+        {(['info', 'notes'] as const).map(v => (
+          <button
+            key={v}
+            onClick={() => setView(v)}
+            className={cn(
+              'flex-1 h-full text-xs font-medium border-b-2 transition-colors',
+              view === v ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {v === 'info' ? 'User Info' : 'Notes'}
+          </button>
+        ))}
+        <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={onClose} title="Collapse panel">
+          <PanelRightClose className="w-4 h-4" />
+        </Button>
       </div>
+
+      {view === 'info' ? (
+        <div className="p-4 space-y-4 overflow-y-auto flex-1 text-sm">
+          <div>
+            <div className="text-[11px] text-muted-foreground mb-0.5">Name</div>
+            <div className="font-medium">{conversation.contact_name || '—'}</div>
+          </div>
+          <div>
+            <div className="text-[11px] text-muted-foreground mb-0.5">Phone</div>
+            <div className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-emerald-500" />{conversation.contact_phone}</div>
+          </div>
+          <div>
+            <div className="text-[11px] text-muted-foreground mb-0.5">Status</div>
+            <Badge variant={conversation.status === 'open' ? 'default' : 'secondary'} className="capitalize">{conversation.status}</Badge>
+          </div>
+          <div>
+            <div className="text-[11px] text-muted-foreground mb-0.5">Contact owner</div>
+            <div className="flex items-center gap-1.5"><User className="w-3.5 h-3.5 text-muted-foreground" />{assigneeName || '—'}</div>
+          </div>
+          <div>
+            <div className="text-[11px] text-muted-foreground mb-0.5">24h window</div>
+            <div>{conversation.window_expires_at && new Date(conversation.window_expires_at) > new Date()
+              ? `Active until ${new Date(conversation.window_expires_at).toLocaleString()}`
+              : 'Closed — template required'}</div>
+          </div>
+          <div className="pt-2 border-t">
+            <div className="text-xs font-medium mb-1.5 flex items-center gap-1.5"><Tag className="w-3 h-3" /> Tags</div>
+            <div className="flex flex-wrap gap-1.5">
+              {tags.length === 0 && <span className="text-[11px] text-muted-foreground">No tags yet</span>}
+              {tags.map(t => <Badge key={t} variant="secondary">{t}</Badge>)}
+            </div>
+          </div>
+        </div>
+      ) : (
       <div className="p-3 space-y-4 overflow-y-auto flex-1">
+
         <div>
           <div className="text-xs font-medium mb-1.5 flex items-center gap-1.5">
             <Tag className="w-3 h-3" /> Tags
