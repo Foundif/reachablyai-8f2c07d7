@@ -186,33 +186,76 @@ const Leads = () => {
 
   const handleCsvUpload = async (file: File) => {
     if (!wsId) return toast.error('Workspace not ready');
-    const text = await file.text();
-    const rows = parseCSV(text);
+    const raw = await file.text();
+    const text = raw.replace(/^\uFEFF/, '');
+    const rows = parseCSV(text, detectDelimiter(text));
     if (rows.length < 2) return toast.error('CSV appears empty');
-    const headers = rows[0].map(h => h.trim().toLowerCase());
-    const nameIdx = headers.findIndex(h => h.includes('name'));
-    const phoneIdx = headers.findIndex(h => h.includes('phone') || h.includes('mobile') || h.includes('whatsapp'));
-    const emailIdx = headers.findIndex(h => h.includes('email'));
-    if (nameIdx === -1 && phoneIdx === -1) return toast.error('Need a "name" or "phone" column');
+    const headers = rows[0].map(h => h.trim().toLowerCase().replace(/^"|"$/g, ''));
+    const find = (...keys: string[]) => headers.findIndex(h => keys.some(k => h === k || h.includes(k)));
+    const nameIdx = find('name', 'contact', 'business');
+    const phoneIdx = find('phone', 'mobile', 'whatsapp', 'number');
+    const emailIdx = find('email', 'mail');
+    const tagsIdx = find('tags', 'tag');
+    const notesIdx = find('notes', 'note', 'address');
+    const statusIdx = find('status');
+    if (nameIdx === -1 && phoneIdx === -1) {
+      return toast.error('Could not find a "name" or "phone" column. Make sure the first row is a header row.');
+    }
+    const val = (r: string[], i: number) => (i >= 0 ? (r[i] || '').trim().replace(/^"|"$/g, '') : '');
+    const validStatus = ['new', 'contacted', 'converted', 'lost'];
     const payload = rows.slice(1)
       .filter(r => r.some(c => c.trim()))
-      .map(r => ({
-        workspace_id: wsId,
-        name: (nameIdx >= 0 ? r[nameIdx] : r[phoneIdx] || '').trim() || 'Unnamed',
-        phone: phoneIdx >= 0 ? r[phoneIdx]?.trim() || null : null,
-        email: emailIdx >= 0 ? r[emailIdx]?.trim() || null : null,
-        source: 'csv' as const,
-      }));
+      .map(r => {
+        const phone = val(r, phoneIdx);
+        const status = val(r, statusIdx).toLowerCase();
+        const tags = val(r, tagsIdx)
+          .replace(/^[\[{]|[\]}]$/g, '')
+          .split(/[,;|]/).map(t => t.trim().replace(/^"|"$/g, '')).filter(Boolean);
+        return {
+          workspace_id: wsId,
+          name: val(r, nameIdx) || phone || 'Unnamed',
+          phone: phone && !isUuid(phone) ? phone : null,
+          email: val(r, emailIdx) || null,
+          notes: val(r, notesIdx) || null,
+          tags,
+          status: validStatus.includes(status) ? status : 'new',
+          source: 'csv' as const,
+        };
+      })
+      .filter(p => !isUuid(p.name) && (p.phone || p.email || p.name !== 'Unnamed'));
+    if (!payload.length) return toast.error('No valid rows found in this file');
     // batch insert in chunks of 100
     for (let i = 0; i < payload.length; i += 100) {
       const chunk = payload.slice(i, i + 100);
       const { error } = await supabase.from('leads' as any).insert(chunk);
       if (error) { toast.error('Import failed: ' + error.message); return; }
     }
-    toast.success(`Imported ${payload.length} lead(s)`);
+    toast.success(`Imported ${payload.length} contact(s)`);
     if (csvInputRef.current) csvInputRef.current.value = '';
     loadLeads();
   };
+
+  // ---- Bulk selection ----
+  const toggleSelect = (id: string) =>
+    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const allVisibleSelected = filtered.length > 0 && filtered.every(l => selected.has(l.id));
+  const toggleSelectAll = () =>
+    setSelected(allVisibleSelected ? new Set() : new Set(filtered.map(l => l.id)));
+
+  const confirmBulkDelete = async () => {
+    const ids = Array.from(selected);
+    setBulkOpen(false);
+    if (!ids.length) return;
+    for (let i = 0; i < ids.length; i += 200) {
+      const chunk = ids.slice(i, i + 200);
+      const { error } = await supabase.from('leads' as any).delete().in('id', chunk);
+      if (error) { toast.error(error.message); loadLeads(); return; }
+    }
+    setLeads(prev => prev.filter(l => !selected.has(l.id)));
+    setSelected(new Set());
+    toast.success(`${ids.length} contact(s) deleted`);
+  };
+
 
   return (
     <AppLayout>
