@@ -240,11 +240,17 @@ const WhatsAppSettings = () => {
               {creds?.connected_at && <div className="text-xs text-muted-foreground">Connected {new Date(creds.connected_at).toLocaleString()}</div>}
             </div>
             {(creds?.status === 'connected' || creds?.verified) && (
+              <Button variant="outline" size="sm" onClick={repairWebhook} disabled={repairing} className="gap-1">
+                {repairing ? 'Checking…' : 'Repair webhook delivery'}
+              </Button>
+            )}
+            {(creds?.status === 'connected' || creds?.verified) && (
               <Button variant="outline" size="sm" onClick={disconnect} disabled={disconnecting} className="gap-1">
                 <Unplug className="w-3.5 h-3.5" /> {disconnecting ? 'Disconnecting…' : 'Disconnect'}
               </Button>
             )}
           </div>
+
           {creds?.last_error && <p className="text-sm text-red-600">{creds.last_error}</p>}
         </Card>
 
