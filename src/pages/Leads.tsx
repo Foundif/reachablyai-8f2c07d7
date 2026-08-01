@@ -353,6 +353,17 @@ const Leads = () => {
           </div>
         </Card>
 
+        {/* Bulk actions bar */}
+        {selected.size > 0 && (
+          <Card className="p-3 flex flex-wrap items-center gap-3 border-primary/40">
+            <span className="text-sm font-medium">{selected.size} selected</span>
+            <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>Clear</Button>
+            <Button variant="destructive" size="sm" className="ml-auto" onClick={() => setBulkOpen(true)}>
+              <Trash2 className="w-4 h-4 mr-2" /> Delete selected
+            </Button>
+          </Card>
+        )}
+
         {/* Results */}
         {loading ? (
           <Card className="p-12 text-center text-muted-foreground">Loading…</Card>
@@ -366,6 +377,9 @@ const Leads = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox checked={allVisibleSelected} onCheckedChange={toggleSelectAll} aria-label="Select all" />
+                  </TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Source</TableHead>
@@ -377,8 +391,12 @@ const Leads = () => {
               </TableHeader>
               <TableBody>
                 {filtered.map(l => (
-                  <TableRow key={l.id}>
+                  <TableRow key={l.id} data-state={selected.has(l.id) ? 'selected' : undefined}>
+                    <TableCell>
+                      <Checkbox checked={selected.has(l.id)} onCheckedChange={() => toggleSelect(l.id)} aria-label={`Select ${l.name}`} />
+                    </TableCell>
                     <TableCell className="font-medium">{l.name}</TableCell>
+
                     <TableCell className="text-sm text-muted-foreground">{l.phone || '—'}</TableCell>
                     <TableCell><Badge variant="outline" className={SOURCE_COLORS[l.source]}>{l.source}</Badge></TableCell>
                     <TableCell>
