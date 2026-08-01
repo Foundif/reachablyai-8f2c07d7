@@ -54,8 +54,20 @@ const SOURCE_COLORS: Record<LeadSource, string> = {
   booking: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30',
 };
 
-// Tiny CSV parser (supports quoted fields, commas inside quotes)
-function parseCSV(text: string): string[][] {
+// Detect the delimiter actually used by the file (Excel/DB exports often use ; or tab)
+function detectDelimiter(text: string): string {
+  const firstLine = (text.split(/\r?\n/).find(l => l.trim()) || '');
+  const candidates = [',', ';', '\t', '|'];
+  let best = ',', bestCount = 0;
+  for (const d of candidates) {
+    const count = firstLine.split(d).length - 1;
+    if (count > bestCount) { best = d; bestCount = count; }
+  }
+  return best;
+}
+
+// Tiny CSV parser (supports quoted fields and custom delimiters)
+function parseCSV(text: string, delimiter = ','): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
   let cell = '';
@@ -68,7 +80,7 @@ function parseCSV(text: string): string[][] {
       else cell += c;
     } else {
       if (c === '"') inQuotes = true;
-      else if (c === ',') { row.push(cell); cell = ''; }
+      else if (c === delimiter) { row.push(cell); cell = ''; }
       else if (c === '\n' || c === '\r') {
         if (c === '\r' && text[i + 1] === '\n') i++;
         row.push(cell); cell = '';
@@ -80,6 +92,9 @@ function parseCSV(text: string): string[][] {
   if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
   return rows;
 }
+
+const isUuid = (v: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v.trim());
+
 
 const Leads = () => {
   const { user, profile } = useAuth();
