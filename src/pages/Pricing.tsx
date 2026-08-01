@@ -393,6 +393,11 @@ const PricingContent = () => {
           </div>
         </div>
 
+        {/* Prepaid wallet + credit buffer */}
+        <div className="mt-14 max-w-3xl mx-auto">
+          <CreditWallet />
+        </div>
+
         {/* Message recharge packs */}
         <div className="mt-14">
           <div className="text-center mb-2">
