@@ -277,122 +277,191 @@ const Inbox = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wsId]);
 
+  const tabCounts = useMemo(() => ({
+    new: convs.filter(c => c.unread_count > 0).length,
+    open: convs.filter(c => c.status === 'open').length,
+    resolved: convs.filter(c => c.status !== 'open').length,
+    all: convs.length,
+  }), [convs]);
+
+  const windowHoursLeft = selected?.window_expires_at
+    ? Math.max(0, Math.ceil((new Date(selected.window_expires_at).getTime() - Date.now()) / 3_600_000))
+    : 0;
+
   return (
-    <AppLayout>
-      <div className="flex h-[calc(100vh-8rem)] md:h-[calc(100vh-6rem)] max-w-7xl mx-auto p-2 md:p-4 gap-3">
-        {/* List */}
-        <Card className={cn('w-full md:w-80 flex flex-col', showMobileChat && 'hidden md:flex')}>
-          <div className="p-3 border-b space-y-2">
+    <AppLayout fullBleed>
+      <div className="flex h-[calc(100dvh-10.5rem)] md:h-[100dvh] w-full overflow-hidden bg-background">
+        {/* ============ Conversation list ============ */}
+        <aside className={cn('w-full md:w-[330px] shrink-0 flex flex-col border-r bg-card', showMobileChat && 'hidden md:flex')}>
+          <div className="p-3 border-b space-y-2.5">
             <div className="flex items-center gap-2">
-              <InboxIcon className="w-5 h-5 text-primary" />
-              <h2 className="font-semibold">Team Inbox</h2>
-              <Badge variant="outline" className="ml-auto">{convs.length}</Badge>
-              <Button size="icon" className="h-7 w-7 rounded-full" onClick={() => setNewChatOpen(true)} title="New chat">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search" className="pl-8 h-9 rounded-full" />
+              </div>
+              <Select value={filter} onValueChange={(v: any) => setFilter(v)}>
+                <SelectTrigger className="h-9 w-9 p-0 justify-center rounded-full border" aria-label="Filter">
+                  <Filter className="w-4 h-4" />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  <SelectItem value="all">All conversations</SelectItem>
+                  <SelectItem value="mine">Assigned to me</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  <SelectItem value="unread">Unread</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button size="icon" className="h-9 w-9 rounded-full shrink-0" onClick={() => setNewChatOpen(true)} title="New chat">
                 <Plus className="w-4 h-4" />
               </Button>
             </div>
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search" className="pl-8 h-9" />
+
+            <div className="flex items-center gap-1 -mb-3">
+              {([
+                { id: 'new', label: 'New', icon: MessageSquareText },
+                { id: 'open', label: 'Open', icon: InboxIcon },
+                { id: 'resolved', label: 'Resolved', icon: CheckCircle2 },
+                { id: 'all', label: 'All', icon: Users },
+              ] as const).map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-1 px-1 pb-2 text-[11px] font-medium border-b-2 transition-colors',
+                    tab === t.id ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  <t.icon className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{t.label}</span>
+                  {tabCounts[t.id] > 0 && (
+                    <span className="ml-0.5 rounded-full bg-muted px-1.5 text-[10px] leading-4">{tabCounts[t.id]}</span>
+                  )}
+                </button>
+              ))}
             </div>
-            <Select value={filter} onValueChange={(v: any) => setFilter(v)}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All conversations</SelectItem>
-                <SelectItem value="mine">Assigned to me</SelectItem>
-                <SelectItem value="unassigned">Unassigned</SelectItem>
-                <SelectItem value="unread">Unread</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
+
           <div className="flex-1 overflow-y-auto">
             {filtered.length === 0 && (
               <div className="p-8 text-center text-sm text-muted-foreground">
                 <MessageSquareText className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                No conversations yet. Once customers message your WhatsApp number, they'll appear here.
+                No conversations here yet.
               </div>
             )}
             {filtered.map(c => {
               const active = c.id === selectedId;
+              const assignee = members.find(m => m.user_id === c.assigned_to) || null;
               return (
                 <button
                   key={c.id}
                   onClick={() => { setSelectedId(c.id); setShowMobileChat(true); }}
-                  className={cn('w-full text-left p-3 border-b hover:bg-muted/50 transition-colors', active && 'bg-primary/10')}
+                  className={cn(
+                    'w-full text-left px-3 py-2.5 border-b hover:bg-muted/50 transition-colors relative',
+                    active && 'bg-muted before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-primary',
+                  )}
                 >
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-fuchsia-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-fuchsia-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
                       {(c.contact_name || c.contact_phone)[0]?.toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm truncate">{c.contact_name || c.contact_phone}</div>
-                      <div className="text-[11px] text-muted-foreground">{c.contact_phone}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm truncate flex-1">{c.contact_name || c.contact_phone}</span>
+                        <span className="text-[10px] text-muted-foreground shrink-0">
+                          {c.last_message_at ? new Date(c.last_message_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : ''}
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {c.last_message_direction === 'outbound' && '→ '}{c.last_message_text || '—'}
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[11px] text-muted-foreground truncate">
+                          {assignee ? displayName(assignee) : 'Unassigned'}
+                        </span>
+                        {c.unread_count > 0 && (
+                          <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">{c.unread_count}</span>
+                        )}
+                      </div>
                     </div>
-                    {c.unread_count > 0 && (
-                      <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">{c.unread_count}</span>
-                    )}
-                  </div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {c.last_message_direction === 'outbound' && '→ '}{c.last_message_text || '—'}
                   </div>
                 </button>
               );
             })}
           </div>
-        </Card>
+        </aside>
 
-        {/* Chat */}
-        <Card className={cn('flex-1 flex flex-col', !showMobileChat && 'hidden md:flex')}>
+        {/* ============ Chat ============ */}
+        <section className={cn('flex-1 min-w-0 flex flex-col', !showMobileChat && 'hidden md:flex')}>
           {!selected ? (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
+            <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm wa-doodle-bg">
               <div className="text-center"><InboxIcon className="w-12 h-12 mx-auto mb-3 opacity-40" /><p>Select a conversation</p></div>
             </div>
           ) : (
             <>
-              <div className="p-3 border-b flex items-center gap-3 flex-wrap">
-                <Button variant="ghost" size="sm" className="md:hidden" onClick={() => setShowMobileChat(false)}><ArrowLeft className="w-4 h-4" /></Button>
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-fuchsia-500 to-pink-500 flex items-center justify-center text-white font-bold">
+              <header className="h-14 shrink-0 px-3 border-b flex items-center gap-2 bg-card">
+                <Button variant="ghost" size="icon" className="md:hidden h-8 w-8" onClick={() => setShowMobileChat(false)}><ArrowLeft className="w-4 h-4" /></Button>
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-fuchsia-500 to-pink-500 flex items-center justify-center text-white text-sm font-bold shrink-0">
                   {(selected.contact_name || selected.contact_phone)[0]?.toUpperCase()}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold truncate">{selected.contact_name || selected.contact_phone}</div>
-                  <div className="text-xs text-muted-foreground">{selected.contact_phone}</div>
+                <div className="min-w-0">
+                  <div className="font-semibold text-sm truncate leading-tight">{selected.contact_name || selected.contact_phone}</div>
+                  <div className="text-[11px] text-muted-foreground leading-tight">{selected.contact_phone}</div>
                 </div>
-                <div className="flex items-center gap-2">
+
+                {/* 24h window ring */}
+                <div
+                  title={windowOpen ? `24h window expires in ~${windowHoursLeft}h` : '24h window closed — send a template'}
+                  className={cn(
+                    'ml-2 w-8 h-8 shrink-0 rounded-full border-2 flex items-center justify-center text-[11px] font-semibold',
+                    windowOpen ? 'border-emerald-500 text-emerald-600' : 'border-muted-foreground/30 text-muted-foreground',
+                  )}
+                >
+                  {windowOpen ? windowHoursLeft : '—'}
+                </div>
+
+                <div className="ml-auto flex items-center gap-1.5">
                   {canAssign ? (
                     <Select value={selected.assigned_to || 'none'} onValueChange={(v) => assign(v === 'none' ? null : v)}>
-                      <SelectTrigger className="h-8 w-[180px] text-xs"><User className="w-3 h-3 mr-1" /><SelectValue placeholder="Assign" /></SelectTrigger>
+                      <SelectTrigger className="h-8 w-[150px] text-xs hidden sm:flex"><User className="w-3 h-3 mr-1" /><SelectValue placeholder="Assign" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Unassigned</SelectItem>
-                        {members
-                          .filter(m => m.hasProfile)
-                          .map(m => <SelectItem key={m.user_id} value={m.user_id}>{displayName(m)}</SelectItem>)}
+                        {members.filter(m => m.hasProfile).map(m => <SelectItem key={m.user_id} value={m.user_id}>{displayName(m)}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   ) : (
-                    <Badge variant="outline" className="h-8 px-3 gap-1">
+                    <Badge variant="outline" className="h-8 px-3 gap-1 hidden sm:flex">
                       <User className="w-3 h-3" />{assignedMember ? displayName(assignedMember) : 'Unassigned'}
                     </Badge>
                   )}
-                  <Button size="sm" variant="outline" onClick={toggleStatus}>{selected.status === 'open' ? 'Close' : 'Reopen'}</Button>
+                  <Button size="sm" variant="outline" className="h-8 hidden sm:inline-flex" onClick={toggleStatus}>
+                    {selected.status === 'open' ? 'Resolve' : 'Reopen'}
+                  </Button>
                   {canAssign && (
-                    <Button size="sm" variant="ghost" onClick={() => setPendingDelete(selected)} title="Delete chat"><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setPendingDelete(selected)} title="Delete chat">
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
                   )}
+                  <Button
+                    size="icon" variant="ghost" className="h-8 w-8 hidden lg:inline-flex"
+                    onClick={() => setPanelOpen(o => !o)}
+                    title={panelOpen ? 'Hide contact panel' : 'Show contact panel'}
+                  >
+                    {panelOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+                  </Button>
                 </div>
-              </div>
+              </header>
 
               {selected.assigned_to && (
-                <div className="px-4 py-2 border-b bg-primary/5 text-xs text-muted-foreground flex items-center gap-2">
+                <div className="px-4 py-1.5 border-b bg-primary/5 text-[11px] text-muted-foreground flex items-center gap-2 shrink-0">
                   <User className="w-3 h-3" />
-                  This chat is assigned to <span className="font-medium text-foreground">{displayName(assignedMember)}</span>
+                  Assigned to <span className="font-medium text-foreground">{displayName(assignedMember)}</span>
                 </div>
               )}
 
-              <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-2 wa-doodle-bg">
+              <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-1.5 wa-doodle-bg">
                 {messages.map(m => (
                   <div key={m.id} className={cn('flex', m.direction === 'outbound' ? 'justify-end' : 'justify-start')}>
                     <div className={cn(
-                      'max-w-[75%] rounded-2xl px-3 py-2 text-sm',
+                      'max-w-[75%] rounded-2xl px-3 py-2 text-sm shadow-sm',
                       m.direction === 'outbound' ? 'bg-primary text-primary-foreground rounded-br-md' : 'bg-card border rounded-bl-md',
                     )}>
                       {m.template_name && <div className="text-[10px] opacity-70 uppercase mb-1">Template · {m.template_name}</div>}
@@ -408,7 +477,7 @@ const Inbox = () => {
                 ))}
               </div>
 
-              <div className="border-t p-3 space-y-2">
+              <div className="border-t p-3 space-y-2 bg-card shrink-0">
                 {!windowOpen && (
                   <div className="text-[11px] text-amber-600 bg-amber-500/10 border border-amber-500/30 rounded-md px-2 py-1.5">
                     24-hour reply window closed. Send an approved template to reopen the conversation.
@@ -429,28 +498,32 @@ const Inbox = () => {
                     onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
                     placeholder={windowOpen ? 'Type a message…' : 'Free-form disabled outside 24h window'}
                     disabled={!windowOpen || sending}
+                    className="rounded-full"
                   />
-                  <Button onClick={send} disabled={!draft.trim() || sending || !windowOpen}>
+                  <Button onClick={send} disabled={!draft.trim() || sending || !windowOpen} size="icon" className="rounded-full shrink-0">
                     <Send className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
             </>
           )}
-        </Card>
+        </section>
 
-        {/* Notes & Tags */}
-        {selected && (
-          <Card className={cn('w-72 hidden lg:flex flex-col')}>
-            <NotesPanel
+        {/* ============ Contact panel ============ */}
+        {selected && panelOpen && (
+          <aside className="w-[300px] shrink-0 hidden lg:flex flex-col border-l bg-card">
+            <ContactPanel
               key={selected.id}
               conversation={selected}
+              assigneeName={assignedMember ? displayName(assignedMember) : null}
+              onClose={() => setPanelOpen(false)}
               onSaveNotes={saveNotes}
               onSaveTags={saveTags}
             />
-          </Card>
+          </aside>
         )}
       </div>
+
 
       <AlertDialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>
         <AlertDialogContent>
