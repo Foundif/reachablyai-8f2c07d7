@@ -256,7 +256,7 @@ const WhatsAppSettings = () => {
                 </div>
                 <Button onClick={startEmbeddedSignup} disabled={embedLoading} className="w-full gap-2 bg-[#1877F2] hover:bg-[#1877F2]/90 text-white">
                   <Facebook className="w-4 h-4" />
-                  {embedLoading ? 'Redirecting to Facebook…' : 'Continue with Facebook'}
+                  {embedLoading ? 'Waiting for Facebook…' : 'Continue with Facebook'}
                 </Button>
                 <p className="text-[11px] text-muted-foreground">Requires a Meta Business account with a verified WhatsApp Business number.</p>
               </div>
