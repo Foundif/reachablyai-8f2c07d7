@@ -63,6 +63,8 @@ const Inbox = () => {
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [filter, setFilter] = useState<'all' | 'mine' | 'unassigned' | 'unread'>('all');
+  const [tab, setTab] = useState<'new' | 'open' | 'resolved' | 'all'>('all');
+  const [panelOpen, setPanelOpen] = useState(true);
   const [showMobileChat, setShowMobileChat] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Conversation | null>(null);
   const [newChatOpen, setNewChatOpen] = useState(false);
