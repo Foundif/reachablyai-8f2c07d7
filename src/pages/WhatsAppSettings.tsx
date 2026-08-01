@@ -52,35 +52,74 @@ const WhatsAppSettings = () => {
   const [embedLoading, setEmbedLoading] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
 
-  const startEmbeddedSignup = () => {
+  const [sessionInfo, setSessionInfo] = useState<{ waba_id?: string; phone_number_id?: string }>({});
+
+  // Meta posts the Embedded Signup session data (WABA + phone id) back via postMessage
+  useEffect(() => {
+    const onMsg = (event: MessageEvent) => {
+      if (!/facebook\.com$/.test(new URL(event.origin).hostname)) return;
+      try {
+        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        if (data?.type === 'WA_EMBEDDED_SIGNUP' && data?.event === 'FINISH') {
+          setSessionInfo({ waba_id: data.data?.waba_id, phone_number_id: data.data?.phone_number_id });
+        }
+      } catch { /* not JSON — ignore */ }
+    };
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  const finishEmbedded = async (code: string, info: { waba_id?: string; phone_number_id?: string }) => {
+    const { data, error } = await supabase.functions.invoke('whatsapp-embedded-connect', {
+      body: { code, ...info },
+    });
+    setEmbedLoading(false);
+    if (error || (data as any)?.error) {
+      return toast.error((data as any)?.error || error?.message || 'Connection failed');
+    }
+    toast.success(`Connected ${(data as any)?.phone || 'WhatsApp'}`);
+    load();
+  };
+
+  /** WATI-style popup Embedded Signup (Facebook JS SDK, no page redirect). */
+  const startEmbeddedSignup = async () => {
     setEmbedLoading(true);
-    const redirect_uri = `${window.location.origin}/whatsapp/callback`;
-    const state = Math.random().toString(36).slice(2);
-    try { sessionStorage.setItem('wa_oauth_state', state); } catch {}
-    const extras = encodeURIComponent(JSON.stringify({ setup: {}, featureType: '', sessionInfoVersion: '3' }));
-    const url =
-      `https://www.facebook.com/v20.0/dialog/oauth` +
-      `?client_id=${encodeURIComponent(META_APP_ID)}` +
-      `&config_id=${encodeURIComponent(META_CONFIG_ID)}` +
-      `&redirect_uri=${encodeURIComponent(redirect_uri)}` +
-      `&response_type=code` +
-      `&override_default_response_type=true` +
-      `&state=${state}` +
-      `&extras=${extras}`;
-    // Break out of iframe (Lovable preview) so Facebook accepts the top-level navigation
     try {
-      if (window.top && window.top !== window.self) {
-        (window.top as Window).location.href = url;
-        return;
-      }
-    } catch {
-      // cross-origin — fall back to opening in a new tab
+      const FB = await loadFacebookSdk();
+      FB.login((response: any) => {
+        const code = response?.authResponse?.code;
+        if (!code) {
+          setEmbedLoading(false);
+          return toast.error('Facebook sign-in was cancelled.');
+        }
+        finishEmbedded(code, sessionInfo);
+      }, {
+        config_id: META_CONFIG_ID,
+        response_type: 'code',
+        override_default_response_type: true,
+        extras: {
+          setup: {},
+          featureType: 'whatsapp_business_app_onboarding',
+          sessionInfoVersion: '3',
+        },
+      });
+    } catch (e: any) {
+      // SDK blocked (extension / strict browser) — fall back to a full redirect
+      toast.message('Opening Facebook in a new window…');
+      const redirect_uri = `${window.location.origin}/whatsapp/callback`;
+      const extras = encodeURIComponent(JSON.stringify({ setup: {}, featureType: 'whatsapp_business_app_onboarding', sessionInfoVersion: '3' }));
+      const url =
+        `https://www.facebook.com/${'v20.0'}/dialog/oauth` +
+        `?client_id=${encodeURIComponent(META_APP_ID)}` +
+        `&config_id=${encodeURIComponent(META_CONFIG_ID)}` +
+        `&redirect_uri=${encodeURIComponent(redirect_uri)}` +
+        `&response_type=code&override_default_response_type=true` +
+        `&extras=${extras}`;
       window.open(url, '_blank', 'noopener,noreferrer');
       setEmbedLoading(false);
-      return;
     }
-    window.location.href = url;
   };
+
 
   const disconnect = async () => {
     if (!wsId) return;
