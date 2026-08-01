@@ -433,11 +433,14 @@ const Leads = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {filtered.map(l => (
-              <Card key={l.id} className="p-4 hover:shadow-glow transition-shadow">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-semibold">{l.name}</p>
-                    <p className="text-sm text-muted-foreground">{l.phone || l.email || '—'}</p>
+              <Card key={l.id} className={`p-4 hover:shadow-glow transition-shadow ${selected.has(l.id) ? 'ring-2 ring-primary' : ''}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-2 min-w-0">
+                    <Checkbox className="mt-1" checked={selected.has(l.id)} onCheckedChange={() => toggleSelect(l.id)} aria-label={`Select ${l.name}`} />
+                    <div className="min-w-0">
+                      <p className="font-semibold truncate">{l.name}</p>
+                      <p className="text-sm text-muted-foreground truncate">{l.phone || l.email || '—'}</p>
+                    </div>
                   </div>
                   <Badge variant="outline" className={SOURCE_COLORS[l.source]}>{l.source}</Badge>
                 </div>
