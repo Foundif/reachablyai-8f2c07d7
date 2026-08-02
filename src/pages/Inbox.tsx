@@ -566,7 +566,7 @@ function NewChatDialog({
   workspaceId: string | null;
   onStart: (phone: string, name?: string | null) => void;
 }) {
-  const [countryCode, setCountryCode] = useState('+91');
+  const [countryCode, setCountryCode] = useState('91|IN');
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
   const [q, setQ] = useState('');
