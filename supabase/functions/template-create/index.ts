@@ -134,12 +134,14 @@ Deno.serve(async (req) => {
       if (header_type === 'text' && header) {
         components.push({ type: 'HEADER', format: 'TEXT', text: header });
       } else if (['image', 'video', 'document'].includes(header_type) && header_media_url) {
+        const handle = await toMetaHandle(header_media_url, header_type, creds.access_token);
         components.push({
           type: 'HEADER',
           format: header_type.toUpperCase(),
-          example: { header_handle: [header_media_url] },
+          example: { header_handle: [handle] },
         });
       }
+
       // BODY
       const metaBody = bodyForMeta ? toMetaBody(bodyForMeta) : '';
       const bodyComp: any = { type: 'BODY', text: metaBody };
