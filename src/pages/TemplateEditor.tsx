@@ -156,6 +156,46 @@ const TemplateEditor = () => {
     }
   };
 
+  const runAiFix = async (autoApply: boolean) => {
+    setAiBusy(true);
+    setAiIssues(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('template-ai-fix', {
+        body: { template: form, meta_error: metaError || '' },
+      });
+      let errBody: any = (data as any)?.error ? data : null;
+      if (error && (error as any)?.context?.json) {
+        try { errBody = await (error as any).context.json(); } catch { /* ignore */ }
+      }
+      if (errBody?.error) return toast.error(errBody.error);
+      if (error) return toast.error(error.message);
+
+      const issues = ((data as any)?.issues || []) as { field?: string; message: string; severity?: string }[];
+      const fixed = (data as any)?.fixed as Partial<Form> | null;
+      setAiIssues(issues);
+
+      if (autoApply && fixed) {
+        setForm(f => ({
+          ...f,
+          name: typeof fixed.name === 'string' && !metaId ? fixed.name.toLowerCase().replace(/[^a-z0-9_]/g, '_') : f.name,
+          category: (['marketing', 'utility', 'authentication', 'carousel'].includes(String(fixed.category)) ? fixed.category : f.category) as TplCategory,
+          header: typeof fixed.header === 'string' ? fixed.header : f.header,
+          body: typeof fixed.body === 'string' && fixed.body.trim() ? fixed.body : f.body,
+          footer: typeof fixed.footer === 'string' ? fixed.footer : f.footer,
+          buttons: Array.isArray(fixed.buttons) ? (fixed.buttons as Btn[]) : f.buttons,
+        }));
+        setMetaError(null);
+        toast.success(issues.length ? 'AI fixed the template' : 'Template already looks good');
+      } else if (!issues.length) {
+        toast.success('AI found no problems with this template');
+      } else {
+        toast.warning(`AI found ${issues.length} issue(s)`, { description: issues[0].message });
+      }
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
   const submitToMeta = async () => {
     if (!wsId) return;
     if (validationErrors.length) {
@@ -174,13 +214,20 @@ const TemplateEditor = () => {
     if (errBody?.error) {
       const meta = errBody.meta;
       const friendly = meta?.error_user_msg || meta?.error_user_title || errBody.error || 'Meta rejected this template.';
-      toast.error('Template not accepted', { description: friendly, duration: 10000 });
+      setMetaError([meta?.error_user_title, meta?.error_user_msg, errBody.error].filter(Boolean).join(' — '));
+      toast.error('Template not accepted', {
+        description: `${friendly} — use "Fix with AI" to correct it automatically.`,
+        duration: 10000,
+      });
       return;
     }
     if (error) return toast.error(error.message);
+    setMetaError(null);
     toast.success(`${metaId ? 'Update' : 'Submission'} sent to Meta — status: ${(data as any).status}`);
     navigate('/templates');
   };
+
+
 
   const addBtn = () => setForm(f => ({ ...f, buttons: [...f.buttons, { type: 'QUICK_REPLY', text: 'Reply' }] }));
   const upBtn = (i: number, patch: Partial<Btn>) => setForm(f => ({ ...f, buttons: f.buttons.map((b, ix) => ix === i ? { ...b, ...patch } : b) }));
