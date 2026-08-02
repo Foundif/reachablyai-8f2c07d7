@@ -11,7 +11,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { ArrowLeft, Info, Loader2, Upload, X, Plus, AlertTriangle, FileText, Play, MapPin } from 'lucide-react';
+import { ArrowLeft, Info, Loader2, Upload, X, Plus, AlertTriangle, FileText, Play, MapPin, Sparkles } from 'lucide-react';
 import { resolveWorkspaceId } from '@/lib/workspace';
 
 type TplCategory = 'marketing' | 'utility' | 'authentication' | 'carousel';
@@ -48,12 +48,20 @@ const validateTemplateForm = (form: Form) => {
   if (body) {
     if (/^\{\{\s*[a-zA-Z0-9_]+\s*\}\}/.test(body)) errors.push("Body can't start with a variable — add some text before {{...}}.");
     if (/\{\{\s*[a-zA-Z0-9_]+\s*\}\}$/.test(body)) errors.push("Body can't end with a variable — add text or punctuation after {{...}}.");
+    if (/\}\}\s*\{\{/.test(body)) errors.push("Two variables can't sit next to each other — add words between them.");
+    if (/ {2,}/.test(body)) errors.push('Remove double spaces from the body — Meta rejects them.');
+    if (/\n{5,}/.test(body)) errors.push('Too many blank lines in the body.');
   }
   if (form.header_type === 'text' && form.header) {
     const h = form.header.trim();
     if (/^\{\{\s*[a-zA-Z0-9_]+\s*\}\}/.test(h) || /\{\{\s*[a-zA-Z0-9_]+\s*\}\}$/.test(h)) {
       errors.push("Header text can't start or end with a variable.");
     }
+    if (extractVars(h).length > 1) errors.push('Header text can contain at most 1 variable.');
+    if (h.length > 60) errors.push('Header text must be 60 characters or fewer.');
+  }
+  if (form.footer && /\{\{\s*[a-zA-Z0-9_]+\s*\}\}/.test(form.footer)) {
+    errors.push("Footer can't contain variables — move them into the body.");
   }
   if (['image', 'video', 'document'].includes(form.header_type) && !form.header_media_url) {
     errors.push('Upload or paste a public URL for the header media.');
@@ -65,13 +73,26 @@ const validateTemplateForm = (form: Form) => {
       if (!c.body.trim()) errors.push(`Card ${i + 1} needs body text.`);
     });
   }
+  let urlBtns = 0, phoneBtns = 0;
   for (const b of form.buttons || []) {
     if (!b.text?.trim()) errors.push('Every button needs text.');
-    if (b.type === 'URL' && !b.url?.trim()) errors.push('URL buttons need a URL.');
-    if (b.type === 'PHONE_NUMBER' && !b.phone_number?.trim()) errors.push('Call buttons need a phone number.');
+    if ((b.text || '').length > 25) errors.push('Button text must be 25 characters or fewer.');
+    if (b.type === 'URL') {
+      urlBtns++;
+      if (!b.url?.trim()) errors.push('URL buttons need a URL.');
+      else if (!/^https?:\/\//i.test(b.url.trim())) errors.push('Button URLs must start with https://');
+    }
+    if (b.type === 'PHONE_NUMBER') {
+      phoneBtns++;
+      if (!b.phone_number?.trim()) errors.push('Call buttons need a phone number.');
+      else if (!/^\+?\d{8,15}$/.test(b.phone_number.trim())) errors.push('Call button number must be digits in international format (e.g. +919999999999).');
+    }
   }
+  if (urlBtns > 1) errors.push('Only 1 URL button is allowed.');
+  if (phoneBtns > 1) errors.push('Only 1 call button is allowed.');
   return errors;
 };
+
 
 const TemplateEditor = () => {
   const { id } = useParams();
@@ -84,6 +105,10 @@ const TemplateEditor = () => {
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [previewValues, setPreviewValues] = useState<Record<string, string>>({});
+  const [metaError, setMetaError] = useState<string | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiIssues, setAiIssues] = useState<{ field?: string; message: string; severity?: string }[] | null>(null);
+
 
   useEffect(() => {
     if (!user) return;
@@ -131,6 +156,46 @@ const TemplateEditor = () => {
     }
   };
 
+  const runAiFix = async (autoApply: boolean) => {
+    setAiBusy(true);
+    setAiIssues(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('template-ai-fix', {
+        body: { template: form, meta_error: metaError || '' },
+      });
+      let errBody: any = (data as any)?.error ? data : null;
+      if (error && (error as any)?.context?.json) {
+        try { errBody = await (error as any).context.json(); } catch { /* ignore */ }
+      }
+      if (errBody?.error) return toast.error(errBody.error);
+      if (error) return toast.error(error.message);
+
+      const issues = ((data as any)?.issues || []) as { field?: string; message: string; severity?: string }[];
+      const fixed = (data as any)?.fixed as Partial<Form> | null;
+      setAiIssues(issues);
+
+      if (autoApply && fixed) {
+        setForm(f => ({
+          ...f,
+          name: typeof fixed.name === 'string' && !metaId ? fixed.name.toLowerCase().replace(/[^a-z0-9_]/g, '_') : f.name,
+          category: (['marketing', 'utility', 'authentication', 'carousel'].includes(String(fixed.category).toLowerCase()) ? String(fixed.category).toLowerCase() : f.category) as TplCategory,
+          header: typeof fixed.header === 'string' ? fixed.header : f.header,
+          body: typeof fixed.body === 'string' && fixed.body.trim() ? fixed.body : f.body,
+          footer: typeof fixed.footer === 'string' ? fixed.footer : f.footer,
+          buttons: Array.isArray(fixed.buttons) ? (fixed.buttons as Btn[]) : f.buttons,
+        }));
+        setMetaError(null);
+        toast.success(issues.length ? 'AI fixed the template' : 'Template already looks good');
+      } else if (!issues.length) {
+        toast.success('AI found no problems with this template');
+      } else {
+        toast.warning(`AI found ${issues.length} issue(s)`, { description: issues[0].message });
+      }
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
   const submitToMeta = async () => {
     if (!wsId) return;
     if (validationErrors.length) {
@@ -149,13 +214,20 @@ const TemplateEditor = () => {
     if (errBody?.error) {
       const meta = errBody.meta;
       const friendly = meta?.error_user_msg || meta?.error_user_title || errBody.error || 'Meta rejected this template.';
-      toast.error('Template not accepted', { description: friendly, duration: 10000 });
+      setMetaError([meta?.error_user_title, meta?.error_user_msg, errBody.error].filter(Boolean).join(' — '));
+      toast.error('Template not accepted', {
+        description: `${friendly} — use "Fix with AI" to correct it automatically.`,
+        duration: 10000,
+      });
       return;
     }
     if (error) return toast.error(error.message);
+    setMetaError(null);
     toast.success(`${metaId ? 'Update' : 'Submission'} sent to Meta — status: ${(data as any).status}`);
     navigate('/templates');
   };
+
+
 
   const addBtn = () => setForm(f => ({ ...f, buttons: [...f.buttons, { type: 'QUICK_REPLY', text: 'Reply' }] }));
   const upBtn = (i: number, patch: Partial<Btn>) => setForm(f => ({ ...f, buttons: f.buttons.map((b, ix) => ix === i ? { ...b, ...patch } : b) }));
@@ -198,9 +270,13 @@ const TemplateEditor = () => {
             <h1 className="text-xl md:text-2xl font-bold truncate">{metaId ? 'Edit template' : 'Create template'}</h1>
             <p className="text-xs text-muted-foreground">Submitted straight to Meta for approval.</p>
           </div>
+          <Button variant="outline" onClick={() => runAiFix(false)} disabled={aiBusy}>
+            {aiBusy ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1" />} Check with AI
+          </Button>
           <Button onClick={submitToMeta} disabled={submitting || validationErrors.length > 0}>
             {submitting ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Submitting…</> : metaId ? 'Update on Meta' : 'Submit for approval'}
           </Button>
+
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-6 items-start">
@@ -343,13 +419,44 @@ const TemplateEditor = () => {
             </Card>
 
             {validationErrors.length > 0 && (
-              <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400 space-y-1">
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400 space-y-2">
                 <div className="flex items-center gap-1 font-semibold"><AlertTriangle className="w-3.5 h-3.5" /> Meta will reject this — fix before submitting:</div>
                 <ul className="list-disc pl-5 space-y-0.5">
                   {validationErrors.map((e, i) => <li key={i}>{e}</li>)}
                 </ul>
+                <Button size="sm" variant="outline" onClick={() => runAiFix(true)} disabled={aiBusy}>
+                  {aiBusy ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />} Fix with AI
+                </Button>
               </div>
             )}
+
+            {metaError && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs space-y-2">
+                <div className="font-semibold flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" /> Meta rejected this template</div>
+                <p className="text-muted-foreground">{metaError}</p>
+                <Button size="sm" onClick={() => runAiFix(true)} disabled={aiBusy}>
+                  {aiBusy ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />} Fix this with AI
+                </Button>
+              </div>
+            )}
+
+            {aiIssues && aiIssues.length > 0 && (
+              <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-xs space-y-2">
+                <div className="font-semibold flex items-center gap-1"><Sparkles className="w-3.5 h-3.5 text-primary" /> AI review</div>
+                <ul className="list-disc pl-5 space-y-0.5 text-muted-foreground">
+                  {aiIssues.map((it, i) => <li key={i}><span className="font-medium">{it.field ? `${it.field}: ` : ''}</span>{it.message}</li>)}
+                </ul>
+                <Button size="sm" variant="outline" onClick={() => runAiFix(true)} disabled={aiBusy}>
+                  {aiBusy ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />} Apply AI fixes
+                </Button>
+              </div>
+            )}
+            {aiIssues && aiIssues.length === 0 && (
+              <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 text-xs text-emerald-700 dark:text-emerald-400">
+                AI found no compliance problems with this template.
+              </div>
+            )}
+
           </div>
 
           {/* ============ Live preview ============ */}
