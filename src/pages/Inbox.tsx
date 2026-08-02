@@ -683,14 +683,17 @@ function NewChatDialog({
 }
 
 function ContactPanel({
-  conversation, assigneeName, onClose, onSaveNotes, onSaveTags,
+  conversation, assigneeName, onClose, onSaveNotes, onSaveTags, labels, onCreateLabel,
 }: {
   conversation: Conversation;
   assigneeName: string | null;
   onClose: () => void;
   onSaveNotes: (v: string) => void | Promise<void>;
   onSaveTags: (v: string[]) => void | Promise<void>;
+  labels: Label[];
+  onCreateLabel: (name: string) => void | Promise<void>;
 }) {
+
   const [view, setView] = useState<'info' | 'notes'>('info');
   const [notes, setNotes] = useState(conversation.notes || '');
   const [tags, setTags] = useState<string[]>(conversation.tags || []);
