@@ -105,6 +105,10 @@ const TemplateEditor = () => {
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [previewValues, setPreviewValues] = useState<Record<string, string>>({});
+  const [metaError, setMetaError] = useState<string | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiIssues, setAiIssues] = useState<{ field?: string; message: string; severity?: string }[] | null>(null);
+
 
   useEffect(() => {
     if (!user) return;
