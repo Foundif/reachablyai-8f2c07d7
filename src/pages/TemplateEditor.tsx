@@ -48,12 +48,20 @@ const validateTemplateForm = (form: Form) => {
   if (body) {
     if (/^\{\{\s*[a-zA-Z0-9_]+\s*\}\}/.test(body)) errors.push("Body can't start with a variable — add some text before {{...}}.");
     if (/\{\{\s*[a-zA-Z0-9_]+\s*\}\}$/.test(body)) errors.push("Body can't end with a variable — add text or punctuation after {{...}}.");
+    if (/\}\}\s*\{\{/.test(body)) errors.push("Two variables can't sit next to each other — add words between them.");
+    if (/ {2,}/.test(body)) errors.push('Remove double spaces from the body — Meta rejects them.');
+    if (/\n{5,}/.test(body)) errors.push('Too many blank lines in the body.');
   }
   if (form.header_type === 'text' && form.header) {
     const h = form.header.trim();
     if (/^\{\{\s*[a-zA-Z0-9_]+\s*\}\}/.test(h) || /\{\{\s*[a-zA-Z0-9_]+\s*\}\}$/.test(h)) {
       errors.push("Header text can't start or end with a variable.");
     }
+    if (extractVars(h).length > 1) errors.push('Header text can contain at most 1 variable.');
+    if (h.length > 60) errors.push('Header text must be 60 characters or fewer.');
+  }
+  if (form.footer && /\{\{\s*[a-zA-Z0-9_]+\s*\}\}/.test(form.footer)) {
+    errors.push("Footer can't contain variables — move them into the body.");
   }
   if (['image', 'video', 'document'].includes(form.header_type) && !form.header_media_url) {
     errors.push('Upload or paste a public URL for the header media.');
@@ -65,13 +73,26 @@ const validateTemplateForm = (form: Form) => {
       if (!c.body.trim()) errors.push(`Card ${i + 1} needs body text.`);
     });
   }
+  let urlBtns = 0, phoneBtns = 0;
   for (const b of form.buttons || []) {
     if (!b.text?.trim()) errors.push('Every button needs text.');
-    if (b.type === 'URL' && !b.url?.trim()) errors.push('URL buttons need a URL.');
-    if (b.type === 'PHONE_NUMBER' && !b.phone_number?.trim()) errors.push('Call buttons need a phone number.');
+    if ((b.text || '').length > 25) errors.push('Button text must be 25 characters or fewer.');
+    if (b.type === 'URL') {
+      urlBtns++;
+      if (!b.url?.trim()) errors.push('URL buttons need a URL.');
+      else if (!/^https?:\/\//i.test(b.url.trim())) errors.push('Button URLs must start with https://');
+    }
+    if (b.type === 'PHONE_NUMBER') {
+      phoneBtns++;
+      if (!b.phone_number?.trim()) errors.push('Call buttons need a phone number.');
+      else if (!/^\+?\d{8,15}$/.test(b.phone_number.trim())) errors.push('Call button number must be digits in international format (e.g. +919999999999).');
+    }
   }
+  if (urlBtns > 1) errors.push('Only 1 URL button is allowed.');
+  if (phoneBtns > 1) errors.push('Only 1 call button is allowed.');
   return errors;
 };
+
 
 const TemplateEditor = () => {
   const { id } = useParams();
