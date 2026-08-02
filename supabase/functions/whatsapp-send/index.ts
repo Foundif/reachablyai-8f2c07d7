@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
     const user = userData?.user;
     if (!user) return json({ error: 'Unauthorized' }, 401);
 
-    const { conversation_id, workspace_id, to, body, template_id } = await req.json();
+    const { conversation_id, workspace_id, to, body, template_id, media_url, media_type, filename, location } = await req.json();
     if (!workspace_id || !to) return json({ error: 'workspace_id and to required' }, 400);
 
     // Verify membership
