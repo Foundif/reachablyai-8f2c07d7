@@ -643,7 +643,22 @@ const Inbox = () => {
                       m.direction === 'outbound' ? 'bg-primary text-primary-foreground rounded-br-md' : 'bg-card border rounded-bl-md',
                     )}>
                       {m.template_name && <div className="text-[10px] opacity-70 uppercase mb-1">Template · {m.template_name}</div>}
-                      <div className="whitespace-pre-wrap break-words">{m.body}</div>
+                      {m.media_url && m.message_type === 'image' && (
+                        <img src={m.media_url} alt="Attachment" loading="lazy" className="rounded-lg mb-1 max-h-60 object-cover" />
+                      )}
+                      {m.media_url && m.message_type === 'video' && (
+                        <video src={m.media_url} controls className="rounded-lg mb-1 max-h-60 w-full" />
+                      )}
+                      {m.media_url && m.message_type === 'audio' && (
+                        <audio src={m.media_url} controls className="mb-1 w-56" />
+                      )}
+                      {m.media_url && m.message_type === 'document' && (
+                        <a href={m.media_url} target="_blank" rel="noreferrer" className="flex items-center gap-2 underline mb-1">
+                          <FileText className="w-4 h-4" /> Document
+                        </a>
+                      )}
+                      {m.message_type === 'location' && <div className="flex items-center gap-1 mb-1"><MapPin className="w-4 h-4" /> Location</div>}
+                      {m.body && <div className="whitespace-pre-wrap break-words">{m.body}</div>}
                       <div className="flex items-center gap-1 mt-1 text-[10px] opacity-70">
                         <Clock className="w-2.5 h-2.5" />
                         {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
