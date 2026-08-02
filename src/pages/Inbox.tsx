@@ -217,6 +217,16 @@ const Inbox = () => {
     await supabase.from('wa_conversations' as any).update({ tags }).eq('id', selected.id);
   };
 
+  /** Persist a newly typed label on the workspace so it can be reused and filtered. */
+  const createLabel = async (name: string) => {
+    if (!wsId || labels.some(l => l.name === name)) return;
+    const color = LABEL_COLORS[labels.length % LABEL_COLORS.length];
+    const { data, error } = await supabase.from('wa_labels' as any)
+      .insert({ workspace_id: wsId, name, color }).select('id,name,color').maybeSingle();
+    if (!error && data) setLabels(prev => [...prev, data as any]);
+  };
+
+
   const toggleStatus = async () => {
     if (!selected) return;
     const next = selected.status === 'open' ? 'closed' : 'open';
