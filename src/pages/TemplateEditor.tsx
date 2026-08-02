@@ -11,7 +11,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { ArrowLeft, Info, Loader2, Upload, X, Plus, AlertTriangle, FileText, Play, MapPin } from 'lucide-react';
+import { ArrowLeft, Info, Loader2, Upload, X, Plus, AlertTriangle, FileText, Play, MapPin, Sparkles } from 'lucide-react';
 import { resolveWorkspaceId } from '@/lib/workspace';
 
 type TplCategory = 'marketing' | 'utility' | 'authentication' | 'carousel';
