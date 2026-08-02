@@ -100,21 +100,7 @@ const Templates = () => {
   const [items, setItems] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingMetaId, setEditingMetaId] = useState<string | null>(null);
-  const [form, setForm] = useState(emptyForm());
   const [pendingDelete, setPendingDelete] = useState<Template | null>(null);
-  const [showPreview, setShowPreview] = useState(true);
-
-  const validationErrors = validateTemplateForm(form);
-  const detectedVars = extractVars(form.body);
-  const [previewValues, setPreviewValues] = useState<Record<string, string>>({});
-  const renderedPreview = detectedVars.length
-    ? form.body.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_m, v: string) => previewValues[v] || `{{${v}}}`)
-    : form.body;
 
   const load = async (silent = false) => {
     if (!user) return;
@@ -135,40 +121,9 @@ const Templates = () => {
   };
   useEffect(() => { load(); }, [user, profile]);
 
-  const uploadMedia = async (file: File, setUrl: (u: string) => void) => {
-    if (!wsId) return;
-    setUploading(true);
-    try {
-      const ext = file.name.split('.').pop() || 'bin';
-      const path = `template-media/${wsId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const { error } = await supabase.storage.from('salon-assets').upload(path, file, { upsert: false });
-      if (error) throw error;
-      const { data: pub } = supabase.storage.from('salon-assets').getPublicUrl(path);
-      setUrl(pub.publicUrl);
-      toast.success('Uploaded');
-    } catch (e: any) {
-      toast.error(e.message || 'Upload failed');
-    } finally {
-      setUploading(false);
-    }
-  };
+  const openNew = () => navigate('/templates/new');
+  const openEdit = (t: Template) => navigate(`/templates/${t.id}`);
 
-  const openNew = () => {
-    setEditingId(null); setEditingMetaId(null);
-    setForm(emptyForm()); setOpen(true);
-  };
-  const openEdit = (t: Template) => {
-    setEditingId(t.id); setEditingMetaId(t.meta_template_id || null);
-    setForm({
-      name: t.name, category: t.category, language: t.language,
-      header_type: (t.header_type || (t.header ? 'text' : 'none')) as HeaderType,
-      header: t.header || '', header_media_url: t.header_media_url || '',
-      body: t.body || '', footer: t.footer || '',
-      buttons: (t.buttons || []) as Btn[],
-      carousel_cards: (t.carousel_cards || []) as CarouselCard[],
-    });
-    setOpen(true);
-  };
 
   const syncFromMeta = async () => {
     if (!wsId) return;
