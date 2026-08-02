@@ -241,7 +241,19 @@ Deno.serve(async (req) => {
                 if (settings) {
                   const withinHours = isWithinBusinessHours(settings.business_hours, settings.timezone);
 
-                  if (settings.welcome_enabled && isNewContact) {
+                  // Only greet contacts the business never messaged first.
+                  // If the chat was started from the CRM (an outbound message exists),
+                  // no automatic template/greeting is sent — the agent picks one manually.
+                  let businessInitiated = false;
+                  try {
+                    const { count } = await admin.from('wa_messages')
+                      .select('id', { count: 'exact', head: true })
+                      .eq('conversation_id', convId).eq('direction', 'outbound');
+                    businessInitiated = (count || 0) > 0;
+                  } catch (_) { /* ignore */ }
+
+                  if (settings.welcome_enabled && isNewContact && !businessInitiated) {
+
                     if (!(await alreadySentRecently(admin, workspace_id, from, 'welcome', 24 * 365))) {
                       await sendAutoReply(admin, creds, workspace_id, convId, from, settings.welcome_message, 'welcome', null);
                       repliedThisTurn = true;
