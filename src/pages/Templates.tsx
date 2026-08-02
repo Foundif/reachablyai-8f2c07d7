@@ -507,14 +507,15 @@ const Templates = () => {
       <AlertDialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete template locally?</AlertDialogTitle>
+            <AlertDialogTitle>Delete this template permanently?</AlertDialogTitle>
             <AlertDialogDescription>
-              Removes <b>{pendingDelete?.name}</b> from Reachably. The template stays on Meta — click <b>Sync from Meta</b> to bring it back.
+              <b>{pendingDelete?.name}</b> will be deleted on <b>Meta</b> and removed from Reachably. This cannot be undone — campaigns using it will stop working.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmRemove} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+            <AlertDialogAction onClick={confirmRemove} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete everywhere</AlertDialogAction>
+
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
