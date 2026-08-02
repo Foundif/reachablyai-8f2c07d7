@@ -18,6 +18,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { resolveWorkspaceId } from '@/lib/workspace';
+import { COUNTRY_CODES } from '@/lib/countryCodes';
+
 
 interface Conversation {
   id: string;
@@ -564,7 +566,7 @@ function NewChatDialog({
   workspaceId: string | null;
   onStart: (phone: string, name?: string | null) => void;
 }) {
-  const [countryCode, setCountryCode] = useState('+91');
+  const [countryCode, setCountryCode] = useState('91|IN');
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
   const [q, setQ] = useState('');
@@ -592,10 +594,11 @@ function NewChatDialog({
 
   const submitNew = () => {
     const clean = phone.replace(/[^\d]/g, '');
-    const cc = countryCode.replace(/[^\d]/g, '');
+    const cc = countryCode.split('|')[0].replace(/[^\d]/g, '');
     if (!clean) return toast.error('Enter a phone number');
     onStart(`${cc}${clean}`, name || null);
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -609,20 +612,28 @@ function NewChatDialog({
           <div className="space-y-2">
             <div className="text-xs font-medium text-muted-foreground">New number</div>
             <div className="flex gap-2">
-              <Input
-                value={countryCode}
-                onChange={e => setCountryCode(e.target.value)}
-                placeholder="+91"
-                className="w-16 sm:w-20 shrink-0"
-              />
+              <Select value={countryCode} onValueChange={setCountryCode}>
+                <SelectTrigger className="w-[110px] shrink-0">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="max-h-64">
+                  {COUNTRY_CODES.map(c => (
+                    <SelectItem key={c.code} value={c.dial + '|' + c.code}>
+                      <span className="mr-1">{c.flag}</span>+{c.dial}
+                      <span className="ml-2 text-xs text-muted-foreground">{c.name}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Input
                 value={phone}
-                onChange={e => setPhone(e.target.value)}
+                onChange={e => setPhone(e.target.value.replace(/[^\d]/g, ''))}
                 placeholder="Phone number"
                 className="flex-1 min-w-0"
-                inputMode="tel"
+                inputMode="numeric"
               />
             </div>
+
             <Input value={name} onChange={e => setName(e.target.value)} placeholder="Contact name (optional)" />
             <Button onClick={submitNew} className="w-full" disabled={!phone.trim()}>Start chat</Button>
           </div>
