@@ -1211,6 +1211,30 @@ export type Database = {
           },
         ]
       }
+      wa_labels: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          workspace_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          workspace_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       wa_messages: {
         Row: {
           body: string | null

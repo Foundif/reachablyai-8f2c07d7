@@ -48,6 +48,10 @@ interface Message {
 }
 interface Member { user_id: string; email: string; full_name: string | null; hasProfile: boolean; }
 interface Template { id: string; name: string; status: string; }
+interface Label { id: string; name: string; color: string; }
+
+const LABEL_COLORS = ['#25D366', '#0ea5e9', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+
 
 const displayName = (m?: Member | null) =>
   m ? (m.full_name?.trim() || (m.email?.includes('@') ? m.email.split('@')[0] : m.email) || 'Teammate') : 'Unassigned';
@@ -66,7 +70,10 @@ const Inbox = () => {
   const [sending, setSending] = useState(false);
   const [filter, setFilter] = useState<'all' | 'mine' | 'unassigned' | 'unread'>('all');
   const [tab, setTab] = useState<'new' | 'open' | 'resolved' | 'all'>('all');
+  const [labels, setLabels] = useState<Label[]>([]);
+  const [labelFilter, setLabelFilter] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
+
   const [showMobileChat, setShowMobileChat] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Conversation | null>(null);
   const [newChatOpen, setNewChatOpen] = useState(false);
@@ -81,12 +88,15 @@ const Inbox = () => {
       if (!id) return;
       setWsId(id);
 
-      const [{ data: cs }, { data: ms }, { data: ts }] = await Promise.all([
+      const [{ data: cs }, { data: ms }, { data: ts }, { data: ls }] = await Promise.all([
         supabase.from('wa_conversations' as any).select('*').eq('workspace_id', id).is('deleted_at', null).order('last_message_at', { ascending: false }),
         supabase.from('workspace_members' as any).select('user_id').eq('workspace_id', id),
         supabase.from('templates' as any).select('id,name,status').eq('workspace_id', id).eq('status', 'approved'),
+        supabase.from('wa_labels' as any).select('id,name,color').eq('workspace_id', id).order('created_at'),
       ]);
       setConvs((cs as any) || []);
+      setLabels((ls as any) || []);
+
       const memberIds = ((ms as any[]) || []).map(m => m.user_id).filter(Boolean);
       if (memberIds.length) {
         const { data: profs } = await supabase.from('profiles' as any)
@@ -146,11 +156,13 @@ const Inbox = () => {
     if (filter === 'mine' && c.assigned_to !== user?.id) return false;
     if (filter === 'unassigned' && c.assigned_to) return false;
     if (filter === 'unread' && !c.unread_count) return false;
+    if (labelFilter && !(c.tags || []).includes(labelFilter)) return false;
     if (tab === 'new' && !c.unread_count) return false;
     if (tab === 'open' && c.status !== 'open') return false;
     if (tab === 'resolved' && c.status === 'open') return false;
     return true;
   });
+
 
   const windowOpen = selected?.window_expires_at ? new Date(selected.window_expires_at) > new Date() : false;
 
@@ -209,6 +221,16 @@ const Inbox = () => {
     setConvs(prev => prev.map(c => c.id === selected.id ? { ...c, tags } : c));
     await supabase.from('wa_conversations' as any).update({ tags }).eq('id', selected.id);
   };
+
+  /** Persist a newly typed label on the workspace so it can be reused and filtered. */
+  const createLabel = async (name: string) => {
+    if (!wsId || labels.some(l => l.name === name)) return;
+    const color = LABEL_COLORS[labels.length % LABEL_COLORS.length];
+    const { data, error } = await supabase.from('wa_labels' as any)
+      .insert({ workspace_id: wsId, name, color }).select('id,name,color').maybeSingle();
+    if (!error && data) setLabels(prev => [...prev, data as any]);
+  };
+
 
   const toggleStatus = async () => {
     if (!selected) return;
@@ -322,6 +344,31 @@ const Inbox = () => {
               </Button>
             </div>
 
+            {labels.length > 0 && (
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 -mx-0.5 px-0.5">
+                <button
+                  onClick={() => setLabelFilter(null)}
+                  className={cn('shrink-0 text-[11px] px-2 py-0.5 rounded-full border transition-colors',
+                    labelFilter === null ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted')}
+                >
+                  All labels
+                </button>
+                {labels.map(l => (
+                  <button
+                    key={l.id}
+                    onClick={() => setLabelFilter(labelFilter === l.name ? null : l.name)}
+                    className={cn('shrink-0 text-[11px] px-2 py-0.5 rounded-full border transition-colors whitespace-nowrap',
+                      labelFilter === l.name ? 'text-white' : 'hover:bg-muted')}
+                    style={labelFilter === l.name
+                      ? { backgroundColor: l.color, borderColor: l.color }
+                      : { borderColor: `${l.color}66`, color: l.color }}
+                  >
+                    {l.name}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div className="flex items-center gap-1 -mb-3">
               {([
                 { id: 'new', label: 'New', icon: MessageSquareText },
@@ -345,6 +392,7 @@ const Inbox = () => {
                 </button>
               ))}
             </div>
+
           </div>
 
           <div className="flex-1 overflow-y-auto">
@@ -380,6 +428,19 @@ const Inbox = () => {
                       <div className="text-xs text-muted-foreground truncate">
                         {c.last_message_direction === 'outbound' && '→ '}{c.last_message_text || '—'}
                       </div>
+                      {(c.tags || []).length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {(c.tags || []).slice(0, 3).map(t => {
+                            const l = labels.find(x => x.name === t);
+                            return (
+                              <span key={t} className="text-[10px] px-1.5 py-px rounded-full border"
+                                style={{ borderColor: `${l?.color || '#94a3b8'}66`, color: l?.color || undefined }}>
+                                {t}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-[11px] text-muted-foreground truncate">
                           {assignee ? displayName(assignee) : 'Unassigned'}
@@ -388,6 +449,7 @@ const Inbox = () => {
                           <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">{c.unread_count}</span>
                         )}
                       </div>
+
                     </div>
                   </div>
                 </button>
@@ -526,7 +588,10 @@ const Inbox = () => {
               onClose={() => setPanelOpen(false)}
               onSaveNotes={saveNotes}
               onSaveTags={saveTags}
+              labels={labels}
+              onCreateLabel={createLabel}
             />
+
           </aside>
         )}
       </div>
@@ -683,14 +748,17 @@ function NewChatDialog({
 }
 
 function ContactPanel({
-  conversation, assigneeName, onClose, onSaveNotes, onSaveTags,
+  conversation, assigneeName, onClose, onSaveNotes, onSaveTags, labels, onCreateLabel,
 }: {
   conversation: Conversation;
   assigneeName: string | null;
   onClose: () => void;
   onSaveNotes: (v: string) => void | Promise<void>;
   onSaveTags: (v: string[]) => void | Promise<void>;
+  labels: Label[];
+  onCreateLabel: (name: string) => void | Promise<void>;
 }) {
+
   const [view, setView] = useState<'info' | 'notes'>('info');
   const [notes, setNotes] = useState(conversation.notes || '');
   const [tags, setTags] = useState<string[]>(conversation.tags || []);
@@ -709,17 +777,24 @@ function ContactPanel({
     return () => clearTimeout(t);
   }, [notes]);
 
+  const applyLabel = (name: string) => {
+    if (tags.includes(name)) return;
+    const next = [...tags, name];
+    setTags(next); onSaveTags(next);
+  };
   const addTag = () => {
     const v = tagDraft.trim();
     if (!v || tags.includes(v)) { setTagDraft(''); return; }
     const next = [...tags, v];
     setTags(next); setTagDraft('');
     onSaveTags(next);
+    onCreateLabel(v);
   };
   const removeTag = (t: string) => {
     const next = tags.filter(x => x !== t);
     setTags(next); onSaveTags(next);
   };
+
 
   return (
     <div className="flex flex-col h-full">
@@ -778,28 +853,42 @@ function ContactPanel({
 
         <div>
           <div className="text-xs font-medium mb-1.5 flex items-center gap-1.5">
-            <Tag className="w-3 h-3" /> Tags
+            <Tag className="w-3 h-3" /> Labels
           </div>
           <div className="flex flex-wrap gap-1.5 mb-2">
-            {tags.length === 0 && <span className="text-[11px] text-muted-foreground">No tags yet</span>}
+            {tags.length === 0 && <span className="text-[11px] text-muted-foreground">No labels yet</span>}
             {tags.map(t => (
-              <Badge key={t} variant="secondary" className="gap-1 pr-1">
+              <Badge key={t} variant="secondary" className="gap-1 pr-1"
+                style={labels.find(l => l.name === t) ? { backgroundColor: `${labels.find(l => l.name === t)!.color}22`, color: labels.find(l => l.name === t)!.color } : undefined}>
                 {t}
                 <button onClick={() => removeTag(t)} className="hover:text-destructive"><X className="w-3 h-3" /></button>
               </Badge>
             ))}
           </div>
+          {labels.filter(l => !tags.includes(l.name)).length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {labels.filter(l => !tags.includes(l.name)).map(l => (
+                <button key={l.id} onClick={() => applyLabel(l.name)}
+                  className="text-[11px] px-2 py-0.5 rounded-full border hover:bg-muted transition-colors"
+                  style={{ borderColor: `${l.color}66`, color: l.color }}>
+                  + {l.name}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex gap-1.5">
             <Input
               value={tagDraft}
               onChange={e => setTagDraft(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
-              placeholder="Add tag (e.g. VIP, hot-lead)"
+              placeholder="New label (e.g. VIP, hot-lead)"
               className="h-8 text-xs"
             />
             <Button size="sm" variant="outline" className="h-8" onClick={addTag}>Add</Button>
           </div>
+          <p className="text-[10px] text-muted-foreground mt-1">New labels are saved to your workspace so you can reuse and filter by them.</p>
         </div>
+
         <div>
           <div className="text-xs font-medium mb-1.5">Notes</div>
           <Textarea

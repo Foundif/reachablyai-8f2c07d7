@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+
 import AppLayout from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -96,25 +98,13 @@ const validateTemplateForm = (form: ReturnType<typeof emptyForm>) => {
 
 const Templates = () => {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [wsId, setWsId] = useState<string | null>(null);
+
   const [items, setItems] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingMetaId, setEditingMetaId] = useState<string | null>(null);
-  const [form, setForm] = useState(emptyForm());
   const [pendingDelete, setPendingDelete] = useState<Template | null>(null);
-  const [showPreview, setShowPreview] = useState(true);
-
-  const validationErrors = validateTemplateForm(form);
-  const detectedVars = extractVars(form.body);
-  const [previewValues, setPreviewValues] = useState<Record<string, string>>({});
-  const renderedPreview = detectedVars.length
-    ? form.body.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_m, v: string) => previewValues[v] || `{{${v}}}`)
-    : form.body;
 
   const load = async (silent = false) => {
     if (!user) return;
@@ -135,69 +125,9 @@ const Templates = () => {
   };
   useEffect(() => { load(); }, [user, profile]);
 
-  const uploadMedia = async (file: File, setUrl: (u: string) => void) => {
-    if (!wsId) return;
-    setUploading(true);
-    try {
-      const ext = file.name.split('.').pop() || 'bin';
-      const path = `template-media/${wsId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const { error } = await supabase.storage.from('salon-assets').upload(path, file, { upsert: false });
-      if (error) throw error;
-      const { data: pub } = supabase.storage.from('salon-assets').getPublicUrl(path);
-      setUrl(pub.publicUrl);
-      toast.success('Uploaded');
-    } catch (e: any) {
-      toast.error(e.message || 'Upload failed');
-    } finally {
-      setUploading(false);
-    }
-  };
+  const openNew = () => navigate('/templates/new');
+  const openEdit = (t: Template) => navigate(`/templates/${t.id}`);
 
-  const openNew = () => {
-    setEditingId(null); setEditingMetaId(null);
-    setForm(emptyForm()); setOpen(true);
-  };
-  const openEdit = (t: Template) => {
-    setEditingId(t.id); setEditingMetaId(t.meta_template_id || null);
-    setForm({
-      name: t.name, category: t.category, language: t.language,
-      header_type: (t.header_type || (t.header ? 'text' : 'none')) as HeaderType,
-      header: t.header || '', header_media_url: t.header_media_url || '',
-      body: t.body || '', footer: t.footer || '',
-      buttons: (t.buttons || []) as Btn[],
-      carousel_cards: (t.carousel_cards || []) as CarouselCard[],
-    });
-    setOpen(true);
-  };
-
-  const submitToMeta = async () => {
-    if (!wsId) return;
-    const errs = validateTemplateForm(form);
-    if (errs.length) {
-      toast.error(errs[0], { description: errs.length > 1 ? `+${errs.length - 1} more issue(s)` : undefined });
-      return;
-    }
-    setSubmitting(true);
-    const { data, error } = await supabase.functions.invoke('template-create', {
-      body: { workspace_id: wsId, template_id: editingMetaId, ...form },
-    });
-    setSubmitting(false);
-    // Extract friendly Meta error even when supabase-js wraps the response as FunctionsHttpError
-    let errBody: any = (data as any)?.error ? data : null;
-    if (error && (error as any)?.context?.json) {
-      try { errBody = await (error as any).context.json(); } catch {}
-    }
-    if (errBody?.error) {
-      const meta = errBody.meta;
-      const friendly = meta?.error_user_msg || meta?.error_user_title || errBody.error || 'Meta rejected this template.';
-      toast.error('Template not accepted', { description: friendly, duration: 10000 });
-      return;
-    }
-    if (error) return toast.error(error.message);
-    toast.success(`${editingMetaId ? 'Update' : 'Submission'} sent to Meta — status: ${(data as any).status}`);
-    setOpen(false);
-    load();
-  };
 
   const syncFromMeta = async () => {
     if (!wsId) return;
@@ -224,15 +154,6 @@ const Templates = () => {
   };
 
 
-  const addBtn = () => setForm(f => ({ ...f, buttons: [...f.buttons, { type: 'QUICK_REPLY', text: 'Reply' }] }));
-  const upBtn = (i: number, patch: Partial<Btn>) => setForm(f => ({ ...f, buttons: f.buttons.map((b, ix) => ix === i ? { ...b, ...patch } : b) }));
-  const rmBtn = (i: number) => setForm(f => ({ ...f, buttons: f.buttons.filter((_, ix) => ix !== i) }));
-
-  const addCard = () => setForm(f => ({ ...f, carousel_cards: [...f.carousel_cards, { header_media_url: '', header_type: 'image', body: '', buttons: [] }] }));
-  const upCard = (i: number, patch: Partial<CarouselCard>) => setForm(f => ({ ...f, carousel_cards: f.carousel_cards.map((c, ix) => ix === i ? { ...c, ...patch } : c) }));
-  const rmCard = (i: number) => setForm(f => ({ ...f, carousel_cards: f.carousel_cards.filter((_, ix) => ix !== i) }));
-
-  const isCarousel = form.category === 'carousel' || form.header_type === 'carousel';
   const canEdit = (t: Template) => !!t.meta_template_id && ['approved', 'rejected', 'paused'].includes(t.status);
 
   return (
@@ -302,207 +223,8 @@ const Templates = () => {
         </Card>
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingMetaId ? 'Edit template on Meta' : 'Submit template to Meta'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="text-xs bg-primary/5 border border-primary/20 rounded-md p-2 flex gap-2">
-              <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-              <span>Sent to Meta immediately. Approval takes minutes to hours. Only approved templates can be used in campaigns and outside the 24-hour window.</span>
-            </div>
-            <div>
-              <Label>Name</Label>
-              <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="welcome_offer" disabled={!!editingMetaId} />
-              <p className="text-[11px] text-muted-foreground mt-1">Lowercase, digits, underscores only. Cannot be changed after submission.</p>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Category</Label>
-                <Select value={form.category} onValueChange={(v: TplCategory) => setForm({ ...form, category: v, header_type: v === 'carousel' ? 'carousel' : form.header_type })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="marketing">Marketing</SelectItem>
-                    <SelectItem value="utility">Utility</SelectItem>
-                    <SelectItem value="authentication">Authentication</SelectItem>
-                    <SelectItem value="carousel">Carousel (multi-card)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Language</Label>
-                <Input value={form.language} onChange={e => setForm({ ...form, language: e.target.value })} placeholder="en" disabled={!!editingMetaId} />
-              </div>
-            </div>
 
-            <Tabs defaultValue="content" className="mt-2">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="content">Content</TabsTrigger>
-                <TabsTrigger value="buttons" disabled={isCarousel}>Buttons</TabsTrigger>
-                <TabsTrigger value="carousel" disabled={!isCarousel}>Cards</TabsTrigger>
-              </TabsList>
 
-              <TabsContent value="content" className="space-y-3 pt-3">
-                <div>
-                  <Label>Header</Label>
-                  <Select value={form.header_type} onValueChange={(v: HeaderType) => setForm({ ...form, header_type: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      <SelectItem value="text">Text</SelectItem>
-                      <SelectItem value="image">Image (JPG/PNG)</SelectItem>
-                      <SelectItem value="video">Video (MP4)</SelectItem>
-                      <SelectItem value="document">Document (PDF)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {form.header_type === 'text' && (
-                  <Input value={form.header} onChange={e => setForm({ ...form, header: e.target.value })} placeholder="Big news!" />
-                )}
-                {['image', 'video', 'document'].includes(form.header_type) && (
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                      <Input value={form.header_media_url} onChange={e => setForm({ ...form, header_media_url: e.target.value })} placeholder="Public URL of media (JPG/PNG/MP4/PDF)" />
-                      <Button type="button" variant="outline" size="sm" asChild disabled={uploading}>
-                        <label className="cursor-pointer">
-                          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                          <input type="file" className="hidden"
-                            accept={form.header_type === 'image' ? 'image/*' : form.header_type === 'video' ? 'video/mp4' : 'application/pdf'}
-                            onChange={e => { const f = e.target.files?.[0]; if (f) uploadMedia(f, (u) => setForm(cur => ({ ...cur, header_media_url: u }))); }} />
-                        </label>
-                      </Button>
-                    </div>
-                    {form.header_media_url && form.header_type === 'image' && (
-                      <img src={form.header_media_url} alt="preview" className="max-h-28 rounded border" />
-                    )}
-                  </div>
-                )}
-                {!isCarousel && (
-                  <div>
-                    <Label>Body</Label>
-                    <Textarea rows={5} value={form.body} onChange={e => setForm({ ...form, body: e.target.value })} />
-                    <p className="text-[11px] text-muted-foreground mt-1">Use <code>{'{{name}}'}</code> for variables.</p>
-                  </div>
-                )}
-                {!isCarousel && (
-                  <div>
-                    <Label>Footer (optional)</Label>
-                    <Input value={form.footer} onChange={e => setForm({ ...form, footer: e.target.value })} placeholder="Reply STOP to opt out" />
-                  </div>
-                )}
-                {isCarousel && (
-                  <div>
-                    <Label>Intro text (shown above cards)</Label>
-                    <Textarea rows={3} value={form.body} onChange={e => setForm({ ...form, body: e.target.value })} placeholder="Check out our new arrivals" />
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="buttons" className="space-y-3 pt-3">
-                <p className="text-xs text-muted-foreground">Up to 10 buttons. Mix quick replies with 1–2 CTAs (URL or Call).</p>
-                {form.buttons.map((b, i) => (
-                  <div key={i} className="p-3 border rounded-lg space-y-2 relative">
-                    <button className="absolute top-2 right-2 text-muted-foreground hover:text-destructive" onClick={() => rmBtn(i)}><X className="w-4 h-4" /></button>
-                    <Select value={b.type} onValueChange={(v: BtnType) => upBtn(i, { type: v })}>
-                      <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="QUICK_REPLY">Quick reply</SelectItem>
-                        <SelectItem value="URL">URL / website</SelectItem>
-                        <SelectItem value="PHONE_NUMBER">Call phone number</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Input placeholder="Button text (max 25 chars)" maxLength={25} value={b.text} onChange={e => upBtn(i, { text: e.target.value })} />
-                    {b.type === 'URL' && <Input placeholder="https://..." value={b.url || ''} onChange={e => upBtn(i, { url: e.target.value })} />}
-                    {b.type === 'PHONE_NUMBER' && <Input placeholder="+919999999999" value={b.phone_number || ''} onChange={e => upBtn(i, { phone_number: e.target.value })} />}
-                  </div>
-                ))}
-                <Button variant="outline" size="sm" onClick={addBtn} disabled={form.buttons.length >= 10}><Plus className="w-4 h-4 mr-1" /> Add button</Button>
-              </TabsContent>
-
-              <TabsContent value="carousel" className="space-y-3 pt-3">
-                <p className="text-xs text-muted-foreground">2–10 media cards. Each card can have its own image/video, body text, and buttons.</p>
-                {form.carousel_cards.map((c, i) => (
-                  <div key={i} className="p-3 border rounded-lg space-y-2 relative">
-                    <button className="absolute top-2 right-2 text-muted-foreground hover:text-destructive" onClick={() => rmCard(i)}><X className="w-4 h-4" /></button>
-                    <div className="text-xs font-semibold text-muted-foreground">Card {i + 1}</div>
-                    <Select value={c.header_type} onValueChange={(v: 'image' | 'video') => upCard(i, { header_type: v })}>
-                      <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="image">Image</SelectItem>
-                        <SelectItem value="video">Video</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <div className="flex gap-2">
-                      <Input value={c.header_media_url} onChange={e => upCard(i, { header_media_url: e.target.value })} placeholder="Public media URL" />
-                      <Button type="button" variant="outline" size="sm" asChild disabled={uploading}>
-                        <label className="cursor-pointer">
-                          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                          <input type="file" className="hidden" accept={c.header_type === 'image' ? 'image/*' : 'video/mp4'}
-                            onChange={e => { const f = e.target.files?.[0]; if (f) uploadMedia(f, (u) => upCard(i, { header_media_url: u })); }} />
-                        </label>
-                      </Button>
-                    </div>
-                    <Textarea rows={2} value={c.body} onChange={e => upCard(i, { body: e.target.value })} placeholder="Card description" />
-                  </div>
-                ))}
-                <Button variant="outline" size="sm" onClick={addCard} disabled={form.carousel_cards.length >= 10}><Plus className="w-4 h-4 mr-1" /> Add card</Button>
-              </TabsContent>
-            </Tabs>
-
-            {/* Live preview + validation */}
-            <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm font-medium"><Eye className="w-4 h-4" /> Preview</div>
-                <Button type="button" size="sm" variant="ghost" onClick={() => setShowPreview(s => !s)}>{showPreview ? 'Hide' : 'Show'}</Button>
-              </div>
-              {showPreview && (
-                <>
-                  {detectedVars.length > 0 && (
-                    <div className="grid grid-cols-2 gap-2">
-                      {detectedVars.map(v => (
-                        <div key={v}>
-                          <Label className="text-[11px]">Sample for {`{{${v}}}`}</Label>
-                          <Input value={previewValues[v] || ''} onChange={e => setPreviewValues(p => ({ ...p, [v]: e.target.value }))} placeholder={`e.g. ${v === 'name' ? 'Aisha' : 'value'}`} />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <div className="rounded-md wa-doodle-bg border p-3 max-w-sm mx-auto">
-                    <div className="rounded-lg bg-white shadow-sm p-3 text-sm text-slate-800 space-y-1.5">
-                      {form.header_type === 'text' && form.header && <div className="font-semibold">{form.header}</div>}
-                      {form.header_type === 'image' && form.header_media_url && <img src={form.header_media_url} alt="" className="rounded max-h-32 w-full object-cover" />}
-                      <div className="whitespace-pre-wrap break-words">{renderedPreview || <span className="text-slate-400">Your message body will appear here…</span>}</div>
-                      {form.footer && <div className="text-[11px] text-slate-500 pt-1">{form.footer}</div>}
-                      {form.buttons?.length > 0 && (
-                        <div className="pt-2 border-t border-slate-200 mt-2 space-y-1">
-                          {form.buttons.map((b, i) => (
-                            <div key={i} className="text-center text-[13px] text-blue-600 font-medium py-1">{b.text || '(button)'}</div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
-              {validationErrors.length > 0 && (
-                <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400 space-y-1">
-                  <div className="flex items-center gap-1 font-semibold"><AlertTriangle className="w-3.5 h-3.5" /> Meta will reject this — fix before submitting:</div>
-                  <ul className="list-disc pl-5 space-y-0.5">
-                    {validationErrors.map((e, i) => <li key={i}>{e}</li>)}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpen(false)} disabled={submitting}>Cancel</Button>
-            <Button onClick={submitToMeta} disabled={submitting || validationErrors.length > 0}>
-              {submitting ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Submitting…</> : editingMetaId ? 'Update on Meta' : 'Submit to Meta'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <AlertDialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>
         <AlertDialogContent>
