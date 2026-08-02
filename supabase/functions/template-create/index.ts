@@ -202,7 +202,8 @@ Deno.serve(async (req) => {
     }, { onConflict: 'workspace_id,name,language' });
 
     return json({ ok: true, meta_id: metaId, status });
-  } catch (e) {
-    return json({ error: String(e) }, 500);
+  } catch (e: any) {
+    return json({ error: e?.message || String(e) }, 400);
   }
+
 });
