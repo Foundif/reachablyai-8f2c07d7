@@ -322,6 +322,31 @@ const Inbox = () => {
               </Button>
             </div>
 
+            {labels.length > 0 && (
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 -mx-0.5 px-0.5">
+                <button
+                  onClick={() => setLabelFilter(null)}
+                  className={cn('shrink-0 text-[11px] px-2 py-0.5 rounded-full border transition-colors',
+                    labelFilter === null ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted')}
+                >
+                  All labels
+                </button>
+                {labels.map(l => (
+                  <button
+                    key={l.id}
+                    onClick={() => setLabelFilter(labelFilter === l.name ? null : l.name)}
+                    className={cn('shrink-0 text-[11px] px-2 py-0.5 rounded-full border transition-colors whitespace-nowrap',
+                      labelFilter === l.name ? 'text-white' : 'hover:bg-muted')}
+                    style={labelFilter === l.name
+                      ? { backgroundColor: l.color, borderColor: l.color }
+                      : { borderColor: `${l.color}66`, color: l.color }}
+                  >
+                    {l.name}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div className="flex items-center gap-1 -mb-3">
               {([
                 { id: 'new', label: 'New', icon: MessageSquareText },
@@ -345,6 +370,7 @@ const Inbox = () => {
                 </button>
               ))}
             </div>
+
           </div>
 
           <div className="flex-1 overflow-y-auto">
