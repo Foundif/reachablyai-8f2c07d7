@@ -18,6 +18,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { resolveWorkspaceId } from '@/lib/workspace';
+import { COUNTRY_CODES } from '@/lib/countryCodes';
+
 
 interface Conversation {
   id: string;
