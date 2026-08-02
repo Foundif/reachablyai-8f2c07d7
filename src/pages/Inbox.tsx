@@ -93,6 +93,8 @@ const Inbox = () => {
   // Conversations the agent has explicitly taken over ("Intervene")
   const [intervened, setIntervened] = useState<Record<string, boolean>>({});
   const [uploading, setUploading] = useState(false);
+  const [uploadInfo, setUploadInfo] = useState<{ name: string; pct: number } | null>(null);
+
   const [recording, setRecording] = useState(false);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const [locOpen, setLocOpen] = useState(false);
