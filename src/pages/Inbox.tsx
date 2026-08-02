@@ -44,6 +44,7 @@ interface Message {
   body: string | null;
   status: string;
   message_type: string;
+  media_url?: string | null;
   template_name: string | null;
   created_at: string;
   sent_by: string | null;
