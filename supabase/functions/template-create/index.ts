@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
         if (vars.length) bc.example = { body_text: [vars.map(v => `sample_${v}`)] };
         components.push(bc);
       }
-      const cards = (carousel_cards || []).slice(0, 10).map((card: any) => {
+      const cards = await Promise.all((carousel_cards || []).slice(0, 10).map(async (card: any) => {
         const cardVars: string[] = [];
         const cardBody = String(card.body || '').replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_: string, v: string) => {
           if (!cardVars.includes(v)) cardVars.push(v);
@@ -115,8 +115,9 @@ Deno.serve(async (req) => {
         });
         const cComps: any[] = [];
         if (card.header_media_url) {
+          const handle = await toMetaHandle(card.header_media_url, card.header_type || 'image', creds.access_token);
           cComps.push({ type: 'HEADER', format: (card.header_type || 'image').toUpperCase(),
-            example: { header_handle: [card.header_media_url] } });
+            example: { header_handle: [handle] } });
         }
         const bc: any = { type: 'BODY', text: cardBody };
         if (cardVars.length) bc.example = { body_text: [cardVars.map(v => `sample_${v}`)] };
@@ -125,8 +126,9 @@ Deno.serve(async (req) => {
           cComps.push({ type: 'BUTTONS', buttons: card.buttons });
         }
         return { components: cComps };
-      });
+      }));
       components.push({ type: 'CAROUSEL', cards });
+
     } else {
       // HEADER
       if (header_type === 'text' && header) {
