@@ -93,6 +93,8 @@ const Inbox = () => {
   // Conversations the agent has explicitly taken over ("Intervene")
   const [intervened, setIntervened] = useState<Record<string, boolean>>({});
   const [uploading, setUploading] = useState(false);
+  const [uploadInfo, setUploadInfo] = useState<{ name: string; pct: number } | null>(null);
+
   const [recording, setRecording] = useState(false);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const [locOpen, setLocOpen] = useState(false);
@@ -215,16 +217,38 @@ const Inbox = () => {
     if (await invokeSend({ body: draft })) setDraft('');
   };
 
-  /** Upload to storage, then send as a WhatsApp media message. */
+  /** Upload to storage with progress, then send as a WhatsApp media message. */
   const sendMedia = async (file: File, kind: 'image' | 'video' | 'audio' | 'document') => {
     if (!wsId || !selected) return;
     setUploading(true);
+    setUploadInfo({ name: file.name, pct: 0 });
     try {
       const ext = file.name.split('.').pop() || 'bin';
       const path = `chat-media/${wsId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const { error } = await supabase.storage.from('salon-assets')
-        .upload(path, file, { upsert: false, contentType: file.type || undefined });
-      if (error) throw error;
+      const { data: { session } } = await supabase.auth.getSession();
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/salon-assets/${path}`;
+
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', url);
+        xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`);
+        xhr.setRequestHeader('apikey', import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
+        xhr.setRequestHeader('x-upsert', 'false');
+        if (file.type) xhr.setRequestHeader('Content-Type', file.type);
+        xhr.upload.onprogress = e => {
+          if (e.lengthComputable) setUploadInfo({ name: file.name, pct: Math.round((e.loaded / e.total) * 100) });
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) return resolve();
+          let msg = `Upload failed (${xhr.status})`;
+          try { msg = JSON.parse(xhr.responseText).message || msg; } catch { /* ignore */ }
+          reject(new Error(msg));
+        };
+        xhr.onerror = () => reject(new Error('Network error during upload'));
+        xhr.send(file);
+      });
+
+      setUploadInfo({ name: file.name, pct: 100 });
       const { data: pub } = supabase.storage.from('salon-assets').getPublicUrl(path);
       const ok = await invokeSend({
         media_url: pub.publicUrl, media_type: kind,
@@ -236,8 +260,10 @@ const Inbox = () => {
       toast.error(e.message || 'Upload failed');
     } finally {
       setUploading(false);
+      setUploadInfo(null);
     }
   };
+
 
   const toggleRecording = async () => {
     if (recording) { recorderRef.current?.stop(); setRecording(false); return; }
@@ -684,6 +710,19 @@ const Inbox = () => {
                     24-hour reply window closed. Send an approved template to reopen the conversation.
                   </div>
                 )}
+                {uploadInfo && (
+                  <div className="rounded-md border bg-muted/40 px-2.5 py-2 space-y-1.5">
+                    <div className="flex items-center gap-2 text-[11px]">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                      <span className="truncate flex-1">{uploadInfo.pct < 100 ? 'Uploading' : 'Sending'} {uploadInfo.name}</span>
+                      <span className="tabular-nums text-muted-foreground">{uploadInfo.pct}%</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                      <div className="h-full bg-primary transition-all duration-200" style={{ width: `${uploadInfo.pct}%` }} />
+                    </div>
+                  </div>
+                )}
+
                 {templates.length > 0 && (
                   <Select onValueChange={(v) => sendTemplate(v)}>
                     <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Send approved template…" /></SelectTrigger>
