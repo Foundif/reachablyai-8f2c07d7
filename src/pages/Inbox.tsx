@@ -566,16 +566,35 @@ const Inbox = () => {
                   <div className="text-[11px] text-muted-foreground leading-tight">{selected.contact_phone}</div>
                 </div>
 
-                {/* 24h window ring */}
-                <div
-                  title={windowOpen ? `24h window expires in ~${windowHoursLeft}h` : '24h window closed — send a template'}
-                  className={cn(
-                    'ml-2 w-8 h-8 shrink-0 rounded-full border-2 flex items-center justify-center text-[11px] font-semibold',
-                    windowOpen ? 'border-emerald-500 text-emerald-600' : 'border-muted-foreground/30 text-muted-foreground',
-                  )}
-                >
-                  {windowOpen ? windowHoursLeft : '—'}
-                </div>
+                {/* 24h window ring — live countdown */}
+                <TooltipProvider delayDuration={100}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div
+                        className={cn(
+                          'ml-2 w-8 h-8 shrink-0 rounded-full border-2 flex items-center justify-center text-[10px] font-semibold cursor-default',
+                          windowOpen ? 'border-emerald-500 text-emerald-600' : 'border-muted-foreground/30 text-muted-foreground',
+                        )}
+                      >
+                        {ringText}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="bg-foreground text-background border-0">
+                      {windowOpen ? (
+                        <div className="space-y-0.5 text-[12px] leading-snug">
+                          <div>24h window expires in {countdownLabel}</div>
+                          <div className="text-emerald-400">You can send any message type while active.</div>
+                        </div>
+                      ) : (
+                        <div className="space-y-0.5 text-[12px] leading-snug">
+                          <div>24h window is closed</div>
+                          <div className="text-amber-400">Send an approved template to reopen it.</div>
+                        </div>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
 
                 <div className="ml-auto flex items-center gap-1.5">
                   {canAssign ? (
