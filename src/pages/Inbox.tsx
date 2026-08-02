@@ -526,7 +526,10 @@ const Inbox = () => {
               onClose={() => setPanelOpen(false)}
               onSaveNotes={saveNotes}
               onSaveTags={saveTags}
+              labels={labels}
+              onCreateLabel={createLabel}
             />
+
           </aside>
         )}
       </div>
