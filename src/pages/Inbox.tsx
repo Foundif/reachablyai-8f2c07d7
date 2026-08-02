@@ -406,9 +406,6 @@ const Inbox = () => {
     all: convs.length,
   }), [convs]);
 
-  const windowHoursLeft = selected?.window_expires_at
-    ? Math.max(0, Math.ceil((new Date(selected.window_expires_at).getTime() - Date.now()) / 3_600_000))
-    : 0;
 
   return (
     <AppLayout fullBleed>
