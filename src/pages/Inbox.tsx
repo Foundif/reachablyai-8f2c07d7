@@ -153,11 +153,13 @@ const Inbox = () => {
     if (filter === 'mine' && c.assigned_to !== user?.id) return false;
     if (filter === 'unassigned' && c.assigned_to) return false;
     if (filter === 'unread' && !c.unread_count) return false;
+    if (labelFilter && !(c.tags || []).includes(labelFilter)) return false;
     if (tab === 'new' && !c.unread_count) return false;
     if (tab === 'open' && c.status !== 'open') return false;
     if (tab === 'resolved' && c.status === 'open') return false;
     return true;
   });
+
 
   const windowOpen = selected?.window_expires_at ? new Date(selected.window_expires_at) > new Date() : false;
 
