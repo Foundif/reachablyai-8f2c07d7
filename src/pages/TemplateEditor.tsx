@@ -415,13 +415,44 @@ const TemplateEditor = () => {
             </Card>
 
             {validationErrors.length > 0 && (
-              <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400 space-y-1">
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400 space-y-2">
                 <div className="flex items-center gap-1 font-semibold"><AlertTriangle className="w-3.5 h-3.5" /> Meta will reject this — fix before submitting:</div>
                 <ul className="list-disc pl-5 space-y-0.5">
                   {validationErrors.map((e, i) => <li key={i}>{e}</li>)}
                 </ul>
+                <Button size="sm" variant="outline" onClick={() => runAiFix(true)} disabled={aiBusy}>
+                  {aiBusy ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />} Fix with AI
+                </Button>
               </div>
             )}
+
+            {metaError && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs space-y-2">
+                <div className="font-semibold flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" /> Meta rejected this template</div>
+                <p className="text-muted-foreground">{metaError}</p>
+                <Button size="sm" onClick={() => runAiFix(true)} disabled={aiBusy}>
+                  {aiBusy ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />} Fix this with AI
+                </Button>
+              </div>
+            )}
+
+            {aiIssues && aiIssues.length > 0 && (
+              <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-xs space-y-2">
+                <div className="font-semibold flex items-center gap-1"><Sparkles className="w-3.5 h-3.5 text-primary" /> AI review</div>
+                <ul className="list-disc pl-5 space-y-0.5 text-muted-foreground">
+                  {aiIssues.map((it, i) => <li key={i}><span className="font-medium">{it.field ? `${it.field}: ` : ''}</span>{it.message}</li>)}
+                </ul>
+                <Button size="sm" variant="outline" onClick={() => runAiFix(true)} disabled={aiBusy}>
+                  {aiBusy ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />} Apply AI fixes
+                </Button>
+              </div>
+            )}
+            {aiIssues && aiIssues.length === 0 && (
+              <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 text-xs text-emerald-700 dark:text-emerald-400">
+                AI found no compliance problems with this template.
+              </div>
+            )}
+
           </div>
 
           {/* ============ Live preview ============ */}
