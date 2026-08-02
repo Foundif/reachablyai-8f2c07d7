@@ -710,6 +710,19 @@ const Inbox = () => {
                     24-hour reply window closed. Send an approved template to reopen the conversation.
                   </div>
                 )}
+                {uploadInfo && (
+                  <div className="rounded-md border bg-muted/40 px-2.5 py-2 space-y-1.5">
+                    <div className="flex items-center gap-2 text-[11px]">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                      <span className="truncate flex-1">{uploadInfo.pct < 100 ? 'Uploading' : 'Sending'} {uploadInfo.name}</span>
+                      <span className="tabular-nums text-muted-foreground">{uploadInfo.pct}%</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                      <div className="h-full bg-primary transition-all duration-200" style={{ width: `${uploadInfo.pct}%` }} />
+                    </div>
+                  </div>
+                )}
+
                 {templates.length > 0 && (
                   <Select onValueChange={(v) => sendTemplate(v)}>
                     <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Send approved template…" /></SelectTrigger>
