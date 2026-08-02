@@ -12,7 +12,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Inbox as InboxIcon, Send, Search, User, Clock, MessageSquareText, ArrowLeft, Trash2, Tag, StickyNote, X, Plus, Filter, CheckCircle2, Users, PanelRightClose, PanelRightOpen, Phone, Mail } from 'lucide-react';
+import { Inbox as InboxIcon, Send, Search, User, Clock, MessageSquareText, ArrowLeft, Trash2, Tag, StickyNote, X, Plus, Filter, CheckCircle2, Users, PanelRightClose, PanelRightOpen, Phone, Mail, Paperclip, Image as ImageIcon, Video, FileText, MapPin, Mic, Square, Loader2 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Label as FieldLabel } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
