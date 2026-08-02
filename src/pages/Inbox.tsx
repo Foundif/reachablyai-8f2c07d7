@@ -75,12 +75,27 @@ const Inbox = () => {
   const [tab, setTab] = useState<'new' | 'open' | 'resolved' | 'all'>('all');
   const [labels, setLabels] = useState<Label[]>([]);
   const [labelFilter, setLabelFilter] = useState<string | null>(null);
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [panelOpen, setPanelOpen] = useState(false);
 
   const [showMobileChat, setShowMobileChat] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Conversation | null>(null);
   const [newChatOpen, setNewChatOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Live clock so the 24h window timer ticks in real time
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Conversations the agent has explicitly taken over ("Intervene")
+  const [intervened, setIntervened] = useState<Record<string, boolean>>({});
+  const [uploading, setUploading] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const [locOpen, setLocOpen] = useState(false);
+  const [locForm, setLocForm] = useState({ latitude: '', longitude: '', name: '', address: '' });
 
   const selected = useMemo(() => convs.find(c => c.id === selectedId) || null, [convs, selectedId]);
 
