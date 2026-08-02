@@ -778,28 +778,42 @@ function ContactPanel({
 
         <div>
           <div className="text-xs font-medium mb-1.5 flex items-center gap-1.5">
-            <Tag className="w-3 h-3" /> Tags
+            <Tag className="w-3 h-3" /> Labels
           </div>
           <div className="flex flex-wrap gap-1.5 mb-2">
-            {tags.length === 0 && <span className="text-[11px] text-muted-foreground">No tags yet</span>}
+            {tags.length === 0 && <span className="text-[11px] text-muted-foreground">No labels yet</span>}
             {tags.map(t => (
-              <Badge key={t} variant="secondary" className="gap-1 pr-1">
+              <Badge key={t} variant="secondary" className="gap-1 pr-1"
+                style={labels.find(l => l.name === t) ? { backgroundColor: `${labels.find(l => l.name === t)!.color}22`, color: labels.find(l => l.name === t)!.color } : undefined}>
                 {t}
                 <button onClick={() => removeTag(t)} className="hover:text-destructive"><X className="w-3 h-3" /></button>
               </Badge>
             ))}
           </div>
+          {labels.filter(l => !tags.includes(l.name)).length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {labels.filter(l => !tags.includes(l.name)).map(l => (
+                <button key={l.id} onClick={() => applyLabel(l.name)}
+                  className="text-[11px] px-2 py-0.5 rounded-full border hover:bg-muted transition-colors"
+                  style={{ borderColor: `${l.color}66`, color: l.color }}>
+                  + {l.name}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex gap-1.5">
             <Input
               value={tagDraft}
               onChange={e => setTagDraft(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
-              placeholder="Add tag (e.g. VIP, hot-lead)"
+              placeholder="New label (e.g. VIP, hot-lead)"
               className="h-8 text-xs"
             />
             <Button size="sm" variant="outline" className="h-8" onClick={addTag}>Add</Button>
           </div>
+          <p className="text-[10px] text-muted-foreground mt-1">New labels are saved to your workspace so you can reuse and filter by them.</p>
         </div>
+
         <div>
           <div className="text-xs font-medium mb-1.5">Notes</div>
           <Textarea
