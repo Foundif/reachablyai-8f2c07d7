@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
         const phoneId = v.metadata?.phone_number_id || null;
 
         const { data: creds } = phoneId
-          ? await admin.from('whatsapp_credentials').select('workspace_id, business_phone').eq('phone_number_id', phoneId).maybeSingle()
+          ? await admin.from('whatsapp_credentials').select('workspace_id, business_phone, access_token').eq('phone_number_id', phoneId).maybeSingle()
           : { data: null };
 
         if (!creds) {
@@ -126,10 +126,48 @@ Deno.serve(async (req) => {
           try {
             const from = m.from as string;
             const contactName = v.contacts?.[0]?.profile?.name || null;
+            const mediaNode = m.image || m.video || m.audio || m.document || m.sticker || null;
+            const mediaKind = m.image ? 'image' : m.video ? 'video' : m.audio ? 'audio'
+              : m.document ? 'document' : m.sticker ? 'sticker' : null;
             const bodyText =
               m.text?.body || m.button?.text ||
               m.interactive?.button_reply?.title || m.interactive?.list_reply?.title ||
-              (m.image ? '[image]' : m.audio ? '[audio]' : m.document ? '[document]' : m.video ? '[video]' : m.type);
+              mediaNode?.caption ||
+              (mediaKind === 'image' ? '\u{1F4F7} Photo' : mediaKind === 'video' ? '\u{1F3A5} Video'
+                : mediaKind === 'audio' ? (m.audio?.voice ? '\u{1F3A4} Voice message' : '\u{1F3B5} Audio')
+                : mediaKind === 'document' ? `\u{1F4C4} ${m.document?.filename || 'Document'}`
+                : mediaKind === 'sticker' ? '\u{1F642} Sticker' : m.type);
+
+            // Download inbound media from Meta and store it so the CRM can render it inline
+            let storedMediaUrl: string | null = null;
+            if (mediaNode?.id && creds.access_token) {
+              try {
+                const metaRes = await fetch(`https://graph.facebook.com/v20.0/${mediaNode.id}`, {
+                  headers: { Authorization: `Bearer ${creds.access_token}` },
+                });
+                const meta = await metaRes.json();
+                if (meta?.url) {
+                  const binRes = await fetch(meta.url, { headers: { Authorization: `Bearer ${creds.access_token}` } });
+                  if (binRes.ok) {
+                    const bytes = new Uint8Array(await binRes.arrayBuffer());
+                    const mime = meta.mime_type || binRes.headers.get('content-type') || 'application/octet-stream';
+                    const extMap: Record<string, string> = {
+                      'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
+                      'video/mp4': 'mp4', 'video/3gpp': '3gp',
+                      'audio/ogg': 'ogg', 'audio/mpeg': 'mp3', 'audio/mp4': 'm4a', 'audio/amr': 'amr', 'audio/aac': 'aac',
+                      'application/pdf': 'pdf',
+                    };
+                    const ext = extMap[mime.split(';')[0]] || (m.document?.filename?.split('.').pop() ?? 'bin');
+                    const path = `chat-media/${workspace_id}/in-${mediaNode.id}.${ext}`;
+                    const { error: upErr } = await admin.storage.from('salon-assets')
+                      .upload(path, bytes, { contentType: mime.split(';')[0], upsert: true });
+                    if (!upErr) {
+                      storedMediaUrl = admin.storage.from('salon-assets').getPublicUrl(path).data.publicUrl;
+                    }
+                  }
+                }
+              } catch (_) { /* non-fatal: message still stores without media */ }
+            }
 
             // Auto-create/find lead so every inbound customer shows in Leads
             let leadId: string | null = null;
@@ -195,7 +233,8 @@ Deno.serve(async (req) => {
             const { error: mErr } = await admin.from('wa_messages').insert({
               workspace_id, conversation_id: convId, direction: 'inbound',
               wa_message_id: m.id, from_phone: from, to_phone: creds.business_phone,
-              body: bodyText, message_type: m.type || 'text', status: 'received',
+              body: bodyText, message_type: mediaKind || m.type || 'text', status: 'received',
+              media_url: storedMediaUrl,
             });
             if (mErr) throw mErr;
 

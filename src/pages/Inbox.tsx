@@ -12,7 +12,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Inbox as InboxIcon, Send, Search, User, Clock, MessageSquareText, ArrowLeft, Trash2, Tag, StickyNote, X, Plus, Filter, CheckCircle2, Users, PanelRightClose, PanelRightOpen, Phone, Mail, Paperclip, Image as ImageIcon, Video, FileText, MapPin, Mic, Square, Loader2 } from 'lucide-react';
+import { Inbox as InboxIcon, Send, Search, User, Clock, MessageSquareText, ArrowLeft, Trash2, Tag, StickyNote, X, Plus, Filter, CheckCircle2, Users, PanelRightClose, PanelRightOpen, Phone, Mail, Paperclip, Image as ImageIcon, Video, FileText, MapPin, Mic, Square, Loader2, Smile, PhoneCall } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Label as FieldLabel } from '@/components/ui/label';
@@ -23,6 +23,8 @@ import { cn } from '@/lib/utils';
 import { resolveWorkspaceId } from '@/lib/workspace';
 import { COUNTRY_CODES } from '@/lib/countryCodes';
 
+
+const EMOJIS = '\u{1F600}\u{1F603}\u{1F604}\u{1F601}\u{1F606}\u{1F605}\u{1F602}\u{1F923}\u{1F60A}\u{1F607}\u{1F642}\u{1F609}\u{1F60D}\u{1F618}\u{1F617}\u{1F60B}\u{1F61B}\u{1F60E}\u{1F929}\u{1F914}\u{1F910}\u{1F644}\u{1F60F}\u{1F612}\u{1F614}\u{1F62A}\u{1F634}\u{1F615}\u{1F61F}\u{1F622}\u{1F62D}\u{1F621}\u{1F620}\u{1F44D}\u{1F44E}\u{1F44F}\u{1F64F}\u{1F91D}\u{1F4AA}\u{1F44C}\u{270C}\u{1F91E}\u{1F525}\u{2764}\u{1F49B}\u{1F49A}\u{1F499}\u{1F49C}\u{2728}\u{1F389}\u{1F38A}\u{1F381}\u{1F4B0}\u{1F4B8}\u{1F4B3}\u{1F6CD}\u{1F4E6}\u{1F69A}\u{2705}\u{274C}\u{26A0}\u{1F4CC}\u{1F4C5}\u{23F0}\u{1F4DE}\u{1F4F1}\u{1F4E7}\u{1F4AC}\u{1F440}\u{1F680}\u{2B50}\u{1F31F}'.split(/(?=[\s\S])/u).filter(c => c.trim().length > 0);
 
 interface Conversation {
   id: string;
@@ -269,13 +271,25 @@ const Inbox = () => {
     if (recording) { recorderRef.current?.stop(); setRecording(false); return; }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const rec = new MediaRecorder(stream);
+      // WhatsApp only accepts ogg/opus, mp4/aac or mp3 for voice notes — pick the best the browser can record.
+      const candidates = ['audio/ogg;codecs=opus', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/webm;codecs=opus'];
+      const mimeType = candidates.find(t => MediaRecorder.isTypeSupported?.(t));
+      const rec = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       const chunks: BlobPart[] = [];
       rec.ondataavailable = e => chunks.push(e.data);
       rec.onstop = async () => {
         stream.getTracks().forEach(t => t.stop());
-        const blob = new Blob(chunks, { type: 'audio/ogg' });
-        await sendMedia(new File([blob], `voice-${Date.now()}.ogg`, { type: 'audio/ogg' }), 'audio');
+        const raw = rec.mimeType || mimeType || 'audio/ogg';
+        const isOgg = raw.includes('ogg');
+        const isMp4 = raw.includes('mp4');
+        const isMp3 = raw.includes('mpeg');
+        // webm/opus is not accepted by WhatsApp — relabel the opus stream as ogg so Meta can decode it.
+        const outType = isMp4 ? 'audio/mp4' : isMp3 ? 'audio/mpeg' : 'audio/ogg';
+        const ext = isMp4 ? 'm4a' : isMp3 ? 'mp3' : 'ogg';
+        if (!isOgg && !isMp4 && !isMp3) console.warn('Recorded as', raw, '— sending as audio/ogg');
+        const blob = new Blob(chunks, { type: outType });
+        if (blob.size < 1200) { toast.error('Recording was too short — hold to record a bit longer'); return; }
+        await sendMedia(new File([blob], `voice-${Date.now()}.${ext}`, { type: outType }), 'audio');
       };
       recorderRef.current = rec;
       rec.start();
@@ -637,6 +651,23 @@ const Inbox = () => {
                       <User className="w-3 h-3" />{assignedMember ? displayName(assignedMember) : 'Unassigned'}
                     </Badge>
                   )}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button size="icon" variant="ghost" className="h-8 w-8" title="Call this contact">
+                        <PhoneCall className="w-4 h-4 text-emerald-500" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent side="bottom" align="end" className="w-56 p-1.5">
+                      <a href={`https://wa.me/${selected.contact_phone.replace(/[^\d]/g, '')}`} target="_blank" rel="noreferrer"
+                        className="flex items-center gap-2 px-2 py-2 rounded-md text-sm hover:bg-muted">
+                        <PhoneCall className="w-4 h-4 text-emerald-500" /> WhatsApp call
+                      </a>
+                      <a href={`tel:+${selected.contact_phone.replace(/[^\d]/g, '')}`}
+                        className="flex items-center gap-2 px-2 py-2 rounded-md text-sm hover:bg-muted">
+                        <Phone className="w-4 h-4 text-muted-foreground" /> Phone call
+                      </a>
+                    </PopoverContent>
+                  </Popover>
                   <Button size="sm" variant="outline" className="h-8 hidden sm:inline-flex" onClick={toggleStatus}>
                     {selected.status === 'open' ? 'Resolve' : 'Reopen'}
                   </Button>
@@ -673,6 +704,9 @@ const Inbox = () => {
                       {m.media_url && m.message_type === 'image' && (
                         <img src={m.media_url} alt="Attachment" loading="lazy" className="rounded-lg mb-1 max-h-60 object-cover" />
                       )}
+                      {m.media_url && m.message_type === 'sticker' && (
+                        <img src={m.media_url} alt="Sticker" loading="lazy" className="mb-1 h-28 w-28 object-contain" />
+                      )}
                       {m.media_url && m.message_type === 'video' && (
                         <video src={m.media_url} controls className="rounded-lg mb-1 max-h-60 w-full" />
                       )}
@@ -681,7 +715,7 @@ const Inbox = () => {
                       )}
                       {m.media_url && m.message_type === 'document' && (
                         <a href={m.media_url} target="_blank" rel="noreferrer" className="flex items-center gap-2 underline mb-1">
-                          <FileText className="w-4 h-4" /> Document
+                          <FileText className="w-4 h-4" /> {m.body?.replace(/^\u{1F4C4}\s*/u, '') || 'Document'}
                         </a>
                       )}
                       {m.message_type === 'location' && <div className="flex items-center gap-1 mb-1"><MapPin className="w-4 h-4" /> Location</div>}
@@ -765,6 +799,22 @@ const Inbox = () => {
                   >
                     {recording ? <Square className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                   </Button>
+
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="icon" className="rounded-full shrink-0" disabled={!windowOpen} title="Emoji">
+                        <Smile className="w-4 h-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent side="top" align="start" className="w-64 p-2">
+                      <div className="grid grid-cols-8 gap-1 max-h-52 overflow-y-auto">
+                        {EMOJIS.map(e => (
+                          <button key={e} type="button" className="text-xl leading-none p-1 rounded hover:bg-muted"
+                            onClick={() => setDraft(d => d + e)}>{e}</button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
 
                   <Input
                     value={draft}

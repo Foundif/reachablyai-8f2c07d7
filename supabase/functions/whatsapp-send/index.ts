@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
     const user = userData?.user;
     if (!user) return json({ error: 'Unauthorized' }, 401);
 
-    const { conversation_id, workspace_id, to, body, template_id, media_url, media_type, filename, location } = await req.json();
+    const { conversation_id, workspace_id, to, body, template_id, media_url, media_type, filename, location, variables } = await req.json();
     if (!workspace_id || !to) return json({ error: 'workspace_id and to required' }, 400);
 
     // Verify membership
@@ -37,6 +37,38 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Resolve the contact's display name for template variable mapping
+    let contactName = '';
+    {
+      const { data: conv } = await admin.from('wa_conversations').select('contact_name').eq('id', convId).maybeSingle();
+      contactName = (conv?.contact_name || '').trim();
+      if (!contactName) {
+        const { data: lead } = await admin.from('leads').select('name').eq('workspace_id', workspace_id).eq('phone', to).maybeSingle();
+        contactName = (lead?.name || '').trim();
+      }
+      if (!contactName || /^\+?\d+$/.test(contactName)) contactName = 'there';
+    }
+
+    /** Upload bytes to Meta and return a media id (more reliable than link for voice notes). */
+    const uploadToMeta = async (url: string, kind: string, name?: string) => {
+      const fileRes = await fetch(url);
+      if (!fileRes.ok) throw new Error(`Could not read uploaded media (${fileRes.status})`);
+      const blob = await fileRes.blob();
+      const mime = blob.type && blob.type !== 'application/octet-stream'
+        ? blob.type
+        : (kind === 'audio' ? 'audio/ogg' : kind === 'image' ? 'image/jpeg' : kind === 'video' ? 'video/mp4' : 'application/pdf');
+      const fd = new FormData();
+      fd.append('messaging_product', 'whatsapp');
+      fd.append('type', mime);
+      fd.append('file', new File([blob], name || url.split('/').pop() || 'file', { type: mime }));
+      const up = await fetch(`https://graph.facebook.com/v20.0/${creds.phone_number_id}/media`, {
+        method: 'POST', headers: { Authorization: `Bearer ${creds.access_token}` }, body: fd,
+      });
+      const upBody = await up.json();
+      if (!up.ok || !upBody?.id) throw new Error(upBody?.error?.message || 'Meta rejected the media upload');
+      return upBody.id as string;
+    };
+
     // Build request
     let waPayload: any = { messaging_product: 'whatsapp', to, type: 'text', text: { body } };
     let msgType = 'text', tplName: string | null = null;
@@ -54,7 +86,13 @@ Deno.serve(async (req) => {
     } else if (media_url && media_type) {
       const kind = ['image', 'video', 'audio', 'document', 'sticker'].includes(media_type) ? media_type : 'document';
       msgType = kind;
-      const payload: any = { link: media_url };
+      const payload: any = {};
+      // Voice notes must be uploaded as bytes (ogg/opus); links are rejected by Meta.
+      if (kind === 'audio') {
+        payload.id = await uploadToMeta(media_url, kind, filename);
+      } else {
+        payload.link = media_url;
+      }
       if (kind === 'image' || kind === 'video' || kind === 'document') { if (body) payload.caption = body; }
       if (kind === 'document' && filename) payload.filename = filename;
       waPayload = { messaging_product: 'whatsapp', to, type: kind, [kind]: payload };
@@ -66,20 +104,47 @@ Deno.serve(async (req) => {
       if (tpl.status !== 'approved') return json({ error: 'Template must be approved' }, 400);
       msgType = 'template';
       tplName = tpl.name;
+
       const varNames: string[] = Array.isArray(tpl.variables) ? tpl.variables : [];
-      const components = varNames.length > 0 ? [{
-        type: 'body',
-        parameters: varNames.map((v) => ({ type: 'text', text: String(v === 'name' ? '' : '-') })),
-      }] : [];
+      const supplied: Record<string, string> = (variables && typeof variables === 'object') ? variables : {};
+      const firstName = contactName.split(' ')[0] || contactName;
+
+      const resolve = (varName: string, idx: number): string => {
+        const direct = supplied[varName] ?? supplied[String(idx + 1)];
+        if (direct !== undefined && String(direct).trim()) return String(direct).trim();
+        const key = varName.toLowerCase();
+        if (key === 'name' || key === 'customer_name' || key === 'contact_name' || key === '1') return contactName;
+        if (key === 'first_name' || key === 'firstname') return firstName;
+        if (key === 'phone' || key === 'number') return to;
+        return contactName; // never send an empty or unresolved value
+      };
+
+      // Body parameter count must match the approved template exactly.
+      const bodyParams = varNames.map((v, i) => ({ type: 'text', text: resolve(v, i) }));
+      const components: any[] = [];
+
+      // Media header component (image / video / document)
+      if (['image', 'video', 'document'].includes(tpl.header_type || '') && tpl.header_media_url) {
+        const fmt = tpl.header_type as 'image' | 'video' | 'document';
+        components.push({
+          type: 'header',
+          parameters: [{ type: fmt, [fmt]: { link: tpl.header_media_url } }],
+        });
+      }
+      if (bodyParams.length) components.push({ type: 'body', parameters: bodyParams });
+
       waPayload = {
         messaging_product: 'whatsapp', to, type: 'template',
         template: { name: tpl.name, language: { code: tpl.language || 'en' }, ...(components.length ? { components } : {}) },
       };
+      console.log('[whatsapp-send] template payload', JSON.stringify(waPayload));
     }
+
     // Charge the prepaid wallet (allows the credit buffer to go slightly negative)
     const charge = await chargeCredits(admin, workspace_id, 1);
     if (!charge.ok) return json({ error: charge.reason, code: 'insufficient_credits', balance: charge.balance }, 402);
 
+    console.log('[whatsapp-send] final payload to Meta', JSON.stringify(waPayload));
     const resp = await fetch(`https://graph.facebook.com/v20.0/${creds.phone_number_id}/messages`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${creds.access_token}`, 'Content-Type': 'application/json' },
