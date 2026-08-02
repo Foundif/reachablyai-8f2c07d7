@@ -211,13 +211,18 @@ const Templates = () => {
 
   const confirmRemove = async () => {
     const t = pendingDelete;
-    if (!t) return;
+    if (!t || !wsId) return;
     setPendingDelete(null);
-    const { error } = await supabase.from('templates' as any).delete().eq('id', t.id);
-    if (error) return toast.error(error.message);
-    toast.success('Template removed locally');
+    const tid = toast.loading(`Deleting ${t.name} on Meta…`);
+    const { data, error } = await supabase.functions.invoke('template-delete', {
+      body: { workspace_id: wsId, template_id: t.id },
+    });
+    toast.dismiss(tid);
+    if (error || (data as any)?.error) return toast.error((data as any)?.error || error!.message);
+    toast.success((data as any)?.meta_deleted ? 'Template deleted on Meta and in Reachably' : 'Template deleted');
     load();
   };
+
 
   const addBtn = () => setForm(f => ({ ...f, buttons: [...f.buttons, { type: 'QUICK_REPLY', text: 'Reply' }] }));
   const upBtn = (i: number, patch: Partial<Btn>) => setForm(f => ({ ...f, buttons: f.buttons.map((b, ix) => ix === i ? { ...b, ...patch } : b) }));
