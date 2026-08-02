@@ -182,19 +182,94 @@ const Inbox = () => {
   });
 
 
-  const windowOpen = selected?.window_expires_at ? new Date(selected.window_expires_at) > new Date() : false;
+  const windowExpiresAt = selected?.window_expires_at ? new Date(selected.window_expires_at).getTime() : 0;
+  const msLeft = Math.max(0, windowExpiresAt - now);
+  const windowOpen = msLeft > 0;
+  const hoursLeft = Math.floor(msLeft / 3_600_000);
+  const minutesLeft = Math.floor((msLeft % 3_600_000) / 60_000);
+  const secondsLeft = Math.floor((msLeft % 60_000) / 1000);
+  const countdownLabel = hoursLeft > 0
+    ? `${hoursLeft} hour${hoursLeft === 1 ? '' : 's'} ${minutesLeft} minute${minutesLeft === 1 ? '' : 's'}`
+    : minutesLeft > 0
+      ? `${minutesLeft} minute${minutesLeft === 1 ? '' : 's'} ${secondsLeft} second${secondsLeft === 1 ? '' : 's'}`
+      : `${secondsLeft} second${secondsLeft === 1 ? '' : 's'}`;
+  const ringText = windowOpen ? (hoursLeft > 0 ? String(hoursLeft) : `${minutesLeft}m`) : '—';
+  const canCompose = !!selected && !!intervened[selected.id];
 
-  const send = async () => {
-    if (!selected || !draft.trim() || !wsId) return;
+  const invokeSend = async (payload: Record<string, unknown>) => {
+    if (!selected || !wsId) return false;
     setSending(true);
     const { data: { session } } = await supabase.auth.getSession();
     const { error } = await supabase.functions.invoke('whatsapp-send', {
-      body: { workspace_id: wsId, conversation_id: selected.id, to: selected.contact_phone, body: draft },
+      body: { workspace_id: wsId, conversation_id: selected.id, to: selected.contact_phone, ...payload },
       headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
     });
     setSending(false);
-    if (error) return toast.error(error.message);
-    setDraft('');
+    if (error) { toast.error(error.message); return false; }
+    return true;
+  };
+
+  const send = async () => {
+    if (!draft.trim()) return;
+    if (await invokeSend({ body: draft })) setDraft('');
+  };
+
+  /** Upload to storage, then send as a WhatsApp media message. */
+  const sendMedia = async (file: File, kind: 'image' | 'video' | 'audio' | 'document') => {
+    if (!wsId || !selected) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop() || 'bin';
+      const path = `chat-media/${wsId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from('salon-assets')
+        .upload(path, file, { upsert: false, contentType: file.type || undefined });
+      if (error) throw error;
+      const { data: pub } = supabase.storage.from('salon-assets').getPublicUrl(path);
+      const ok = await invokeSend({
+        media_url: pub.publicUrl, media_type: kind,
+        filename: kind === 'document' ? file.name : undefined,
+        body: draft.trim() && kind !== 'audio' ? draft : undefined,
+      });
+      if (ok) { setDraft(''); toast.success(`${kind[0].toUpperCase()}${kind.slice(1)} sent`); }
+    } catch (e: any) {
+      toast.error(e.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const toggleRecording = async () => {
+    if (recording) { recorderRef.current?.stop(); setRecording(false); return; }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const rec = new MediaRecorder(stream);
+      const chunks: BlobPart[] = [];
+      rec.ondataavailable = e => chunks.push(e.data);
+      rec.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(chunks, { type: 'audio/ogg' });
+        await sendMedia(new File([blob], `voice-${Date.now()}.ogg`, { type: 'audio/ogg' }), 'audio');
+      };
+      recorderRef.current = rec;
+      rec.start();
+      setRecording(true);
+    } catch {
+      toast.error('Microphone permission denied');
+    }
+  };
+
+  const sendLocation = async () => {
+    const { latitude, longitude, name, address } = locForm;
+    if (!latitude || !longitude) return toast.error('Latitude and longitude are required');
+    const ok = await invokeSend({ location: { latitude, longitude, name, address } });
+    if (ok) { setLocOpen(false); setLocForm({ latitude: '', longitude: '', name: '', address: '' }); toast.success('Location sent'); }
+  };
+
+  const useMyLocation = () => {
+    navigator.geolocation?.getCurrentPosition(
+      pos => setLocForm(f => ({ ...f, latitude: String(pos.coords.latitude), longitude: String(pos.coords.longitude) })),
+      () => toast.error('Could not get your location'),
+    );
   };
 
   const sendTemplate = async (templateId: string) => {
