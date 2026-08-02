@@ -41,6 +41,25 @@ Deno.serve(async (req) => {
     let waPayload: any = { messaging_product: 'whatsapp', to, type: 'text', text: { body } };
     let msgType = 'text', tplName: string | null = null;
 
+    if (location && location.latitude && location.longitude) {
+      msgType = 'location';
+      waPayload = {
+        messaging_product: 'whatsapp', to, type: 'location',
+        location: {
+          latitude: Number(location.latitude), longitude: Number(location.longitude),
+          ...(location.name ? { name: location.name } : {}),
+          ...(location.address ? { address: location.address } : {}),
+        },
+      };
+    } else if (media_url && media_type) {
+      const kind = ['image', 'video', 'audio', 'document', 'sticker'].includes(media_type) ? media_type : 'document';
+      msgType = kind;
+      const payload: any = { link: media_url };
+      if (kind === 'image' || kind === 'video' || kind === 'document') { if (body) payload.caption = body; }
+      if (kind === 'document' && filename) payload.filename = filename;
+      waPayload = { messaging_product: 'whatsapp', to, type: kind, [kind]: payload };
+    }
+
     if (template_id) {
       const { data: tpl } = await admin.from('templates').select('*').eq('id', template_id).maybeSingle();
       if (!tpl) return json({ error: 'Template not found' }, 404);
