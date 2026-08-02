@@ -96,7 +96,9 @@ const validateTemplateForm = (form: ReturnType<typeof emptyForm>) => {
 
 const Templates = () => {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [wsId, setWsId] = useState<string | null>(null);
+
   const [items, setItems] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
