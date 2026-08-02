@@ -32,6 +32,8 @@ import Terms from "./pages/Terms";
 import Leads from "./pages/Leads";
 import ComingSoonModule from "./pages/ComingSoonModule";
 import Templates from "./pages/Templates";
+import TemplateEditor from "./pages/TemplateEditor";
+
 import Campaigns, { CampaignDetail } from "./pages/Campaigns";
 import Automations from "./pages/Automations";
 import AutoReplies from "./pages/AutoReplies";
