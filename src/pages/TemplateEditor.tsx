@@ -270,9 +270,13 @@ const TemplateEditor = () => {
             <h1 className="text-xl md:text-2xl font-bold truncate">{metaId ? 'Edit template' : 'Create template'}</h1>
             <p className="text-xs text-muted-foreground">Submitted straight to Meta for approval.</p>
           </div>
+          <Button variant="outline" onClick={() => runAiFix(false)} disabled={aiBusy}>
+            {aiBusy ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1" />} Check with AI
+          </Button>
           <Button onClick={submitToMeta} disabled={submitting || validationErrors.length > 0}>
             {submitting ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Submitting…</> : metaId ? 'Update on Meta' : 'Submit for approval'}
           </Button>
+
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-6 items-start">
