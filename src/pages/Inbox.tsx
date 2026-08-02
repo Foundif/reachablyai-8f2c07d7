@@ -428,6 +428,19 @@ const Inbox = () => {
                       <div className="text-xs text-muted-foreground truncate">
                         {c.last_message_direction === 'outbound' && '→ '}{c.last_message_text || '—'}
                       </div>
+                      {(c.tags || []).length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {(c.tags || []).slice(0, 3).map(t => {
+                            const l = labels.find(x => x.name === t);
+                            return (
+                              <span key={t} className="text-[10px] px-1.5 py-px rounded-full border"
+                                style={{ borderColor: `${l?.color || '#94a3b8'}66`, color: l?.color || undefined }}>
+                                {t}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-[11px] text-muted-foreground truncate">
                           {assignee ? displayName(assignee) : 'Unassigned'}
@@ -436,6 +449,7 @@ const Inbox = () => {
                           <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">{c.unread_count}</span>
                         )}
                       </div>
+
                     </div>
                   </div>
                 </button>
