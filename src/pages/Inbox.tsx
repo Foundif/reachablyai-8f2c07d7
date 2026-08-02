@@ -609,20 +609,28 @@ function NewChatDialog({
           <div className="space-y-2">
             <div className="text-xs font-medium text-muted-foreground">New number</div>
             <div className="flex gap-2">
-              <Input
-                value={countryCode}
-                onChange={e => setCountryCode(e.target.value)}
-                placeholder="+91"
-                className="w-16 sm:w-20 shrink-0"
-              />
+              <Select value={countryCode} onValueChange={setCountryCode}>
+                <SelectTrigger className="w-[110px] shrink-0">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="max-h-64">
+                  {COUNTRY_CODES.map(c => (
+                    <SelectItem key={c.code} value={c.dial + '|' + c.code}>
+                      <span className="mr-1">{c.flag}</span>+{c.dial}
+                      <span className="ml-2 text-xs text-muted-foreground">{c.name}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Input
                 value={phone}
-                onChange={e => setPhone(e.target.value)}
+                onChange={e => setPhone(e.target.value.replace(/[^\d]/g, ''))}
                 placeholder="Phone number"
                 className="flex-1 min-w-0"
-                inputMode="tel"
+                inputMode="numeric"
               />
             </div>
+
             <Input value={name} onChange={e => setName(e.target.value)} placeholder="Contact name (optional)" />
             <Button onClick={submitNew} className="w-full" disabled={!phone.trim()}>Start chat</Button>
           </div>
