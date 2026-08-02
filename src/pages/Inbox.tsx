@@ -712,17 +712,24 @@ function ContactPanel({
     return () => clearTimeout(t);
   }, [notes]);
 
+  const applyLabel = (name: string) => {
+    if (tags.includes(name)) return;
+    const next = [...tags, name];
+    setTags(next); onSaveTags(next);
+  };
   const addTag = () => {
     const v = tagDraft.trim();
     if (!v || tags.includes(v)) { setTagDraft(''); return; }
     const next = [...tags, v];
     setTags(next); setTagDraft('');
     onSaveTags(next);
+    onCreateLabel(v);
   };
   const removeTag = (t: string) => {
     const next = tags.filter(x => x !== t);
     setTags(next); onSaveTags(next);
   };
+
 
   return (
     <div className="flex flex-col h-full">
