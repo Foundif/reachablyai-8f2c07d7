@@ -178,7 +178,7 @@ const TemplateEditor = () => {
         setForm(f => ({
           ...f,
           name: typeof fixed.name === 'string' && !metaId ? fixed.name.toLowerCase().replace(/[^a-z0-9_]/g, '_') : f.name,
-          category: (['marketing', 'utility', 'authentication', 'carousel'].includes(String(fixed.category)) ? fixed.category : f.category) as TplCategory,
+          category: (['marketing', 'utility', 'authentication', 'carousel'].includes(String(fixed.category).toLowerCase()) ? String(fixed.category).toLowerCase() : f.category) as TplCategory,
           header: typeof fixed.header === 'string' ? fixed.header : f.header,
           body: typeof fixed.body === 'string' && fixed.body.trim() ? fixed.body : f.body,
           footer: typeof fixed.footer === 'string' ? fixed.footer : f.footer,
