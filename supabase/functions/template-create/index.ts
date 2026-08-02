@@ -133,6 +133,8 @@ Deno.serve(async (req) => {
       // HEADER
       if (header_type === 'text' && header) {
         components.push({ type: 'HEADER', format: 'TEXT', text: header });
+      } else if (header_type === 'location') {
+        components.push({ type: 'HEADER', format: 'LOCATION' });
       } else if (['image', 'video', 'document'].includes(header_type) && header_media_url) {
         const handle = await toMetaHandle(header_media_url, header_type, creds.access_token);
         components.push({
