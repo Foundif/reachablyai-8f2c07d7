@@ -655,6 +655,13 @@ const Inbox = () => {
                 ))}
               </div>
 
+              {!canCompose ? (
+                <div className="border-t p-4 bg-card shrink-0 flex justify-center">
+                  <Button className="px-8" onClick={() => setIntervened(p => ({ ...p, [selected.id]: true }))}>
+                    Intervene
+                  </Button>
+                </div>
+              ) : (
               <div className="border-t p-3 space-y-2 bg-card shrink-0">
                 {!windowOpen && (
                   <div className="text-[11px] text-amber-600 bg-amber-500/10 border border-amber-500/30 rounded-md px-2 py-1.5">
@@ -669,13 +676,47 @@ const Inbox = () => {
                     </SelectContent>
                   </Select>
                 )}
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="icon" className="rounded-full shrink-0" disabled={!windowOpen || uploading} title="Attach">
+                        {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent side="top" align="start" className="w-52 p-1.5">
+                      {([
+                        { kind: 'image' as const, icon: ImageIcon, label: 'Photo', accept: 'image/*' },
+                        { kind: 'video' as const, icon: Video, label: 'Video', accept: 'video/*' },
+                        { kind: 'document' as const, icon: FileText, label: 'Document', accept: '.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt' },
+                        { kind: 'audio' as const, icon: Mic, label: 'Audio file', accept: 'audio/*' },
+                      ]).map(({ kind, icon: Icon, label, accept }) => (
+                        <label key={kind} className="flex items-center gap-2 px-2 py-2 rounded-md text-sm hover:bg-muted cursor-pointer">
+                          <Icon className="w-4 h-4 text-muted-foreground" /> {label}
+                          <input type="file" className="hidden" accept={accept}
+                            onChange={e => { const f = e.target.files?.[0]; if (f) sendMedia(f, kind); e.currentTarget.value = ''; }} />
+                        </label>
+                      ))}
+                      <button type="button" onClick={() => setLocOpen(true)}
+                        className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm hover:bg-muted">
+                        <MapPin className="w-4 h-4 text-muted-foreground" /> Location
+                      </button>
+                    </PopoverContent>
+                  </Popover>
+
+                  <Button
+                    variant={recording ? 'destructive' : 'ghost'} size="icon" className="rounded-full shrink-0"
+                    disabled={!windowOpen || uploading} onClick={toggleRecording}
+                    title={recording ? 'Stop and send voice note' : 'Record voice note'}
+                  >
+                    {recording ? <Square className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                  </Button>
+
                   <Input
                     value={draft}
                     onChange={e => setDraft(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
-                    placeholder={windowOpen ? 'Type a message…' : 'Free-form disabled outside 24h window'}
-                    disabled={!windowOpen || sending}
+                    placeholder={recording ? 'Recording… tap stop to send' : windowOpen ? 'Type a message…' : 'Free-form disabled outside 24h window'}
+                    disabled={!windowOpen || sending || recording}
                     className="rounded-full"
                   />
                   <Button onClick={send} disabled={!draft.trim() || sending || !windowOpen} size="icon" className="rounded-full shrink-0">
@@ -683,6 +724,7 @@ const Inbox = () => {
                   </Button>
                 </div>
               </div>
+              )}
             </>
           )}
         </section>
