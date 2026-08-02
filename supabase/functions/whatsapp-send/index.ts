@@ -144,6 +144,7 @@ Deno.serve(async (req) => {
     const charge = await chargeCredits(admin, workspace_id, 1);
     if (!charge.ok) return json({ error: charge.reason, code: 'insufficient_credits', balance: charge.balance }, 402);
 
+    console.log('[whatsapp-send] final payload to Meta', JSON.stringify(waPayload));
     const resp = await fetch(`https://graph.facebook.com/v20.0/${creds.phone_number_id}/messages`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${creds.access_token}`, 'Content-Type': 'application/json' },

@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
         const phoneId = v.metadata?.phone_number_id || null;
 
         const { data: creds } = phoneId
-          ? await admin.from('whatsapp_credentials').select('workspace_id, business_phone').eq('phone_number_id', phoneId).maybeSingle()
+          ? await admin.from('whatsapp_credentials').select('workspace_id, business_phone, access_token').eq('phone_number_id', phoneId).maybeSingle()
           : { data: null };
 
         if (!creds) {
