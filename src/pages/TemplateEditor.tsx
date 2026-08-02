@@ -11,11 +11,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { ArrowLeft, Info, Loader2, Upload, X, Plus, AlertTriangle, FileText, Play } from 'lucide-react';
+import { ArrowLeft, Info, Loader2, Upload, X, Plus, AlertTriangle, FileText, Play, MapPin } from 'lucide-react';
 import { resolveWorkspaceId } from '@/lib/workspace';
 
 type TplCategory = 'marketing' | 'utility' | 'authentication' | 'carousel';
-type HeaderType = 'none' | 'text' | 'image' | 'video' | 'document' | 'carousel';
+type HeaderType = 'none' | 'text' | 'image' | 'video' | 'document' | 'location' | 'carousel';
 type BtnType = 'QUICK_REPLY' | 'URL' | 'PHONE_NUMBER';
 
 interface Btn { type: BtnType; text: string; url?: string; phone_number?: string }
@@ -248,7 +248,7 @@ const TemplateEditor = () => {
                   <div>
                     <Label>Message header <span className="text-muted-foreground text-xs">(optional)</span></Label>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {(['none', 'text', 'image', 'video', 'document'] as HeaderType[]).map(h => (
+                      {(['none', 'text', 'image', 'video', 'document', 'location'] as HeaderType[]).map(h => (
                         <button
                           key={h}
                           type="button"
@@ -261,6 +261,9 @@ const TemplateEditor = () => {
                       ))}
                     </div>
                   </div>
+                  {form.header_type === 'location' && (
+                    <p className="text-[11px] text-muted-foreground">Location headers carry a map pin. You provide the latitude, longitude, name and address when the template is sent.</p>
+                  )}
                   {form.header_type === 'text' && (
                     <Input value={form.header} onChange={e => setForm({ ...form, header: e.target.value })} placeholder="Big news!" maxLength={60} />
                   )}
@@ -379,6 +382,9 @@ const TemplateEditor = () => {
                     : <div className="rounded w-full h-28 bg-slate-200" />)}
                   {form.header_type === 'video' && (
                     <div className="rounded w-full h-28 bg-slate-900 flex items-center justify-center text-white/70"><Play className="w-6 h-6" /></div>
+                  )}
+                  {form.header_type === 'location' && (
+                    <div className="rounded w-full bg-slate-100 p-3 flex items-center gap-2 text-slate-600 text-xs"><MapPin className="w-5 h-5" /> Map location (filled in when you send)</div>
                   )}
                   {form.header_type === 'document' && (
                     <div className="rounded w-full bg-slate-100 p-3 flex items-center gap-2 text-slate-600 text-xs"><FileText className="w-5 h-5" /> Document.pdf</div>

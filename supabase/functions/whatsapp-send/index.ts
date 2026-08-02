@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
     const user = userData?.user;
     if (!user) return json({ error: 'Unauthorized' }, 401);
 
-    const { conversation_id, workspace_id, to, body, template_id } = await req.json();
+    const { conversation_id, workspace_id, to, body, template_id, media_url, media_type, filename, location } = await req.json();
     if (!workspace_id || !to) return json({ error: 'workspace_id and to required' }, 400);
 
     // Verify membership
@@ -40,6 +40,25 @@ Deno.serve(async (req) => {
     // Build request
     let waPayload: any = { messaging_product: 'whatsapp', to, type: 'text', text: { body } };
     let msgType = 'text', tplName: string | null = null;
+
+    if (location && location.latitude && location.longitude) {
+      msgType = 'location';
+      waPayload = {
+        messaging_product: 'whatsapp', to, type: 'location',
+        location: {
+          latitude: Number(location.latitude), longitude: Number(location.longitude),
+          ...(location.name ? { name: location.name } : {}),
+          ...(location.address ? { address: location.address } : {}),
+        },
+      };
+    } else if (media_url && media_type) {
+      const kind = ['image', 'video', 'audio', 'document', 'sticker'].includes(media_type) ? media_type : 'document';
+      msgType = kind;
+      const payload: any = { link: media_url };
+      if (kind === 'image' || kind === 'video' || kind === 'document') { if (body) payload.caption = body; }
+      if (kind === 'document' && filename) payload.filename = filename;
+      waPayload = { messaging_product: 'whatsapp', to, type: kind, [kind]: payload };
+    }
 
     if (template_id) {
       const { data: tpl } = await admin.from('templates').select('*').eq('id', template_id).maybeSingle();
@@ -72,8 +91,8 @@ Deno.serve(async (req) => {
       const err = rbody?.error?.message || `HTTP ${resp.status}`;
       await admin.from('wa_messages').insert({
         workspace_id, conversation_id: convId, direction: 'outbound',
-        from_phone: creds.business_phone, to_phone: to, body: body || tplName, message_type: msgType,
-        template_name: tplName, status: 'failed', error: err, sent_by: user.id,
+        from_phone: creds.business_phone, to_phone: to, body: body || tplName || (msgType === 'location' ? '📍 Location' : null), message_type: msgType,
+        template_name: tplName, media_url: media_url || null, status: 'failed', error: err, sent_by: user.id,
       });
       return json({ error: err }, 400);
     }
@@ -81,8 +100,8 @@ Deno.serve(async (req) => {
 
     await admin.from('wa_messages').insert({
       workspace_id, conversation_id: convId, direction: 'outbound', wa_message_id: wamid,
-      from_phone: creds.business_phone, to_phone: to, body: body || tplName, message_type: msgType,
-      template_name: tplName, status: 'sent', sent_by: user.id,
+      from_phone: creds.business_phone, to_phone: to, body: body || tplName || (msgType === 'location' ? '📍 Location' : null), message_type: msgType,
+      template_name: tplName, media_url: media_url || null, status: 'sent', sent_by: user.id,
     });
 
     await admin.from('wa_conversations').update({

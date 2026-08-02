@@ -12,7 +12,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Inbox as InboxIcon, Send, Search, User, Clock, MessageSquareText, ArrowLeft, Trash2, Tag, StickyNote, X, Plus, Filter, CheckCircle2, Users, PanelRightClose, PanelRightOpen, Phone, Mail } from 'lucide-react';
+import { Inbox as InboxIcon, Send, Search, User, Clock, MessageSquareText, ArrowLeft, Trash2, Tag, StickyNote, X, Plus, Filter, CheckCircle2, Users, PanelRightClose, PanelRightOpen, Phone, Mail, Paperclip, Image as ImageIcon, Video, FileText, MapPin, Mic, Square, Loader2 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Label as FieldLabel } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
@@ -41,6 +44,7 @@ interface Message {
   body: string | null;
   status: string;
   message_type: string;
+  media_url?: string | null;
   template_name: string | null;
   created_at: string;
   sent_by: string | null;
@@ -72,12 +76,27 @@ const Inbox = () => {
   const [tab, setTab] = useState<'new' | 'open' | 'resolved' | 'all'>('all');
   const [labels, setLabels] = useState<Label[]>([]);
   const [labelFilter, setLabelFilter] = useState<string | null>(null);
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [panelOpen, setPanelOpen] = useState(false);
 
   const [showMobileChat, setShowMobileChat] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Conversation | null>(null);
   const [newChatOpen, setNewChatOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Live clock so the 24h window timer ticks in real time
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Conversations the agent has explicitly taken over ("Intervene")
+  const [intervened, setIntervened] = useState<Record<string, boolean>>({});
+  const [uploading, setUploading] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const [locOpen, setLocOpen] = useState(false);
+  const [locForm, setLocForm] = useState({ latitude: '', longitude: '', name: '', address: '' });
 
   const selected = useMemo(() => convs.find(c => c.id === selectedId) || null, [convs, selectedId]);
 
@@ -164,19 +183,94 @@ const Inbox = () => {
   });
 
 
-  const windowOpen = selected?.window_expires_at ? new Date(selected.window_expires_at) > new Date() : false;
+  const windowExpiresAt = selected?.window_expires_at ? new Date(selected.window_expires_at).getTime() : 0;
+  const msLeft = Math.max(0, windowExpiresAt - now);
+  const windowOpen = msLeft > 0;
+  const hoursLeft = Math.floor(msLeft / 3_600_000);
+  const minutesLeft = Math.floor((msLeft % 3_600_000) / 60_000);
+  const secondsLeft = Math.floor((msLeft % 60_000) / 1000);
+  const countdownLabel = hoursLeft > 0
+    ? `${hoursLeft} hour${hoursLeft === 1 ? '' : 's'} ${minutesLeft} minute${minutesLeft === 1 ? '' : 's'}`
+    : minutesLeft > 0
+      ? `${minutesLeft} minute${minutesLeft === 1 ? '' : 's'} ${secondsLeft} second${secondsLeft === 1 ? '' : 's'}`
+      : `${secondsLeft} second${secondsLeft === 1 ? '' : 's'}`;
+  const ringText = windowOpen ? (hoursLeft > 0 ? String(hoursLeft) : `${minutesLeft}m`) : '—';
+  const canCompose = !!selected && !!intervened[selected.id];
 
-  const send = async () => {
-    if (!selected || !draft.trim() || !wsId) return;
+  const invokeSend = async (payload: Record<string, unknown>) => {
+    if (!selected || !wsId) return false;
     setSending(true);
     const { data: { session } } = await supabase.auth.getSession();
     const { error } = await supabase.functions.invoke('whatsapp-send', {
-      body: { workspace_id: wsId, conversation_id: selected.id, to: selected.contact_phone, body: draft },
+      body: { workspace_id: wsId, conversation_id: selected.id, to: selected.contact_phone, ...payload },
       headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
     });
     setSending(false);
-    if (error) return toast.error(error.message);
-    setDraft('');
+    if (error) { toast.error(error.message); return false; }
+    return true;
+  };
+
+  const send = async () => {
+    if (!draft.trim()) return;
+    if (await invokeSend({ body: draft })) setDraft('');
+  };
+
+  /** Upload to storage, then send as a WhatsApp media message. */
+  const sendMedia = async (file: File, kind: 'image' | 'video' | 'audio' | 'document') => {
+    if (!wsId || !selected) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop() || 'bin';
+      const path = `chat-media/${wsId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from('salon-assets')
+        .upload(path, file, { upsert: false, contentType: file.type || undefined });
+      if (error) throw error;
+      const { data: pub } = supabase.storage.from('salon-assets').getPublicUrl(path);
+      const ok = await invokeSend({
+        media_url: pub.publicUrl, media_type: kind,
+        filename: kind === 'document' ? file.name : undefined,
+        body: draft.trim() && kind !== 'audio' ? draft : undefined,
+      });
+      if (ok) { setDraft(''); toast.success(`${kind[0].toUpperCase()}${kind.slice(1)} sent`); }
+    } catch (e: any) {
+      toast.error(e.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const toggleRecording = async () => {
+    if (recording) { recorderRef.current?.stop(); setRecording(false); return; }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const rec = new MediaRecorder(stream);
+      const chunks: BlobPart[] = [];
+      rec.ondataavailable = e => chunks.push(e.data);
+      rec.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(chunks, { type: 'audio/ogg' });
+        await sendMedia(new File([blob], `voice-${Date.now()}.ogg`, { type: 'audio/ogg' }), 'audio');
+      };
+      recorderRef.current = rec;
+      rec.start();
+      setRecording(true);
+    } catch {
+      toast.error('Microphone permission denied');
+    }
+  };
+
+  const sendLocation = async () => {
+    const { latitude, longitude, name, address } = locForm;
+    if (!latitude || !longitude) return toast.error('Latitude and longitude are required');
+    const ok = await invokeSend({ location: { latitude, longitude, name, address } });
+    if (ok) { setLocOpen(false); setLocForm({ latitude: '', longitude: '', name: '', address: '' }); toast.success('Location sent'); }
+  };
+
+  const useMyLocation = () => {
+    navigator.geolocation?.getCurrentPosition(
+      pos => setLocForm(f => ({ ...f, latitude: String(pos.coords.latitude), longitude: String(pos.coords.longitude) })),
+      () => toast.error('Could not get your location'),
+    );
   };
 
   const sendTemplate = async (templateId: string) => {
@@ -313,9 +407,6 @@ const Inbox = () => {
     all: convs.length,
   }), [convs]);
 
-  const windowHoursLeft = selected?.window_expires_at
-    ? Math.max(0, Math.ceil((new Date(selected.window_expires_at).getTime() - Date.now()) / 3_600_000))
-    : 0;
 
   return (
     <AppLayout fullBleed>
@@ -476,16 +567,35 @@ const Inbox = () => {
                   <div className="text-[11px] text-muted-foreground leading-tight">{selected.contact_phone}</div>
                 </div>
 
-                {/* 24h window ring */}
-                <div
-                  title={windowOpen ? `24h window expires in ~${windowHoursLeft}h` : '24h window closed — send a template'}
-                  className={cn(
-                    'ml-2 w-8 h-8 shrink-0 rounded-full border-2 flex items-center justify-center text-[11px] font-semibold',
-                    windowOpen ? 'border-emerald-500 text-emerald-600' : 'border-muted-foreground/30 text-muted-foreground',
-                  )}
-                >
-                  {windowOpen ? windowHoursLeft : '—'}
-                </div>
+                {/* 24h window ring — live countdown */}
+                <TooltipProvider delayDuration={100}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div
+                        className={cn(
+                          'ml-2 w-8 h-8 shrink-0 rounded-full border-2 flex items-center justify-center text-[10px] font-semibold cursor-default',
+                          windowOpen ? 'border-emerald-500 text-emerald-600' : 'border-muted-foreground/30 text-muted-foreground',
+                        )}
+                      >
+                        {ringText}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="bg-foreground text-background border-0">
+                      {windowOpen ? (
+                        <div className="space-y-0.5 text-[12px] leading-snug">
+                          <div>24h window expires in {countdownLabel}</div>
+                          <div className="text-emerald-400">You can send any message type while active.</div>
+                        </div>
+                      ) : (
+                        <div className="space-y-0.5 text-[12px] leading-snug">
+                          <div>24h window is closed</div>
+                          <div className="text-amber-400">Send an approved template to reopen it.</div>
+                        </div>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
 
                 <div className="ml-auto flex items-center gap-1.5">
                   {canAssign ? (
@@ -534,7 +644,22 @@ const Inbox = () => {
                       m.direction === 'outbound' ? 'bg-primary text-primary-foreground rounded-br-md' : 'bg-card border rounded-bl-md',
                     )}>
                       {m.template_name && <div className="text-[10px] opacity-70 uppercase mb-1">Template · {m.template_name}</div>}
-                      <div className="whitespace-pre-wrap break-words">{m.body}</div>
+                      {m.media_url && m.message_type === 'image' && (
+                        <img src={m.media_url} alt="Attachment" loading="lazy" className="rounded-lg mb-1 max-h-60 object-cover" />
+                      )}
+                      {m.media_url && m.message_type === 'video' && (
+                        <video src={m.media_url} controls className="rounded-lg mb-1 max-h-60 w-full" />
+                      )}
+                      {m.media_url && m.message_type === 'audio' && (
+                        <audio src={m.media_url} controls className="mb-1 w-56" />
+                      )}
+                      {m.media_url && m.message_type === 'document' && (
+                        <a href={m.media_url} target="_blank" rel="noreferrer" className="flex items-center gap-2 underline mb-1">
+                          <FileText className="w-4 h-4" /> Document
+                        </a>
+                      )}
+                      {m.message_type === 'location' && <div className="flex items-center gap-1 mb-1"><MapPin className="w-4 h-4" /> Location</div>}
+                      {m.body && <div className="whitespace-pre-wrap break-words">{m.body}</div>}
                       <div className="flex items-center gap-1 mt-1 text-[10px] opacity-70">
                         <Clock className="w-2.5 h-2.5" />
                         {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -546,6 +671,13 @@ const Inbox = () => {
                 ))}
               </div>
 
+              {!canCompose ? (
+                <div className="border-t p-4 bg-card shrink-0 flex justify-center">
+                  <Button className="px-8" onClick={() => setIntervened(p => ({ ...p, [selected.id]: true }))}>
+                    Intervene
+                  </Button>
+                </div>
+              ) : (
               <div className="border-t p-3 space-y-2 bg-card shrink-0">
                 {!windowOpen && (
                   <div className="text-[11px] text-amber-600 bg-amber-500/10 border border-amber-500/30 rounded-md px-2 py-1.5">
@@ -560,13 +692,47 @@ const Inbox = () => {
                     </SelectContent>
                   </Select>
                 )}
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="icon" className="rounded-full shrink-0" disabled={!windowOpen || uploading} title="Attach">
+                        {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent side="top" align="start" className="w-52 p-1.5">
+                      {([
+                        { kind: 'image' as const, icon: ImageIcon, label: 'Photo', accept: 'image/*' },
+                        { kind: 'video' as const, icon: Video, label: 'Video', accept: 'video/*' },
+                        { kind: 'document' as const, icon: FileText, label: 'Document', accept: '.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt' },
+                        { kind: 'audio' as const, icon: Mic, label: 'Audio file', accept: 'audio/*' },
+                      ]).map(({ kind, icon: Icon, label, accept }) => (
+                        <label key={kind} className="flex items-center gap-2 px-2 py-2 rounded-md text-sm hover:bg-muted cursor-pointer">
+                          <Icon className="w-4 h-4 text-muted-foreground" /> {label}
+                          <input type="file" className="hidden" accept={accept}
+                            onChange={e => { const f = e.target.files?.[0]; if (f) sendMedia(f, kind); e.currentTarget.value = ''; }} />
+                        </label>
+                      ))}
+                      <button type="button" onClick={() => setLocOpen(true)}
+                        className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm hover:bg-muted">
+                        <MapPin className="w-4 h-4 text-muted-foreground" /> Location
+                      </button>
+                    </PopoverContent>
+                  </Popover>
+
+                  <Button
+                    variant={recording ? 'destructive' : 'ghost'} size="icon" className="rounded-full shrink-0"
+                    disabled={!windowOpen || uploading} onClick={toggleRecording}
+                    title={recording ? 'Stop and send voice note' : 'Record voice note'}
+                  >
+                    {recording ? <Square className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                  </Button>
+
                   <Input
                     value={draft}
                     onChange={e => setDraft(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
-                    placeholder={windowOpen ? 'Type a message…' : 'Free-form disabled outside 24h window'}
-                    disabled={!windowOpen || sending}
+                    placeholder={recording ? 'Recording… tap stop to send' : windowOpen ? 'Type a message…' : 'Free-form disabled outside 24h window'}
+                    disabled={!windowOpen || sending || recording}
                     className="rounded-full"
                   />
                   <Button onClick={send} disabled={!draft.trim() || sending || !windowOpen} size="icon" className="rounded-full shrink-0">
@@ -574,6 +740,7 @@ const Inbox = () => {
                   </Button>
                 </div>
               </div>
+              )}
             </>
           )}
         </section>
@@ -596,6 +763,41 @@ const Inbox = () => {
         )}
       </div>
 
+
+      {/* Send location */}
+      <Dialog open={locOpen} onOpenChange={setLocOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send location</DialogTitle>
+            <DialogDescription>Share a pin on the map with this customer.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <FieldLabel className="text-xs">Latitude</FieldLabel>
+                <Input value={locForm.latitude} onChange={e => setLocForm(f => ({ ...f, latitude: e.target.value }))} placeholder="12.9716" />
+              </div>
+              <div>
+                <FieldLabel className="text-xs">Longitude</FieldLabel>
+                <Input value={locForm.longitude} onChange={e => setLocForm(f => ({ ...f, longitude: e.target.value }))} placeholder="77.5946" />
+              </div>
+            </div>
+            <div>
+              <FieldLabel className="text-xs">Place name (optional)</FieldLabel>
+              <Input value={locForm.name} onChange={e => setLocForm(f => ({ ...f, name: e.target.value }))} placeholder="Our store" />
+            </div>
+            <div>
+              <FieldLabel className="text-xs">Address (optional)</FieldLabel>
+              <Input value={locForm.address} onChange={e => setLocForm(f => ({ ...f, address: e.target.value }))} placeholder="MG Road, Bengaluru" />
+            </div>
+            <Button variant="outline" size="sm" onClick={useMyLocation}><MapPin className="w-4 h-4 mr-1" /> Use my current location</Button>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setLocOpen(false)}>Cancel</Button>
+            <Button onClick={sendLocation} disabled={sending}>Send location</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>
         <AlertDialogContent>
