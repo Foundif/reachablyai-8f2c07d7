@@ -764,6 +764,41 @@ const Inbox = () => {
       </div>
 
 
+      {/* Send location */}
+      <Dialog open={locOpen} onOpenChange={setLocOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send location</DialogTitle>
+            <DialogDescription>Share a pin on the map with this customer.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <FieldLabel className="text-xs">Latitude</FieldLabel>
+                <Input value={locForm.latitude} onChange={e => setLocForm(f => ({ ...f, latitude: e.target.value }))} placeholder="12.9716" />
+              </div>
+              <div>
+                <FieldLabel className="text-xs">Longitude</FieldLabel>
+                <Input value={locForm.longitude} onChange={e => setLocForm(f => ({ ...f, longitude: e.target.value }))} placeholder="77.5946" />
+              </div>
+            </div>
+            <div>
+              <FieldLabel className="text-xs">Place name (optional)</FieldLabel>
+              <Input value={locForm.name} onChange={e => setLocForm(f => ({ ...f, name: e.target.value }))} placeholder="Our store" />
+            </div>
+            <div>
+              <FieldLabel className="text-xs">Address (optional)</FieldLabel>
+              <Input value={locForm.address} onChange={e => setLocForm(f => ({ ...f, address: e.target.value }))} placeholder="MG Road, Bengaluru" />
+            </div>
+            <Button variant="outline" size="sm" onClick={useMyLocation}><MapPin className="w-4 h-4 mr-1" /> Use my current location</Button>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setLocOpen(false)}>Cancel</Button>
+            <Button onClick={sendLocation} disabled={sending}>Send location</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <AlertDialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
