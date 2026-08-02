@@ -88,12 +88,15 @@ const Inbox = () => {
       if (!id) return;
       setWsId(id);
 
-      const [{ data: cs }, { data: ms }, { data: ts }] = await Promise.all([
+      const [{ data: cs }, { data: ms }, { data: ts }, { data: ls }] = await Promise.all([
         supabase.from('wa_conversations' as any).select('*').eq('workspace_id', id).is('deleted_at', null).order('last_message_at', { ascending: false }),
         supabase.from('workspace_members' as any).select('user_id').eq('workspace_id', id),
         supabase.from('templates' as any).select('id,name,status').eq('workspace_id', id).eq('status', 'approved'),
+        supabase.from('wa_labels' as any).select('id,name,color').eq('workspace_id', id).order('created_at'),
       ]);
       setConvs((cs as any) || []);
+      setLabels((ls as any) || []);
+
       const memberIds = ((ms as any[]) || []).map(m => m.user_id).filter(Boolean);
       if (memberIds.length) {
         const { data: profs } = await supabase.from('profiles' as any)
