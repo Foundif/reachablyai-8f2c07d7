@@ -594,10 +594,11 @@ function NewChatDialog({
 
   const submitNew = () => {
     const clean = phone.replace(/[^\d]/g, '');
-    const cc = countryCode.replace(/[^\d]/g, '');
+    const cc = countryCode.split('|')[0].replace(/[^\d]/g, '');
     if (!clean) return toast.error('Enter a phone number');
     onStart(`${cc}${clean}`, name || null);
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
