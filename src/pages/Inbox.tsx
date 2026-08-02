@@ -48,6 +48,10 @@ interface Message {
 }
 interface Member { user_id: string; email: string; full_name: string | null; hasProfile: boolean; }
 interface Template { id: string; name: string; status: string; }
+interface Label { id: string; name: string; color: string; }
+
+const LABEL_COLORS = ['#25D366', '#0ea5e9', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+
 
 const displayName = (m?: Member | null) =>
   m ? (m.full_name?.trim() || (m.email?.includes('@') ? m.email.split('@')[0] : m.email) || 'Teammate') : 'Unassigned';
