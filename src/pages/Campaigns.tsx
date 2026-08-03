@@ -12,7 +12,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
-import { Slider } from '@/components/ui/slider';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -69,7 +68,6 @@ function BulkWizard({
   const [bodyText, setBodyText] = useState('');
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [delay, setDelay] = useState<[number, number]>([6, 12]);
   const [reachCheck, setReachCheck] = useState<{ ok: number; skip: number; loading: boolean }>({ ok: 0, skip: 0, loading: false });
   const [creating, setCreating] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -78,7 +76,7 @@ function BulkWizard({
   const reset = () => {
     setStep(1); setName(''); setMode('template'); setSource('leads');
     setSelectedLeadIds([]); setCsvContacts([]); setTemplateId(''); setBodyText('');
-    setMediaUrls([]); setDelay([6, 12]); setReachCheck({ ok: 0, skip: 0, loading: false });
+    setMediaUrls([]); setReachCheck({ ok: 0, skip: 0, loading: false });
   };
 
   const contacts: Contact[] = useMemo(() => {
@@ -159,7 +157,7 @@ function BulkWizard({
       template_id: mode === 'template' ? templateId : null,
       body_text: mode === 'freeform' ? bodyText : null,
       media_urls: mode === 'freeform' ? mediaUrls : [],
-      min_delay_sec: delay[0], max_delay_sec: delay[1],
+      min_delay_sec: 0, max_delay_sec: 0,
       status: 'draft', total_count: contacts.length, created_by: userId,
     }).select().single();
 
@@ -340,33 +338,17 @@ function BulkWizard({
 
         {step === 4 && (
           <div className="space-y-5">
-            <Card className="p-4 bg-amber-50 dark:bg-amber-950/20 border-amber-300">
+            <Card className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300">
               <div className="flex gap-3">
-                <ShieldCheck className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+                <ShieldCheck className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
                 <div className="text-sm">
-                  <p className="font-medium text-amber-900 dark:text-amber-200">Safe pacing recommended</p>
-                  <p className="text-xs text-amber-800 dark:text-amber-300 mt-1">
-                    A random {delay[0]}–{delay[1]}s delay between messages helps you stay under Meta's rate limits and reduces the risk of your number being flagged or banned.
+                  <p className="font-medium text-emerald-900 dark:text-emerald-200">Optimized high-speed delivery</p>
+                  <p className="text-xs text-emerald-800 dark:text-emerald-300 mt-1">
+                    Messages are queued immediately. Meta automatically manages throughput for your WhatsApp Business account.
                   </p>
                 </div>
               </div>
             </Card>
-
-            <div>
-              <Label>Delay between messages: {delay[0]}s – {delay[1]}s</Label>
-              <div className="grid grid-cols-2 gap-3 mt-2">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Min ({delay[0]}s)</p>
-                  <Slider min={2} max={30} step={1} value={[delay[0]]}
-                    onValueChange={(v) => setDelay([v[0], Math.max(v[0], delay[1])])} />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Max ({delay[1]}s)</p>
-                  <Slider min={2} max={60} step={1} value={[delay[1]]}
-                    onValueChange={(v) => setDelay([Math.min(delay[0], v[0]), v[0]])} />
-                </div>
-              </div>
-            </div>
 
             <div className="grid gap-2">
               <Button variant="outline" onClick={runReachCheck} disabled={reachCheck.loading}>
@@ -390,7 +372,7 @@ function BulkWizard({
               <div><span className="text-muted-foreground">Name:</span> {name}</div>
               <div><span className="text-muted-foreground">Mode:</span> {mode === 'template' ? 'Meta template' : 'Free-form'}</div>
               <div><span className="text-muted-foreground">Recipients:</span> {contacts.length}</div>
-              <div><span className="text-muted-foreground">Estimated time:</span> ~{Math.ceil((contacts.length * (delay[0] + delay[1]) / 2) / 60)} min</div>
+              <div><span className="text-muted-foreground">Delivery:</span> Starts immediately</div>
             </Card>
           </div>
         )}
@@ -473,7 +455,7 @@ const CampaignsList = () => {
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
               <Megaphone className="w-6 h-6" /> Campaigns
             </h1>
-            <p className="text-muted-foreground text-sm">Bulk WhatsApp campaigns with safe pacing. Send Meta templates to anyone, or free-form text + images to contacts inside the 24h window.</p>
+            <p className="text-muted-foreground text-sm">High-speed WhatsApp campaigns. Send Meta templates to anyone, or free-form text + images to contacts inside the 24h window.</p>
           </div>
           <Button className="gap-2" onClick={() => setOpen(true)}><Plus className="w-4 h-4" /> New Campaign</Button>
           {wsId && user && (
@@ -615,7 +597,7 @@ export const CampaignDetail = () => {
           <Card className="p-4">
             <div className="flex items-center justify-between text-sm mb-2">
               <span className="font-medium">
-                Progress · pacing {campaign.min_delay_sec}–{campaign.max_delay_sec}s between messages
+                Progress · optimized delivery
               </span>
               <span className="text-muted-foreground">{progress}%</span>
             </div>
@@ -648,7 +630,7 @@ export const CampaignDetail = () => {
                   <TableCell>{r.phone}</TableCell>
                   <TableCell><Badge variant="outline" className={STATUS_STYLES[r.status]}>{r.status}</Badge></TableCell>
                   <TableCell className="text-xs">{r.sent_at ? new Date(r.sent_at).toLocaleString() : '—'}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground max-w-xs truncate">{r.error || r.reason || ''}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground max-w-xs whitespace-normal break-words">{r.error || r.reason || ''}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

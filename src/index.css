@@ -211,6 +211,7 @@
     position: relative;
     background-color: hsl(var(--muted));
     isolation: isolate;
+    overflow: hidden;
   }
   .wa-doodle-bg::before {
     content: '';
@@ -220,7 +221,8 @@
     pointer-events: none;
     background-image: url("/__l5e/assets-v1/8aecd476-60d8-486a-bc96-eeaf4ccd9182/wa-doodle.png");
     background-repeat: repeat;
-    background-size: 420px auto;
+    background-size: min(420px, 100vw) auto;
+    background-position: center top;
     /* source artwork is dark — invert it for the light theme */
     filter: invert(1);
     opacity: 0.32;
@@ -232,6 +234,13 @@
   .wa-doodle-bg > * {
     position: relative;
     z-index: 1;
+  }
+
+  @media (max-width: 640px) {
+    .wa-doodle-bg::before {
+      background-size: 280px auto;
+      background-position: center top;
+    }
   }
 
   .glass-panel {

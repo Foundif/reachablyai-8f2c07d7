@@ -323,8 +323,27 @@ Deno.serve(async (req) => {
 
         // Status callbacks
         for (const s of v.statuses || []) {
+          const statusError = s.errors?.map((item: any) => item?.error_data?.details || item?.message || item?.title).filter(Boolean).join(' · ') || null;
           await admin.from('wa_messages').update({ status: s.status }).eq('wa_message_id', s.id);
-          await admin.from('campaign_recipients').update({ status: s.status }).eq('meta_message_id', s.id);
+          const { data: changed } = await admin.from('campaign_recipients')
+            .update({ status: s.status, error: statusError })
+            .eq('meta_message_id', s.id)
+            .select('campaign_id')
+            .maybeSingle();
+          if (changed?.campaign_id) {
+            const { data: rows } = await admin.from('campaign_recipients').select('status').eq('campaign_id', changed.campaign_id);
+            const counts = (rows || []).reduce((acc: Record<string, number>, row: any) => {
+              acc[row.status] = (acc[row.status] || 0) + 1;
+              return acc;
+            }, {});
+            await admin.from('campaigns').update({
+              sent_count: (counts.sent || 0) + (counts.delivered || 0) + (counts.read || 0),
+              delivered_count: (counts.delivered || 0) + (counts.read || 0),
+              read_count: counts.read || 0,
+              failed_count: counts.failed || 0,
+              status: (rows?.length && (counts.failed || 0) === rows.length) ? 'failed' : 'sent',
+            }).eq('id', changed.campaign_id);
+          }
           await admin.from('wa_webhook_events').insert({
             workspace_id, phone_number_id: phoneId, event_type: 'status',
             status: 'ok', summary: `Status ${s.status} for ${s.id}`, payload: s,
