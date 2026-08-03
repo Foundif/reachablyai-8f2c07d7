@@ -698,13 +698,38 @@ const Inbox = () => {
               )}
 
               <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-1.5 wa-doodle-bg">
-                {messages.map(m => (
-                  <div key={m.id} className={cn('flex', m.direction === 'outbound' ? 'justify-end' : 'justify-start')}>
+                {messages.map((m, i) => {
+                  const prev = messages[i - 1];
+                  const showDay = !prev || new Date(prev.created_at).toDateString() !== new Date(m.created_at).toDateString();
+                  const tpl = m.template_name ? templates.find(t => t.name === m.template_name) : null;
+                  const contactLabel = selected?.contact_name?.trim() || 'there';
+                  const bodyText = tpl
+                    ? renderTemplateText(tpl.body, contactLabel)
+                    : (m.body && m.body !== m.template_name ? m.body : null);
+                  return (
+                  <div key={m.id}>
+                    {showDay && (
+                      <div className="flex justify-center my-3">
+                        <span className="rounded-lg bg-background/90 border px-3 py-1 text-[11px] uppercase tracking-wide text-muted-foreground shadow-sm">
+                          {dayLabel(m.created_at)}
+                        </span>
+                      </div>
+                    )}
+                    <div className={cn('flex', m.direction === 'outbound' ? 'justify-end' : 'justify-start')}>
                     <div className={cn(
                       'max-w-[75%] rounded-2xl px-3 py-2 text-sm shadow-sm',
                       m.direction === 'outbound' ? 'bg-primary text-primary-foreground rounded-br-md' : 'bg-card border rounded-bl-md',
                     )}>
                       {m.template_name && <div className="text-[10px] opacity-70 uppercase mb-1">Template · {m.template_name}</div>}
+                      {tpl?.header_media_url && tpl.header_type === 'image' && (
+                        <img src={tpl.header_media_url} alt="" loading="lazy" className="rounded-lg mb-1 max-h-52 w-full object-cover" />
+                      )}
+                      {tpl?.header_media_url && tpl.header_type === 'video' && (
+                        <video src={tpl.header_media_url} controls className="rounded-lg mb-1 max-h-52 w-full" />
+                      )}
+                      {tpl?.header_type === 'text' && tpl.header && (
+                        <div className="font-semibold mb-0.5">{renderTemplateText(tpl.header, contactLabel)}</div>
+                      )}
                       {m.media_url && m.message_type === 'image' && (
                         <img src={m.media_url} alt="Attachment" loading="lazy" className="rounded-lg mb-1 max-h-60 object-cover" />
                       )}
@@ -715,7 +740,7 @@ const Inbox = () => {
                         <video src={m.media_url} controls className="rounded-lg mb-1 max-h-60 w-full" />
                       )}
                       {m.media_url && m.message_type === 'audio' && (
-                        <audio src={m.media_url} controls className="mb-1 w-56" />
+                        <VoiceNote src={m.media_url} outbound={m.direction === 'outbound'} />
                       )}
                       {m.media_url && m.message_type === 'document' && (
                         <a href={m.media_url} target="_blank" rel="noreferrer" className="flex items-center gap-2 underline mb-1">
@@ -723,7 +748,10 @@ const Inbox = () => {
                         </a>
                       )}
                       {m.message_type === 'location' && <div className="flex items-center gap-1 mb-1"><MapPin className="w-4 h-4" /> Location</div>}
-                      {m.body && <div className="whitespace-pre-wrap break-words">{m.body}</div>}
+                      {m.message_type !== 'document' && bodyText && (
+                        <div className="whitespace-pre-wrap break-words">{bodyText}</div>
+                      )}
+                      {tpl?.footer && <div className="text-[11px] opacity-70 mt-1">{tpl.footer}</div>}
                       <div className="flex items-center gap-1 mt-1 text-[10px] opacity-70">
                         <Clock className="w-2.5 h-2.5" />
                         {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -731,8 +759,10 @@ const Inbox = () => {
                       </div>
                       {m.error && <div className="text-[10px] text-red-500 mt-1">{m.error}</div>}
                     </div>
+                    </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
 
               {!canCompose ? (
