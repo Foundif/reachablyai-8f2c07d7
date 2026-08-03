@@ -8,6 +8,36 @@ const json = (b: any, s = 200) =>
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** Mirrors a campaign send into the team inbox so it shows up in the conversation. */
+async function logToInbox(admin: any, creds: any, workspaceId: string, phone: string, name: string | null, preview: string, templateName: string | null) {
+  try {
+    let convId: string | null = null;
+    const { data: existing } = await admin.from('wa_conversations')
+      .select('id').eq('workspace_id', workspaceId).eq('contact_phone', phone).maybeSingle();
+    if (existing) {
+      convId = existing.id;
+    } else {
+      const { data: created } = await admin.from('wa_conversations')
+        .insert({ workspace_id: workspaceId, contact_phone: phone, contact_name: name || null }).select('id').maybeSingle();
+      convId = created?.id ?? null;
+    }
+    if (!convId) return;
+    await admin.from('wa_messages').insert({
+      workspace_id: workspaceId, conversation_id: convId, direction: 'outbound',
+      from_phone: creds.business_phone, to_phone: phone, body: preview,
+      message_type: templateName ? 'template' : 'text', template_name: templateName, status: 'sent',
+    });
+    await admin.from('wa_conversations').update({
+      last_message_at: new Date().toISOString(),
+      last_message_text: String(preview || '').slice(0, 200),
+      last_message_direction: 'outbound',
+      deleted_at: null,
+    }).eq('id', convId);
+  } catch (e) {
+    console.error('[campaign-dispatch] inbox log failed', e);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -84,7 +114,10 @@ Deno.serve(async (req) => {
           console.log('[campaign-dispatch] final template payload', JSON.stringify(payload));
           const resp = await metaSend(creds, payload);
           const ok = await handleResp(admin, r, resp, `[template:${template.name}]`);
-          if (ok) sent++; else failed++;
+          if (ok) {
+            sent++;
+            await logToInbox(admin, creds, campaign.workspace_id, r.phone, r.name, template.name, template.name);
+          } else failed++;
         } else {
           // Free-form: optional images (sequence), then text.
           let anyFail: string | null = null;
@@ -109,6 +142,7 @@ Deno.serve(async (req) => {
           } else {
             await admin.from('campaign_recipients').update({ status: 'sent', sent_at: new Date().toISOString(), error: null, reachable: true }).eq('id', r.id);
             sent++;
+            await logToInbox(admin, creds, campaign.workspace_id, r.phone, r.name, personalize(bodyText, r) || '\u{1F4F7} Media', null);
           }
         }
       } catch (e) {

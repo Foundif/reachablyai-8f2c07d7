@@ -22,6 +22,8 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { resolveWorkspaceId } from '@/lib/workspace';
 import { COUNTRY_CODES } from '@/lib/countryCodes';
+import VoiceNote from '@/components/inbox/VoiceNote';
+import TemplatePickerSheet, { renderTemplateText, type TemplateOption } from '@/components/inbox/TemplatePickerSheet';
 
 
 const EMOJIS = '\u{1F600}\u{1F603}\u{1F604}\u{1F601}\u{1F606}\u{1F605}\u{1F602}\u{1F923}\u{1F60A}\u{1F607}\u{1F642}\u{1F609}\u{1F60D}\u{1F618}\u{1F617}\u{1F60B}\u{1F61B}\u{1F60E}\u{1F929}\u{1F914}\u{1F910}\u{1F644}\u{1F60F}\u{1F612}\u{1F614}\u{1F62A}\u{1F634}\u{1F615}\u{1F61F}\u{1F622}\u{1F62D}\u{1F621}\u{1F620}\u{1F44D}\u{1F44E}\u{1F44F}\u{1F64F}\u{1F91D}\u{1F4AA}\u{1F44C}\u{270C}\u{1F91E}\u{1F525}\u{2764}\u{1F49B}\u{1F49A}\u{1F499}\u{1F49C}\u{2728}\u{1F389}\u{1F38A}\u{1F381}\u{1F4B0}\u{1F4B8}\u{1F4B3}\u{1F6CD}\u{1F4E6}\u{1F69A}\u{2705}\u{274C}\u{26A0}\u{1F4CC}\u{1F4C5}\u{23F0}\u{1F4DE}\u{1F4F1}\u{1F4E7}\u{1F4AC}\u{1F440}\u{1F680}\u{2B50}\u{1F31F}'.split(/(?=[\s\S])/u).filter(c => c.trim().length > 0);
@@ -53,8 +55,17 @@ interface Message {
   error: string | null;
 }
 interface Member { user_id: string; email: string; full_name: string | null; hasProfile: boolean; }
-interface Template { id: string; name: string; status: string; }
+type Template = TemplateOption;
 interface Label { id: string; name: string; color: string; }
+
+const dayLabel = (iso: string) => {
+  const d = new Date(iso);
+  const today = new Date();
+  const yest = new Date(); yest.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return 'Today';
+  if (d.toDateString() === yest.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
+};
 
 const LABEL_COLORS = ['#25D366', '#0ea5e9', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
@@ -79,6 +90,7 @@ const Inbox = () => {
   const [labels, setLabels] = useState<Label[]>([]);
   const [labelFilter, setLabelFilter] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
 
   const [showMobileChat, setShowMobileChat] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Conversation | null>(null);
@@ -114,7 +126,7 @@ const Inbox = () => {
       const [{ data: cs }, { data: ms }, { data: ts }, { data: ls }] = await Promise.all([
         supabase.from('wa_conversations' as any).select('*').eq('workspace_id', id).is('deleted_at', null).order('last_message_at', { ascending: false }),
         supabase.from('workspace_members' as any).select('user_id').eq('workspace_id', id),
-        supabase.from('templates' as any).select('id,name,status').eq('workspace_id', id).eq('status', 'approved'),
+        supabase.from('templates' as any).select('id,name,status,language,category,body,header,header_type,header_media_url,footer').eq('workspace_id', id).eq('status', 'approved'),
         supabase.from('wa_labels' as any).select('id,name,color').eq('workspace_id', id).order('created_at'),
       ]);
       setConvs((cs as any) || []);
@@ -321,6 +333,7 @@ const Inbox = () => {
     });
     setSending(false);
     if (error) return toast.error(error.message);
+    setTemplatePickerOpen(false);
     toast.success('Template sent');
   };
 
@@ -694,13 +707,38 @@ const Inbox = () => {
               )}
 
               <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-1.5 wa-doodle-bg">
-                {messages.map(m => (
-                  <div key={m.id} className={cn('flex', m.direction === 'outbound' ? 'justify-end' : 'justify-start')}>
+                {messages.map((m, i) => {
+                  const prev = messages[i - 1];
+                  const showDay = !prev || new Date(prev.created_at).toDateString() !== new Date(m.created_at).toDateString();
+                  const tpl = m.template_name ? templates.find(t => t.name === m.template_name) : null;
+                  const contactLabel = selected?.contact_name?.trim() || 'there';
+                  const bodyText = tpl
+                    ? renderTemplateText(tpl.body, contactLabel)
+                    : (m.body && m.body !== m.template_name ? m.body : null);
+                  return (
+                  <div key={m.id}>
+                    {showDay && (
+                      <div className="flex justify-center my-3">
+                        <span className="rounded-lg bg-background/90 border px-3 py-1 text-[11px] uppercase tracking-wide text-muted-foreground shadow-sm">
+                          {dayLabel(m.created_at)}
+                        </span>
+                      </div>
+                    )}
+                    <div className={cn('flex', m.direction === 'outbound' ? 'justify-end' : 'justify-start')}>
                     <div className={cn(
                       'max-w-[75%] rounded-2xl px-3 py-2 text-sm shadow-sm',
                       m.direction === 'outbound' ? 'bg-primary text-primary-foreground rounded-br-md' : 'bg-card border rounded-bl-md',
                     )}>
                       {m.template_name && <div className="text-[10px] opacity-70 uppercase mb-1">Template · {m.template_name}</div>}
+                      {tpl?.header_media_url && tpl.header_type === 'image' && (
+                        <img src={tpl.header_media_url} alt="" loading="lazy" className="rounded-lg mb-1 max-h-52 w-full object-cover" />
+                      )}
+                      {tpl?.header_media_url && tpl.header_type === 'video' && (
+                        <video src={tpl.header_media_url} controls className="rounded-lg mb-1 max-h-52 w-full" />
+                      )}
+                      {tpl?.header_type === 'text' && tpl.header && (
+                        <div className="font-semibold mb-0.5">{renderTemplateText(tpl.header, contactLabel)}</div>
+                      )}
                       {m.media_url && m.message_type === 'image' && (
                         <img src={m.media_url} alt="Attachment" loading="lazy" className="rounded-lg mb-1 max-h-60 object-cover" />
                       )}
@@ -711,7 +749,7 @@ const Inbox = () => {
                         <video src={m.media_url} controls className="rounded-lg mb-1 max-h-60 w-full" />
                       )}
                       {m.media_url && m.message_type === 'audio' && (
-                        <audio src={m.media_url} controls className="mb-1 w-56" />
+                        <VoiceNote src={m.media_url} outbound={m.direction === 'outbound'} />
                       )}
                       {m.media_url && m.message_type === 'document' && (
                         <a href={m.media_url} target="_blank" rel="noreferrer" className="flex items-center gap-2 underline mb-1">
@@ -719,7 +757,10 @@ const Inbox = () => {
                         </a>
                       )}
                       {m.message_type === 'location' && <div className="flex items-center gap-1 mb-1"><MapPin className="w-4 h-4" /> Location</div>}
-                      {m.body && <div className="whitespace-pre-wrap break-words">{m.body}</div>}
+                      {m.message_type !== 'document' && bodyText && (
+                        <div className="whitespace-pre-wrap break-words">{bodyText}</div>
+                      )}
+                      {tpl?.footer && <div className="text-[11px] opacity-70 mt-1">{tpl.footer}</div>}
                       <div className="flex items-center gap-1 mt-1 text-[10px] opacity-70">
                         <Clock className="w-2.5 h-2.5" />
                         {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -727,8 +768,10 @@ const Inbox = () => {
                       </div>
                       {m.error && <div className="text-[10px] text-red-500 mt-1">{m.error}</div>}
                     </div>
+                    </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
 
               {!canCompose ? (
@@ -757,15 +800,14 @@ const Inbox = () => {
                   </div>
                 )}
 
-                {templates.length > 0 && (
-                  <Select onValueChange={(v) => sendTemplate(v)}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Send approved template…" /></SelectTrigger>
-                    <SelectContent>
-                      {templates.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                )}
                 <div className="flex gap-2 items-center">
+                  <Button
+                    variant="ghost" size="icon" className="rounded-full shrink-0"
+                    onClick={() => setTemplatePickerOpen(true)} title="Send approved template"
+                  >
+                    <MessageSquareText className="w-4 h-4" />
+                  </Button>
+
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="ghost" size="icon" className="rounded-full shrink-0" disabled={!windowOpen || uploading} title="Attach">
@@ -909,6 +951,15 @@ const Inbox = () => {
         onOpenChange={setNewChatOpen}
         workspaceId={wsId}
         onStart={startChat}
+      />
+
+      <TemplatePickerSheet
+        open={templatePickerOpen}
+        onClose={() => setTemplatePickerOpen(false)}
+        templates={templates}
+        contactName={selected?.contact_name?.trim() || 'there'}
+        onSend={sendTemplate}
+        sending={sending}
       />
     </AppLayout>
   );
