@@ -8,7 +8,6 @@ const json = (b: any, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-const jitter = (min: number, max: number) => Math.floor((min + Math.random() * Math.max(0, max - min)) * 1000);
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
