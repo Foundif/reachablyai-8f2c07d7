@@ -58,6 +58,15 @@ interface Member { user_id: string; email: string; full_name: string | null; has
 type Template = TemplateOption;
 interface Label { id: string; name: string; color: string; }
 
+const dayLabel = (iso: string) => {
+  const d = new Date(iso);
+  const today = new Date();
+  const yest = new Date(); yest.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return 'Today';
+  if (d.toDateString() === yest.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
 const LABEL_COLORS = ['#25D366', '#0ea5e9', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 
@@ -791,15 +800,14 @@ const Inbox = () => {
                   </div>
                 )}
 
-                {templates.length > 0 && (
-                  <Select onValueChange={(v) => sendTemplate(v)}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Send approved template…" /></SelectTrigger>
-                    <SelectContent>
-                      {templates.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                )}
                 <div className="flex gap-2 items-center">
+                  <Button
+                    variant="ghost" size="icon" className="rounded-full shrink-0"
+                    onClick={() => setTemplatePickerOpen(true)} title="Send approved template"
+                  >
+                    <MessageSquareText className="w-4 h-4" />
+                  </Button>
+
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="ghost" size="icon" className="rounded-full shrink-0" disabled={!windowOpen || uploading} title="Attach">
