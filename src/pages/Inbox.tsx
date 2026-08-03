@@ -952,6 +952,15 @@ const Inbox = () => {
         workspaceId={wsId}
         onStart={startChat}
       />
+
+      <TemplatePickerSheet
+        open={templatePickerOpen}
+        onClose={() => setTemplatePickerOpen(false)}
+        templates={templates}
+        contactName={selected?.contact_name?.trim() || 'there'}
+        onSend={sendTemplate}
+        sending={sending}
+      />
     </AppLayout>
   );
 };
