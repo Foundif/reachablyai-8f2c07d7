@@ -55,7 +55,7 @@ interface Message {
   error: string | null;
 }
 interface Member { user_id: string; email: string; full_name: string | null; hasProfile: boolean; }
-interface Template { id: string; name: string; status: string; }
+type Template = TemplateOption;
 interface Label { id: string; name: string; color: string; }
 
 const LABEL_COLORS = ['#25D366', '#0ea5e9', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
@@ -81,6 +81,7 @@ const Inbox = () => {
   const [labels, setLabels] = useState<Label[]>([]);
   const [labelFilter, setLabelFilter] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
 
   const [showMobileChat, setShowMobileChat] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Conversation | null>(null);
@@ -116,7 +117,7 @@ const Inbox = () => {
       const [{ data: cs }, { data: ms }, { data: ts }, { data: ls }] = await Promise.all([
         supabase.from('wa_conversations' as any).select('*').eq('workspace_id', id).is('deleted_at', null).order('last_message_at', { ascending: false }),
         supabase.from('workspace_members' as any).select('user_id').eq('workspace_id', id),
-        supabase.from('templates' as any).select('id,name,status').eq('workspace_id', id).eq('status', 'approved'),
+        supabase.from('templates' as any).select('id,name,status,language,category,body,header,header_type,header_media_url,footer').eq('workspace_id', id).eq('status', 'approved'),
         supabase.from('wa_labels' as any).select('id,name,color').eq('workspace_id', id).order('created_at'),
       ]);
       setConvs((cs as any) || []);
