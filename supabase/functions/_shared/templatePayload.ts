@@ -5,6 +5,7 @@ type TemplateRecord = {
   header?: string | null;
   header_type?: string | null;
   header_media_url?: string | null;
+  header_media_id?: string | null;
   parameter_format?: string | null;
   variables?: unknown;
 };
@@ -60,12 +61,12 @@ export function buildTemplatePayload(template: TemplateRecord, recipient: Recipi
   switch (headerType) {
     case 'image':
     case 'video':
-      if (!headerUrl) throw new Error(`Approved ${headerType} template is missing its header media URL. Sync the template from Meta and retry.`);
-      components.push({ type: 'header', parameters: [{ type: headerType, [headerType]: { link: headerUrl } }] });
+      if (!template.header_media_id && !headerUrl) throw new Error(`Approved ${headerType} template is missing its header media. Upload the header again and retry.`);
+      components.push({ type: 'header', parameters: [{ type: headerType, [headerType]: template.header_media_id ? { id: template.header_media_id } : { link: headerUrl } }] });
       break;
     case 'document':
-      if (!headerUrl) throw new Error('Approved document template is missing its header media URL. Sync the template from Meta and retry.');
-      components.push({ type: 'header', parameters: [{ type: 'document', document: { link: headerUrl, filename: 'Document' } }] });
+      if (!template.header_media_id && !headerUrl) throw new Error('Approved document template is missing its header media. Upload the header again and retry.');
+      components.push({ type: 'header', parameters: [{ type: 'document', document: template.header_media_id ? { id: template.header_media_id, filename: 'Document' } : { link: headerUrl, filename: 'Document' } }] });
       break;
     case 'text': {
       // Static text headers are already part of the approved template. Only a

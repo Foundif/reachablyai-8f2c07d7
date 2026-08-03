@@ -42,10 +42,14 @@ Deno.serve(async (req) => {
 
     await admin.from('campaigns').update({ status: 'sending', started_at: new Date().toISOString() }).eq('id', campaign_id);
 
-    const minD = Number(campaign.min_delay_sec ?? 6);
-    const maxD = Number(campaign.max_delay_sec ?? 12);
     const mediaUrls: string[] = Array.isArray(campaign.media_urls) ? campaign.media_urls : [];
     const bodyText: string = campaign.body_text || '';
+
+    // Meta's synced preview CDN URLs frequently reject server-side downloads
+    // with 403. Upload the header once and reuse its durable media id.
+    if (mode === 'template' && ['image', 'video', 'document'].includes(String(template.header_type || '').toLowerCase())) {
+      template = { ...template, header_media_id: await uploadToMeta(creds, template.header_media_url, template.header_type) };
+    }
 
     let sent = 0, failed = 0, skipped = 0;
 
@@ -121,8 +125,8 @@ Deno.serve(async (req) => {
         progress: { done: i + 1, total: recipients.length },
       }).eq('id', campaign_id);
 
-      // Randomised delay between recipients — critical for staying under Meta rate limits.
-      if (i < recipients.length - 1) await sleep(jitter(minD, maxD));
+      // Approved templates and active service-window messages are dispatched
+      // immediately; Meta applies the account's own throughput limits.
     }
 
     const finalStatus = failed === recipients.length ? 'failed' : 'sent';
@@ -149,6 +153,24 @@ async function metaSend(creds: any, payload: any): Promise<{ ok: boolean; id?: s
   const body = await resp.json();
   if (!resp.ok) return { ok: false, error: body?.error?.message || `HTTP ${resp.status}` };
   return { ok: true, id: body?.messages?.[0]?.id };
+}
+
+async function uploadToMeta(creds: any, url: string, kind: string): Promise<string> {
+  if (!url) throw new Error(`Template ${kind} header has no reusable media. Re-upload the header in Templates and retry.`);
+  const fileRes = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+  if (!fileRes.ok) throw new Error(`Template header media is no longer accessible (${fileRes.status}). Re-upload it in Templates and retry.`);
+  const blob = await fileRes.blob();
+  const mime = blob.type || (kind === 'image' ? 'image/jpeg' : kind === 'video' ? 'video/mp4' : 'application/pdf');
+  const form = new FormData();
+  form.append('messaging_product', 'whatsapp');
+  form.append('type', mime);
+  form.append('file', new File([blob], `template-header.${kind === 'document' ? 'pdf' : kind === 'video' ? 'mp4' : 'jpg'}`, { type: mime }));
+  const response = await fetch(`https://graph.facebook.com/v20.0/${creds.phone_number_id}/media`, {
+    method: 'POST', headers: { Authorization: `Bearer ${creds.access_token}` }, body: form,
+  });
+  const result = await response.json();
+  if (!response.ok || !result?.id) throw new Error(result?.error?.message || 'Meta rejected the template header upload');
+  return result.id;
 }
 
 async function handleResp(admin: any, r: any, resp: { ok: boolean; id?: string; error?: string }, label: string) {
