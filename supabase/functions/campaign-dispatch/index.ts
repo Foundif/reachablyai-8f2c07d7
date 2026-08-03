@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
     // Meta's synced preview CDN URLs frequently reject server-side downloads
     // with 403. Upload the header once and reuse its durable media id.
     if (mode === 'template' && ['image', 'video', 'document'].includes(String(template.header_type || '').toLowerCase())) {
-      template = { ...template, header_media_id: await uploadToMeta(creds, template.header_media_url, template.header_type) };
+      template = { ...template, header_media_id: await uploadToMeta(admin, creds, campaign.workspace_id, template.header_media_url, template.header_type) };
     }
 
     let sent = 0, failed = 0, skipped = 0;
@@ -154,11 +154,24 @@ async function metaSend(creds: any, payload: any): Promise<{ ok: boolean; id?: s
   return { ok: true, id: body?.messages?.[0]?.id };
 }
 
-async function uploadToMeta(creds: any, url: string, kind: string): Promise<string> {
+async function uploadToMeta(admin: any, creds: any, workspaceId: string, url: string, kind: string): Promise<string> {
   if (!url) throw new Error(`Template ${kind} header has no reusable media. Re-upload the header in Templates and retry.`);
   const fileRes = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-  if (!fileRes.ok) throw new Error(`Template header media is no longer accessible (${fileRes.status}). Re-upload it in Templates and retry.`);
-  const blob = await fileRes.blob();
+  let blob: Blob | null = fileRes.ok ? await fileRes.blob() : null;
+  // Synced Meta example URLs expire or reject server downloads. Templates
+  // created in Reachably retain their original upload, so use that instead.
+  if (!blob) {
+    const { data: files } = await admin.storage.from('salon-assets').list(`template-media/${workspaceId}`, {
+      limit: 100, sortBy: { column: 'created_at', order: 'desc' },
+    });
+    const expected = kind === 'image' ? 'image/' : kind === 'video' ? 'video/' : 'application/';
+    const source = (files || []).find((file: any) => String(file.metadata?.mimetype || '').startsWith(expected));
+    if (source?.name) {
+      const { data } = await admin.storage.from('salon-assets').download(`template-media/${workspaceId}/${source.name}`);
+      blob = data || null;
+    }
+  }
+  if (!blob) throw new Error(`Template header media is no longer accessible (${fileRes.status}). Re-upload it in Templates and retry.`);
   const mime = blob.type || (kind === 'image' ? 'image/jpeg' : kind === 'video' ? 'video/mp4' : 'application/pdf');
   const form = new FormData();
   form.append('messaging_product', 'whatsapp');

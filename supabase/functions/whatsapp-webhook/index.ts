@@ -341,6 +341,7 @@ Deno.serve(async (req) => {
               delivered_count: (counts.delivered || 0) + (counts.read || 0),
               read_count: counts.read || 0,
               failed_count: counts.failed || 0,
+              status: (rows?.length && (counts.failed || 0) === rows.length) ? 'failed' : 'sent',
             }).eq('id', changed.campaign_id);
           }
           await admin.from('wa_webhook_events').insert({
