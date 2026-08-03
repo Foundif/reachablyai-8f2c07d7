@@ -22,6 +22,8 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { resolveWorkspaceId } from '@/lib/workspace';
 import { COUNTRY_CODES } from '@/lib/countryCodes';
+import VoiceNote from '@/components/inbox/VoiceNote';
+import TemplatePickerSheet, { renderTemplateText, type TemplateOption } from '@/components/inbox/TemplatePickerSheet';
 
 
 const EMOJIS = '\u{1F600}\u{1F603}\u{1F604}\u{1F601}\u{1F606}\u{1F605}\u{1F602}\u{1F923}\u{1F60A}\u{1F607}\u{1F642}\u{1F609}\u{1F60D}\u{1F618}\u{1F617}\u{1F60B}\u{1F61B}\u{1F60E}\u{1F929}\u{1F914}\u{1F910}\u{1F644}\u{1F60F}\u{1F612}\u{1F614}\u{1F62A}\u{1F634}\u{1F615}\u{1F61F}\u{1F622}\u{1F62D}\u{1F621}\u{1F620}\u{1F44D}\u{1F44E}\u{1F44F}\u{1F64F}\u{1F91D}\u{1F4AA}\u{1F44C}\u{270C}\u{1F91E}\u{1F525}\u{2764}\u{1F49B}\u{1F49A}\u{1F499}\u{1F49C}\u{2728}\u{1F389}\u{1F38A}\u{1F381}\u{1F4B0}\u{1F4B8}\u{1F4B3}\u{1F6CD}\u{1F4E6}\u{1F69A}\u{2705}\u{274C}\u{26A0}\u{1F4CC}\u{1F4C5}\u{23F0}\u{1F4DE}\u{1F4F1}\u{1F4E7}\u{1F4AC}\u{1F440}\u{1F680}\u{2B50}\u{1F31F}'.split(/(?=[\s\S])/u).filter(c => c.trim().length > 0);
