@@ -455,7 +455,7 @@ const CampaignsList = () => {
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
               <Megaphone className="w-6 h-6" /> Campaigns
             </h1>
-            <p className="text-muted-foreground text-sm">Bulk WhatsApp campaigns with safe pacing. Send Meta templates to anyone, or free-form text + images to contacts inside the 24h window.</p>
+            <p className="text-muted-foreground text-sm">High-speed WhatsApp campaigns. Send Meta templates to anyone, or free-form text + images to contacts inside the 24h window.</p>
           </div>
           <Button className="gap-2" onClick={() => setOpen(true)}><Plus className="w-4 h-4" /> New Campaign</Button>
           {wsId && user && (

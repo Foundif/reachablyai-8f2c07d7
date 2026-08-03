@@ -1,5 +1,4 @@
-// Bulk-send dispatcher: template + free-form (text/images), 24h window aware,
-// random pacing to reduce WhatsApp ban risk.
+// Bulk-send dispatcher: template + free-form (text/images), 24h window aware.
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { buildTemplatePayload } from '../_shared/templatePayload.ts';
