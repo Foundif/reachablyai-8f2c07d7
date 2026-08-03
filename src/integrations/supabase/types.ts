@@ -1073,6 +1073,7 @@ export type Database = {
           language: string
           meta_template_id: string | null
           name: string
+          parameter_format: string
           rejection_reason: string | null
           status: string
           synced_at: string | null
@@ -1096,6 +1097,7 @@ export type Database = {
           language?: string
           meta_template_id?: string | null
           name: string
+          parameter_format?: string
           rejection_reason?: string | null
           status?: string
           synced_at?: string | null
@@ -1119,6 +1121,7 @@ export type Database = {
           language?: string
           meta_template_id?: string | null
           name?: string
+          parameter_format?: string
           rejection_reason?: string | null
           status?: string
           synced_at?: string | null
