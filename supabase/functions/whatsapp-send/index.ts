@@ -1,6 +1,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { chargeCredits, refundCredits } from '../_shared/credits.ts';
+import { buildTemplatePayload } from '../_shared/templatePayload.ts';
 
 const json = (b: any, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
@@ -105,37 +106,11 @@ Deno.serve(async (req) => {
       msgType = 'template';
       tplName = tpl.name;
 
-      const varNames: string[] = Array.isArray(tpl.variables) ? tpl.variables : [];
       const supplied: Record<string, string> = (variables && typeof variables === 'object') ? variables : {};
-      const firstName = contactName.split(' ')[0] || contactName;
-
-      const resolve = (varName: string, idx: number): string => {
-        const direct = supplied[varName] ?? supplied[String(idx + 1)];
-        if (direct !== undefined && String(direct).trim()) return String(direct).trim();
-        const key = varName.toLowerCase();
-        if (key === 'name' || key === 'customer_name' || key === 'contact_name' || key === '1') return contactName;
-        if (key === 'first_name' || key === 'firstname') return firstName;
-        if (key === 'phone' || key === 'number') return to;
-        return contactName; // never send an empty or unresolved value
-      };
-
-      // Body parameter count must match the approved template exactly.
-      const bodyParams = varNames.map((v, i) => ({ type: 'text', text: resolve(v, i) }));
-      const components: any[] = [];
-
-      // Media header component (image / video / document)
-      if (['image', 'video', 'document'].includes(tpl.header_type || '') && tpl.header_media_url) {
-        const fmt = tpl.header_type as 'image' | 'video' | 'document';
-        components.push({
-          type: 'header',
-          parameters: [{ type: fmt, [fmt]: { link: tpl.header_media_url } }],
-        });
-      }
-      if (bodyParams.length) components.push({ type: 'body', parameters: bodyParams });
 
       waPayload = {
         messaging_product: 'whatsapp', to, type: 'template',
-        template: { name: tpl.name, language: { code: tpl.language || 'en' }, ...(components.length ? { components } : {}) },
+        template: buildTemplatePayload(tpl, { name: contactName, phone: to, variables: supplied }),
       };
       console.log('[whatsapp-send] template payload', JSON.stringify(waPayload));
     }

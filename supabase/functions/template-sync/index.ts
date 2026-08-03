@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     const { data: creds } = await admin.from('whatsapp_credentials').select('*').eq('workspace_id', workspace_id).maybeSingle();
     if (!creds?.access_token || !creds?.waba_id) return json({ error: 'WhatsApp API credentials missing' }, 400);
 
-    let url: string | null = `https://graph.facebook.com/v20.0/${creds.waba_id}/message_templates?limit=200&fields=name,status,category,language,components,id,quality_score,rejected_reason`;
+    let url: string | null = `https://graph.facebook.com/v20.0/${creds.waba_id}/message_templates?limit=200&fields=name,status,category,language,parameter_format,components,id,quality_score,rejected_reason`;
     let synced = 0;
     let listError: string | null = null;
     while (url) {
@@ -57,8 +57,7 @@ Deno.serve(async (req) => {
         const carouselComp = comps.find((c: any) => c.type === 'CAROUSEL');
 
         const rawBody = bodyComp?.text || '';
-        const varCount = (rawBody.match(/\{\{\d+\}\}/g) || []).length;
-        const variables = Array.from({ length: varCount }, (_, i) => `var${i + 1}`);
+        const variables = Array.from(rawBody.matchAll(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g), (m: any) => m[1]);
 
         let header_type = 'none';
         let header_media_url: string | null = null;
@@ -84,6 +83,7 @@ Deno.serve(async (req) => {
           buttons: btns?.buttons || null,
           carousel_cards: carouselComp?.cards || null,
           variables,
+          parameter_format: (t.parameter_format || (variables.some((v: string) => !/^\d+$/.test(v)) ? 'NAMED' : 'POSITIONAL')).toUpperCase(),
           status: mapStatus(t.status),
           meta_template_id: t.id,
           rejection_reason: t.rejected_reason || null,
@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
         .not('meta_template_id', 'is', null);
 
       for (const local of localTemplates || []) {
-        const resp = await fetch(`https://graph.facebook.com/v20.0/${local.meta_template_id}?fields=name,status,category,language,components,id,quality_score,rejected_reason`, {
+        const resp = await fetch(`https://graph.facebook.com/v20.0/${local.meta_template_id}?fields=name,status,category,language,parameter_format,components,id,quality_score,rejected_reason`, {
           headers: { Authorization: `Bearer ${creds.access_token}` },
         });
         const t: any = await resp.json();
@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
         const btns = comps.find((c: any) => c.type === 'BUTTONS');
         const carouselComp = comps.find((c: any) => c.type === 'CAROUSEL');
         const rawBody = bodyComp?.text || '';
-        const varCount = (rawBody.match(/\{\{\d+\}\}/g) || []).length;
+        const variables = Array.from(rawBody.matchAll(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g), (m: any) => m[1]);
         let header_type = 'none';
         let header_media_url: string | null = null;
         if (headerComp) {
@@ -137,7 +137,8 @@ Deno.serve(async (req) => {
           footer: footerComp?.text || null,
           buttons: btns?.buttons || null,
           carousel_cards: carouselComp?.cards || null,
-          variables: Array.from({ length: varCount }, (_, i) => `${i + 1}`),
+          variables,
+          parameter_format: (t.parameter_format || (variables.some((v: string) => !/^\d+$/.test(v)) ? 'NAMED' : 'POSITIONAL')).toUpperCase(),
           status: mapStatus(t.status),
           rejection_reason: t.rejected_reason || null,
           synced_at: new Date().toISOString(),

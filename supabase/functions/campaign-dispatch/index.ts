@@ -2,6 +2,7 @@
 // random pacing to reduce WhatsApp ban risk.
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { buildTemplatePayload } from '../_shared/templatePayload.ts';
 
 const json = (b: any, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -74,16 +75,14 @@ Deno.serve(async (req) => {
 
       try {
         if (mode === 'template') {
-          const varNames: string[] = template.variables || [];
-          const components = varNames.length > 0 ? [{
-            type: 'body',
-            parameters: varNames.map((v) => ({ type: 'text', text: String(((r.variables || {})[v] ?? (v === 'name' ? r.name : '-')) || '-') })),
-          }] : [];
-          const resp = await metaSend(creds, {
+          const payload = {
             messaging_product: 'whatsapp', to: r.phone, type: 'template',
-            template: { name: template.name, language: { code: template.language || 'en' }, ...(components.length ? { components } : {}) },
-          });
-          await handleResp(admin, r, resp, `[template:${template.name}]`);
+            template: buildTemplatePayload(template, { name: r.name, phone: r.phone, variables: r.variables }),
+          };
+          console.log('[campaign-dispatch] final template payload', JSON.stringify(payload));
+          const resp = await metaSend(creds, payload);
+          const ok = await handleResp(admin, r, resp, `[template:${template.name}]`);
+          if (ok) sent++; else failed++;
         } else {
           // Free-form: optional images (sequence), then text.
           let anyFail: string | null = null;
