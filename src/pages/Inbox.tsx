@@ -321,6 +321,7 @@ const Inbox = () => {
     });
     setSending(false);
     if (error) return toast.error(error.message);
+    setTemplatePickerOpen(false);
     toast.success('Template sent');
   };
 
