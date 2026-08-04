@@ -212,36 +212,34 @@
     background-color: hsl(var(--muted));
     isolation: isolate;
     overflow: hidden;
+    /* makes the element a containing block so the fixed wallpaper stays put while chat scrolls */
+    transform: translateZ(0);
   }
   .wa-doodle-bg::before {
     content: '';
-    position: absolute;
+    position: fixed;
     inset: 0;
     z-index: 0;
     pointer-events: none;
-    background-image: url("/__l5e/assets-v1/8aecd476-60d8-486a-bc96-eeaf4ccd9182/wa-doodle.png");
-    background-repeat: repeat;
-    background-size: min(420px, 100vw) auto;
-    background-position: center top;
+    background-image: url("/__l5e/assets-v1/3ffebee9-3051-4db1-87cc-c161e1133efa/doodle-dark.png");
+    /* single continuous artwork — no tiling seams / cut edges */
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center center;
     /* source artwork is dark — invert it for the light theme */
     filter: invert(1);
-    opacity: 0.32;
+    opacity: 0.28;
   }
+
   .dark .wa-doodle-bg::before {
     filter: none;
-    opacity: 0.5;
+    opacity: 0.45;
   }
   .wa-doodle-bg > * {
     position: relative;
     z-index: 1;
   }
 
-  @media (max-width: 640px) {
-    .wa-doodle-bg::before {
-      background-size: 280px auto;
-      background-position: center top;
-    }
-  }
 
   .glass-panel {
     background: hsl(var(--glass-bg));
