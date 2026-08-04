@@ -115,6 +115,14 @@ const Leads = () => {
 
   const [form, setForm] = useState({ name: '', phone: '', email: '', tags: '' });
 
+  // Deep link from Home: /leads?import=1 opens the CSV file picker
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('import') === '1') {
+      const t = setTimeout(() => csvInputRef.current?.click(), 300);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
   const loadWorkspace = async () => {
     if (!user) return;
     setWsId(await resolveWorkspaceId(user.id, profile));
