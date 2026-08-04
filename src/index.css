@@ -212,10 +212,12 @@
     background-color: hsl(var(--muted));
     isolation: isolate;
     overflow: hidden;
+    /* makes the element a containing block so the fixed wallpaper stays put while chat scrolls */
+    transform: translateZ(0);
   }
   .wa-doodle-bg::before {
     content: '';
-    position: absolute;
+    position: fixed;
     inset: 0;
     z-index: 0;
     pointer-events: none;
@@ -224,11 +226,11 @@
     background-repeat: no-repeat;
     background-size: cover;
     background-position: center center;
-    background-attachment: local;
     /* source artwork is dark — invert it for the light theme */
     filter: invert(1);
     opacity: 0.28;
   }
+
   .dark .wa-doodle-bg::before {
     filter: none;
     opacity: 0.45;
