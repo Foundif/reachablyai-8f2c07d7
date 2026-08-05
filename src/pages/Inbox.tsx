@@ -184,6 +184,11 @@ const Inbox = () => {
           setMessages(prev => prev.some(m => m.id === payload.new.id) ? prev : [...prev, payload.new]);
         }
       })
+      // Delivery/read receipts from Meta arrive as UPDATEs — keep ticks live.
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'wa_messages', filter: `workspace_id=eq.${wsId}` }, (payload: any) => {
+        setMessages(prev => prev.map(m => m.id === payload.new.id ? { ...m, ...payload.new } : m));
+      })
+
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [wsId, selectedId]);
