@@ -130,6 +130,10 @@ const Inbox = () => {
   const [forwardOpen, setForwardOpen] = useState(false);
   const [forwarding, setForwarding] = useState(false);
 
+  // Wati Astra voice calling
+  const [calling, setCalling] = useState(false);
+
+
 
   const selected = useMemo(() => convs.find(c => c.id === selectedId) || null, [convs, selectedId]);
 
