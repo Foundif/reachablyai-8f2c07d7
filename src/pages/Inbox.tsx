@@ -548,7 +548,25 @@ const Inbox = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wsId]);
 
+  /** Group consecutive photos/videos from the same side into WhatsApp-style albums. */
+  const messageGroups = useMemo(() => {
+    const out: Message[][] = [];
+    for (const m of messages) {
+      const isMedia = !!m.media_url && (m.message_type === 'image' || m.message_type === 'video');
+      const last = out[out.length - 1];
+      const lastItem = last?.[last.length - 1];
+      const canGroup = isMedia && lastItem
+        && !!lastItem.media_url && (lastItem.message_type === 'image' || lastItem.message_type === 'video')
+        && lastItem.direction === m.direction
+        && !lastItem.template_name && !m.template_name
+        && Math.abs(new Date(m.created_at).getTime() - new Date(lastItem.created_at).getTime()) < 120_000;
+      if (canGroup) last.push(m); else out.push([m]);
+    }
+    return out;
+  }, [messages]);
+
   const tabCounts = useMemo(() => ({
+
     new: convs.filter(c => c.unread_count > 0).length,
     open: convs.filter(c => c.status === 'open').length,
     resolved: convs.filter(c => c.status !== 'open').length,
