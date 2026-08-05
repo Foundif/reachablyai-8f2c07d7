@@ -231,41 +231,46 @@ const Inbox = () => {
     if (await invokeSend({ body: draft })) setDraft('');
   };
 
+  /** Upload one file to storage with progress and return its public URL. */
+  const uploadFile = async (file: File) => {
+    const ext = file.name.split('.').pop() || 'bin';
+    const path = `chat-media/${wsId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { data: { session } } = await supabase.auth.getSession();
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/salon-assets/${path}`;
+
+    await new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url);
+      xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`);
+      xhr.setRequestHeader('apikey', import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
+      xhr.setRequestHeader('x-upsert', 'false');
+      if (file.type) xhr.setRequestHeader('Content-Type', file.type);
+      xhr.upload.onprogress = e => {
+        if (e.lengthComputable) setUploadInfo({ name: file.name, pct: Math.round((e.loaded / e.total) * 100) });
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) return resolve();
+        let msg = `Upload failed (${xhr.status})`;
+        try { msg = JSON.parse(xhr.responseText).message || msg; } catch { /* ignore */ }
+        reject(new Error(msg));
+      };
+      xhr.onerror = () => reject(new Error('Network error during upload'));
+      xhr.send(file);
+    });
+
+    setUploadInfo({ name: file.name, pct: 100 });
+    return supabase.storage.from('salon-assets').getPublicUrl(path).data.publicUrl;
+  };
+
   /** Upload to storage with progress, then send as a WhatsApp media message. */
   const sendMedia = async (file: File, kind: 'image' | 'video' | 'audio' | 'document') => {
     if (!wsId || !selected) return;
     setUploading(true);
     setUploadInfo({ name: file.name, pct: 0 });
     try {
-      const ext = file.name.split('.').pop() || 'bin';
-      const path = `chat-media/${wsId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const { data: { session } } = await supabase.auth.getSession();
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/salon-assets/${path}`;
-
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', url);
-        xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`);
-        xhr.setRequestHeader('apikey', import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
-        xhr.setRequestHeader('x-upsert', 'false');
-        if (file.type) xhr.setRequestHeader('Content-Type', file.type);
-        xhr.upload.onprogress = e => {
-          if (e.lengthComputable) setUploadInfo({ name: file.name, pct: Math.round((e.loaded / e.total) * 100) });
-        };
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) return resolve();
-          let msg = `Upload failed (${xhr.status})`;
-          try { msg = JSON.parse(xhr.responseText).message || msg; } catch { /* ignore */ }
-          reject(new Error(msg));
-        };
-        xhr.onerror = () => reject(new Error('Network error during upload'));
-        xhr.send(file);
-      });
-
-      setUploadInfo({ name: file.name, pct: 100 });
-      const { data: pub } = supabase.storage.from('salon-assets').getPublicUrl(path);
+      const publicUrl = await uploadFile(file);
       const ok = await invokeSend({
-        media_url: pub.publicUrl, media_type: kind,
+        media_url: publicUrl, media_type: kind,
         filename: kind === 'document' ? file.name : undefined,
         body: draft.trim() && kind !== 'audio' ? draft : undefined,
       });
@@ -277,6 +282,74 @@ const Inbox = () => {
       setUploadInfo(null);
     }
   };
+
+  /** Send a WhatsApp-style album: every photo/video goes out in one action, caption on the first. */
+  const sendAlbum = async (caption: string) => {
+    if (!wsId || !selected || !albumFiles.length) return;
+    setAlbumSending(true);
+    setAlbumProgress({ done: 0, total: albumFiles.length });
+    setUploading(true);
+    try {
+      for (let i = 0; i < albumFiles.length; i++) {
+        const file = albumFiles[i];
+        setUploadInfo({ name: file.name, pct: 0 });
+        const publicUrl = await uploadFile(file);
+        await invokeSend({
+          media_url: publicUrl,
+          media_type: file.type.startsWith('video') ? 'video' : 'image',
+          body: i === 0 && caption.trim() ? caption.trim() : undefined,
+        });
+        setAlbumProgress({ done: i + 1, total: albumFiles.length });
+      }
+      toast.success(`${albumFiles.length} ${albumFiles.length === 1 ? 'item' : 'items'} sent`);
+      setAlbumFiles([]);
+      setAlbumOpen(false);
+    } catch (e: any) {
+      toast.error(e.message || 'Could not send all items');
+    } finally {
+      setAlbumSending(false);
+      setAlbumProgress(null);
+      setUploading(false);
+      setUploadInfo(null);
+    }
+  };
+
+  /** Forward the selected messages to one or more chats (WhatsApp-style forward). */
+  const forwardMessages = async (targetIds: string[]) => {
+    if (!wsId) return;
+    const items = messages.filter(m => selectedMsgIds.includes(m.id));
+    if (!items.length) return;
+    setForwarding(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    let failed = 0;
+    for (const convId of targetIds) {
+      const conv = convs.find(c => c.id === convId);
+      if (!conv) continue;
+      for (const m of items) {
+        const payload: Record<string, unknown> = m.media_url
+          ? {
+              media_url: m.media_url,
+              media_type: ['image', 'video', 'audio', 'document'].includes(m.message_type) ? m.message_type : 'document',
+              body: m.message_type === 'audio' ? undefined : (m.body || undefined),
+              filename: m.message_type === 'document' ? (m.body || 'document') : undefined,
+            }
+          : { body: m.body || '' };
+        if (!m.media_url && !m.body) continue;
+        const { error } = await supabase.functions.invoke('whatsapp-send', {
+          body: { workspace_id: wsId, conversation_id: conv.id, to: conv.contact_phone, ...payload },
+          headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+        });
+        if (error) failed++;
+      }
+    }
+    setForwarding(false);
+    setForwardOpen(false);
+    setSelectMode(false);
+    setSelectedMsgIds([]);
+    if (failed) toast.error(`${failed} message${failed === 1 ? '' : 's'} could not be forwarded`);
+    else toast.success('Forwarded');
+  };
+
 
 
   const toggleRecording = async () => {
