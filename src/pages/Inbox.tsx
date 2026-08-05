@@ -378,7 +378,22 @@ const Inbox = () => {
 
 
 
+  /** Start a low-latency voice call with this contact via the Wati Astra agent. */
+  const startVoiceCall = async () => {
+    if (!selected || !wsId) return;
+    setCalling(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    const { data, error } = await supabase.functions.invoke('voice-call', {
+      body: { workspace_id: wsId, conversation_id: selected.id, to: selected.contact_phone },
+      headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+    });
+    setCalling(false);
+    if (error || (data as any)?.error) return toast.error((data as any)?.error || error?.message || 'Could not start the call');
+    toast.success('Calling ' + (selected.contact_name || selected.contact_phone));
+  };
+
   const toggleRecording = async () => {
+
     if (recording) { recorderRef.current?.stop(); setRecording(false); return; }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
