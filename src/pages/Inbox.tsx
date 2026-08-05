@@ -801,28 +801,122 @@ const Inbox = () => {
                 </div>
               )}
 
+              {selectMode && (
+                <div className="px-3 py-2 border-b bg-card flex items-center gap-2 shrink-0">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setSelectMode(false); setSelectedMsgIds([]); }}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                  <span className="text-sm font-medium">{selectedMsgIds.length} selected</span>
+                  <Button
+                    size="sm" className="ml-auto h-8" disabled={!selectedMsgIds.length}
+                    onClick={() => setForwardOpen(true)}
+                  >
+                    <Forward className="w-4 h-4 mr-1.5" /> Forward
+                  </Button>
+                </div>
+              )}
+
               <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-1.5 wa-doodle-bg">
-                {messages.map((m, i) => {
-                  const prev = messages[i - 1];
-                  const showDay = !prev || new Date(prev.created_at).toDateString() !== new Date(m.created_at).toDateString();
-                  const tpl = m.template_name ? templates.find(t => t.name === m.template_name) : null;
+                {messageGroups.map((group, gi) => {
+                  const first = group[0];
+                  const last = group[group.length - 1];
+                  const prevGroup = messageGroups[gi - 1];
+                  const prev = prevGroup?.[prevGroup.length - 1];
+                  const showDay = !prev || new Date(prev.created_at).toDateString() !== new Date(first.created_at).toDateString();
+                  const outbound = first.direction === 'outbound';
+                  const ids = group.map(g => g.id);
+                  const groupSelected = ids.every(id => selectedMsgIds.includes(id));
+                  const toggleGroup = () => setSelectedMsgIds(p =>
+                    groupSelected ? p.filter(id => !ids.includes(id)) : [...p, ...ids.filter(id => !p.includes(id))]);
+
                   const contactLabel = selected?.contact_name?.trim() || 'there';
+                  const stamp = (
+                    <div className={cn('flex items-center gap-1 mt-1 text-[10px] opacity-70', outbound && 'justify-end')}>
+                      <Clock className="w-2.5 h-2.5" />
+                      {new Date(last.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      <MessageTicks status={last.status} outbound={outbound} />
+                    </div>
+                  );
+
+                  const wrap = (children: React.ReactNode) => (
+                    <div key={first.id}>
+                      {showDay && (
+                        <div className="flex justify-center my-3">
+                          <span className="rounded-lg bg-background/90 border px-3 py-1 text-[11px] uppercase tracking-wide text-muted-foreground shadow-sm">
+                            {dayLabel(first.created_at)}
+                          </span>
+                        </div>
+                      )}
+                      <div
+                        className={cn('flex items-center gap-2 group', outbound ? 'justify-end' : 'justify-start')}
+                        onClick={() => { if (selectMode) toggleGroup(); }}
+                      >
+                        {selectMode && (
+                          <span className={cn(
+                            'h-5 w-5 shrink-0 rounded-full border grid place-items-center order-first',
+                            groupSelected ? 'bg-primary border-primary text-primary-foreground' : 'bg-background',
+                          )}>
+                            {groupSelected && <CheckCircle2 className="w-4 h-4" />}
+                          </span>
+                        )}
+                        {!selectMode && (
+                          <Button
+                            size="icon" variant="ghost"
+                            className={cn('h-7 w-7 opacity-0 group-hover:opacity-100 shrink-0', outbound ? 'order-first' : 'order-last')}
+                            title="Select & forward"
+                            onClick={() => { setSelectMode(true); setSelectedMsgIds(ids); }}
+                          >
+                            <Forward className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
+                        {children}
+                      </div>
+                    </div>
+                  );
+
+                  // ---- WhatsApp-style album (2+ consecutive photos/videos) ----
+                  if (group.length > 1) {
+                    const caption = group.map(g => g.body).find(b => b && b.trim());
+                    return wrap(
+                      <div className={cn(
+                        'max-w-[75%] rounded-2xl p-1.5 text-sm shadow-sm cursor-pointer',
+                        outbound ? 'bg-primary text-primary-foreground rounded-br-md' : 'bg-card border rounded-bl-md',
+                      )}>
+                        <div className={cn('grid gap-0.5 rounded-xl overflow-hidden', group.length === 2 ? 'grid-cols-2' : 'grid-cols-2')}>
+                          {group.slice(0, 4).map((g, idx) => (
+                            <div key={g.id} className={cn(
+                              'relative bg-black/10',
+                              group.length === 3 && idx === 0 && 'col-span-2',
+                            )}>
+                              {g.message_type === 'video'
+                                ? <video src={g.media_url!} controls className="h-32 w-full object-cover" />
+                                : <img src={g.media_url!} alt="" loading="lazy" className="h-32 w-full object-cover" />}
+                              {idx === 3 && group.length > 4 && (
+                                <div className="absolute inset-0 bg-black/60 grid place-items-center text-white text-lg font-semibold">
+                                  +{group.length - 4}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        {caption && <div className="whitespace-pre-wrap break-words px-1.5 pt-1.5">{caption}</div>}
+                        <div className="px-1.5 pb-0.5">{stamp}</div>
+                      </div>,
+                    );
+                  }
+
+                  // ---- Single message ----
+                  const m = first;
+                  const tpl = m.template_name ? templates.find(t => t.name === m.template_name) : null;
                   const bodyText = tpl
                     ? renderTemplateText(tpl.body, contactLabel)
                     : (m.body && m.body !== m.template_name ? m.body : null);
-                  return (
-                  <div key={m.id}>
-                    {showDay && (
-                      <div className="flex justify-center my-3">
-                        <span className="rounded-lg bg-background/90 border px-3 py-1 text-[11px] uppercase tracking-wide text-muted-foreground shadow-sm">
-                          {dayLabel(m.created_at)}
-                        </span>
-                      </div>
-                    )}
-                    <div className={cn('flex', m.direction === 'outbound' ? 'justify-end' : 'justify-start')}>
+
+                  return wrap(
                     <div className={cn(
                       'max-w-[75%] rounded-2xl px-3 py-2 text-sm shadow-sm',
-                      m.direction === 'outbound' ? 'bg-primary text-primary-foreground rounded-br-md' : 'bg-card border rounded-bl-md',
+                      selectMode && 'cursor-pointer',
+                      outbound ? 'bg-primary text-primary-foreground rounded-br-md' : 'bg-card border rounded-bl-md',
                     )}>
                       {m.template_name && <div className="text-[10px] opacity-70 uppercase mb-1">Template · {m.template_name}</div>}
                       {tpl?.header_media_url && tpl.header_type === 'image' && (
@@ -844,7 +938,7 @@ const Inbox = () => {
                         <video src={m.media_url} controls className="rounded-lg mb-1 max-h-60 w-full" />
                       )}
                       {m.media_url && m.message_type === 'audio' && (
-                        <VoiceNote src={m.media_url} outbound={m.direction === 'outbound'} />
+                        <VoiceNote src={m.media_url} outbound={outbound} />
                       )}
                       {m.media_url && m.message_type === 'document' && (
                         <a href={m.media_url} target="_blank" rel="noreferrer" className="flex items-center gap-2 underline mb-1">
@@ -856,18 +950,13 @@ const Inbox = () => {
                         <div className="whitespace-pre-wrap break-words">{bodyText}</div>
                       )}
                       {tpl?.footer && <div className="text-[11px] opacity-70 mt-1">{tpl.footer}</div>}
-                      <div className="flex items-center gap-1 mt-1 text-[10px] opacity-70">
-                        <Clock className="w-2.5 h-2.5" />
-                        {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        {m.direction === 'outbound' && <span>· {m.status}</span>}
-                      </div>
+                      {stamp}
                       {m.error && <div className="text-[10px] text-red-500 mt-1">{m.error}</div>}
-                    </div>
-                    </div>
-                  </div>
+                    </div>,
                   );
                 })}
               </div>
+
 
               {!canCompose ? (
                 <div className="border-t p-4 bg-card shrink-0 flex justify-center">
