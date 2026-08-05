@@ -321,10 +321,20 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Status callbacks
+        // Status callbacks (sent → delivered → read). Never downgrade an already higher status.
+        const STATUS_RANK: Record<string, number> = { pending: 0, accepted: 1, sent: 2, delivered: 3, read: 4, failed: 5 };
         for (const s of v.statuses || []) {
           const statusError = s.errors?.map((item: any) => item?.error_data?.details || item?.message || item?.title).filter(Boolean).join(' · ') || null;
-          await admin.from('wa_messages').update({ status: s.status }).eq('wa_message_id', s.id);
+          const { data: existingMsg } = await admin.from('wa_messages')
+            .select('id,status').eq('wa_message_id', s.id).maybeSingle();
+          const incomingRank = STATUS_RANK[s.status] ?? 0;
+          const currentRank = STATUS_RANK[existingMsg?.status || ''] ?? -1;
+          if (existingMsg && incomingRank >= currentRank) {
+            await admin.from('wa_messages')
+              .update({ status: s.status, ...(statusError ? { error: statusError } : {}) })
+              .eq('id', existingMsg.id);
+          }
+
           const { data: changed } = await admin.from('campaign_recipients')
             .update({ status: s.status, error: statusError })
             .eq('meta_message_id', s.id)

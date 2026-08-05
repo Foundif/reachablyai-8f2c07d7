@@ -12,7 +12,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Inbox as InboxIcon, Send, Search, User, Clock, MessageSquareText, ArrowLeft, Trash2, Tag, StickyNote, X, Plus, Filter, CheckCircle2, Users, PanelRightClose, PanelRightOpen, Phone, Mail, Paperclip, Image as ImageIcon, Video, FileText, MapPin, Mic, Square, Loader2, Smile, PhoneCall } from 'lucide-react';
+import { Inbox as InboxIcon, Send, Search, User, Clock, MessageSquareText, ArrowLeft, Trash2, Tag, StickyNote, X, Plus, Filter, CheckCircle2, Users, PanelRightClose, PanelRightOpen, Phone, Mail, Paperclip, Image as ImageIcon, Video, FileText, MapPin, Mic, Square, Loader2, Smile, PhoneCall, Forward, Images, CheckSquare } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Label as FieldLabel } from '@/components/ui/label';
@@ -23,7 +23,11 @@ import { cn } from '@/lib/utils';
 import { resolveWorkspaceId } from '@/lib/workspace';
 import { COUNTRY_CODES } from '@/lib/countryCodes';
 import VoiceNote from '@/components/inbox/VoiceNote';
+import MessageTicks from '@/components/inbox/MessageTicks';
+import AlbumComposer from '@/components/inbox/AlbumComposer';
+import ForwardDialog from '@/components/inbox/ForwardDialog';
 import TemplatePickerSheet, { renderTemplateText, type TemplateOption } from '@/components/inbox/TemplatePickerSheet';
+
 
 
 const EMOJIS = '\u{1F600}\u{1F603}\u{1F604}\u{1F601}\u{1F606}\u{1F605}\u{1F602}\u{1F923}\u{1F60A}\u{1F607}\u{1F642}\u{1F609}\u{1F60D}\u{1F618}\u{1F617}\u{1F60B}\u{1F61B}\u{1F60E}\u{1F929}\u{1F914}\u{1F910}\u{1F644}\u{1F60F}\u{1F612}\u{1F614}\u{1F62A}\u{1F634}\u{1F615}\u{1F61F}\u{1F622}\u{1F62D}\u{1F621}\u{1F620}\u{1F44D}\u{1F44E}\u{1F44F}\u{1F64F}\u{1F91D}\u{1F4AA}\u{1F44C}\u{270C}\u{1F91E}\u{1F525}\u{2764}\u{1F49B}\u{1F49A}\u{1F499}\u{1F49C}\u{2728}\u{1F389}\u{1F38A}\u{1F381}\u{1F4B0}\u{1F4B8}\u{1F4B3}\u{1F6CD}\u{1F4E6}\u{1F69A}\u{2705}\u{274C}\u{26A0}\u{1F4CC}\u{1F4C5}\u{23F0}\u{1F4DE}\u{1F4F1}\u{1F4E7}\u{1F4AC}\u{1F440}\u{1F680}\u{2B50}\u{1F31F}'.split(/(?=[\s\S])/u).filter(c => c.trim().length > 0);
@@ -114,6 +118,19 @@ const Inbox = () => {
   const [locOpen, setLocOpen] = useState(false);
   const [locForm, setLocForm] = useState({ latitude: '', longitude: '', name: '', address: '' });
 
+  // Multi-photo album composer
+  const [albumOpen, setAlbumOpen] = useState(false);
+  const [albumFiles, setAlbumFiles] = useState<File[]>([]);
+  const [albumSending, setAlbumSending] = useState(false);
+  const [albumProgress, setAlbumProgress] = useState<{ done: number; total: number } | null>(null);
+
+  // Multi-select + forward
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedMsgIds, setSelectedMsgIds] = useState<string[]>([]);
+  const [forwardOpen, setForwardOpen] = useState(false);
+  const [forwarding, setForwarding] = useState(false);
+
+
   const selected = useMemo(() => convs.find(c => c.id === selectedId) || null, [convs, selectedId]);
 
   useEffect(() => {
@@ -167,6 +184,11 @@ const Inbox = () => {
           setMessages(prev => prev.some(m => m.id === payload.new.id) ? prev : [...prev, payload.new]);
         }
       })
+      // Delivery/read receipts from Meta arrive as UPDATEs — keep ticks live.
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'wa_messages', filter: `workspace_id=eq.${wsId}` }, (payload: any) => {
+        setMessages(prev => prev.map(m => m.id === payload.new.id ? { ...m, ...payload.new } : m));
+      })
+
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [wsId, selectedId]);
@@ -231,41 +253,46 @@ const Inbox = () => {
     if (await invokeSend({ body: draft })) setDraft('');
   };
 
+  /** Upload one file to storage with progress and return its public URL. */
+  const uploadFile = async (file: File) => {
+    const ext = file.name.split('.').pop() || 'bin';
+    const path = `chat-media/${wsId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { data: { session } } = await supabase.auth.getSession();
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/salon-assets/${path}`;
+
+    await new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url);
+      xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`);
+      xhr.setRequestHeader('apikey', import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
+      xhr.setRequestHeader('x-upsert', 'false');
+      if (file.type) xhr.setRequestHeader('Content-Type', file.type);
+      xhr.upload.onprogress = e => {
+        if (e.lengthComputable) setUploadInfo({ name: file.name, pct: Math.round((e.loaded / e.total) * 100) });
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) return resolve();
+        let msg = `Upload failed (${xhr.status})`;
+        try { msg = JSON.parse(xhr.responseText).message || msg; } catch { /* ignore */ }
+        reject(new Error(msg));
+      };
+      xhr.onerror = () => reject(new Error('Network error during upload'));
+      xhr.send(file);
+    });
+
+    setUploadInfo({ name: file.name, pct: 100 });
+    return supabase.storage.from('salon-assets').getPublicUrl(path).data.publicUrl;
+  };
+
   /** Upload to storage with progress, then send as a WhatsApp media message. */
   const sendMedia = async (file: File, kind: 'image' | 'video' | 'audio' | 'document') => {
     if (!wsId || !selected) return;
     setUploading(true);
     setUploadInfo({ name: file.name, pct: 0 });
     try {
-      const ext = file.name.split('.').pop() || 'bin';
-      const path = `chat-media/${wsId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const { data: { session } } = await supabase.auth.getSession();
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/salon-assets/${path}`;
-
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', url);
-        xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`);
-        xhr.setRequestHeader('apikey', import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
-        xhr.setRequestHeader('x-upsert', 'false');
-        if (file.type) xhr.setRequestHeader('Content-Type', file.type);
-        xhr.upload.onprogress = e => {
-          if (e.lengthComputable) setUploadInfo({ name: file.name, pct: Math.round((e.loaded / e.total) * 100) });
-        };
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) return resolve();
-          let msg = `Upload failed (${xhr.status})`;
-          try { msg = JSON.parse(xhr.responseText).message || msg; } catch { /* ignore */ }
-          reject(new Error(msg));
-        };
-        xhr.onerror = () => reject(new Error('Network error during upload'));
-        xhr.send(file);
-      });
-
-      setUploadInfo({ name: file.name, pct: 100 });
-      const { data: pub } = supabase.storage.from('salon-assets').getPublicUrl(path);
+      const publicUrl = await uploadFile(file);
       const ok = await invokeSend({
-        media_url: pub.publicUrl, media_type: kind,
+        media_url: publicUrl, media_type: kind,
         filename: kind === 'document' ? file.name : undefined,
         body: draft.trim() && kind !== 'audio' ? draft : undefined,
       });
@@ -277,6 +304,74 @@ const Inbox = () => {
       setUploadInfo(null);
     }
   };
+
+  /** Send a WhatsApp-style album: every photo/video goes out in one action, caption on the first. */
+  const sendAlbum = async (caption: string) => {
+    if (!wsId || !selected || !albumFiles.length) return;
+    setAlbumSending(true);
+    setAlbumProgress({ done: 0, total: albumFiles.length });
+    setUploading(true);
+    try {
+      for (let i = 0; i < albumFiles.length; i++) {
+        const file = albumFiles[i];
+        setUploadInfo({ name: file.name, pct: 0 });
+        const publicUrl = await uploadFile(file);
+        await invokeSend({
+          media_url: publicUrl,
+          media_type: file.type.startsWith('video') ? 'video' : 'image',
+          body: i === 0 && caption.trim() ? caption.trim() : undefined,
+        });
+        setAlbumProgress({ done: i + 1, total: albumFiles.length });
+      }
+      toast.success(`${albumFiles.length} ${albumFiles.length === 1 ? 'item' : 'items'} sent`);
+      setAlbumFiles([]);
+      setAlbumOpen(false);
+    } catch (e: any) {
+      toast.error(e.message || 'Could not send all items');
+    } finally {
+      setAlbumSending(false);
+      setAlbumProgress(null);
+      setUploading(false);
+      setUploadInfo(null);
+    }
+  };
+
+  /** Forward the selected messages to one or more chats (WhatsApp-style forward). */
+  const forwardMessages = async (targetIds: string[]) => {
+    if (!wsId) return;
+    const items = messages.filter(m => selectedMsgIds.includes(m.id));
+    if (!items.length) return;
+    setForwarding(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    let failed = 0;
+    for (const convId of targetIds) {
+      const conv = convs.find(c => c.id === convId);
+      if (!conv) continue;
+      for (const m of items) {
+        const payload: Record<string, unknown> = m.media_url
+          ? {
+              media_url: m.media_url,
+              media_type: ['image', 'video', 'audio', 'document'].includes(m.message_type) ? m.message_type : 'document',
+              body: m.message_type === 'audio' ? undefined : (m.body || undefined),
+              filename: m.message_type === 'document' ? (m.body || 'document') : undefined,
+            }
+          : { body: m.body || '' };
+        if (!m.media_url && !m.body) continue;
+        const { error } = await supabase.functions.invoke('whatsapp-send', {
+          body: { workspace_id: wsId, conversation_id: conv.id, to: conv.contact_phone, ...payload },
+          headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+        });
+        if (error) failed++;
+      }
+    }
+    setForwarding(false);
+    setForwardOpen(false);
+    setSelectMode(false);
+    setSelectedMsgIds([]);
+    if (failed) toast.error(`${failed} message${failed === 1 ? '' : 's'} could not be forwarded`);
+    else toast.success('Forwarded');
+  };
+
 
 
   const toggleRecording = async () => {
@@ -453,7 +548,25 @@ const Inbox = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wsId]);
 
+  /** Group consecutive photos/videos from the same side into WhatsApp-style albums. */
+  const messageGroups = useMemo(() => {
+    const out: Message[][] = [];
+    for (const m of messages) {
+      const isMedia = !!m.media_url && (m.message_type === 'image' || m.message_type === 'video');
+      const last = out[out.length - 1];
+      const lastItem = last?.[last.length - 1];
+      const canGroup = isMedia && lastItem
+        && !!lastItem.media_url && (lastItem.message_type === 'image' || lastItem.message_type === 'video')
+        && lastItem.direction === m.direction
+        && !lastItem.template_name && !m.template_name
+        && Math.abs(new Date(m.created_at).getTime() - new Date(lastItem.created_at).getTime()) < 120_000;
+      if (canGroup) last.push(m); else out.push([m]);
+    }
+    return out;
+  }, [messages]);
+
   const tabCounts = useMemo(() => ({
+
     new: convs.filter(c => c.unread_count > 0).length,
     open: convs.filter(c => c.status === 'open').length,
     resolved: convs.filter(c => c.status !== 'open').length,
@@ -706,28 +819,122 @@ const Inbox = () => {
                 </div>
               )}
 
+              {selectMode && (
+                <div className="px-3 py-2 border-b bg-card flex items-center gap-2 shrink-0">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setSelectMode(false); setSelectedMsgIds([]); }}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                  <span className="text-sm font-medium">{selectedMsgIds.length} selected</span>
+                  <Button
+                    size="sm" className="ml-auto h-8" disabled={!selectedMsgIds.length}
+                    onClick={() => setForwardOpen(true)}
+                  >
+                    <Forward className="w-4 h-4 mr-1.5" /> Forward
+                  </Button>
+                </div>
+              )}
+
               <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-1.5 wa-doodle-bg">
-                {messages.map((m, i) => {
-                  const prev = messages[i - 1];
-                  const showDay = !prev || new Date(prev.created_at).toDateString() !== new Date(m.created_at).toDateString();
-                  const tpl = m.template_name ? templates.find(t => t.name === m.template_name) : null;
+                {messageGroups.map((group, gi) => {
+                  const first = group[0];
+                  const last = group[group.length - 1];
+                  const prevGroup = messageGroups[gi - 1];
+                  const prev = prevGroup?.[prevGroup.length - 1];
+                  const showDay = !prev || new Date(prev.created_at).toDateString() !== new Date(first.created_at).toDateString();
+                  const outbound = first.direction === 'outbound';
+                  const ids = group.map(g => g.id);
+                  const groupSelected = ids.every(id => selectedMsgIds.includes(id));
+                  const toggleGroup = () => setSelectedMsgIds(p =>
+                    groupSelected ? p.filter(id => !ids.includes(id)) : [...p, ...ids.filter(id => !p.includes(id))]);
+
                   const contactLabel = selected?.contact_name?.trim() || 'there';
+                  const stamp = (
+                    <div className={cn('flex items-center gap-1 mt-1 text-[10px] opacity-70', outbound && 'justify-end')}>
+                      <Clock className="w-2.5 h-2.5" />
+                      {new Date(last.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      <MessageTicks status={last.status} outbound={outbound} />
+                    </div>
+                  );
+
+                  const wrap = (children: React.ReactNode) => (
+                    <div key={first.id}>
+                      {showDay && (
+                        <div className="flex justify-center my-3">
+                          <span className="rounded-lg bg-background/90 border px-3 py-1 text-[11px] uppercase tracking-wide text-muted-foreground shadow-sm">
+                            {dayLabel(first.created_at)}
+                          </span>
+                        </div>
+                      )}
+                      <div
+                        className={cn('flex items-center gap-2 group', outbound ? 'justify-end' : 'justify-start')}
+                        onClick={() => { if (selectMode) toggleGroup(); }}
+                      >
+                        {selectMode && (
+                          <span className={cn(
+                            'h-5 w-5 shrink-0 rounded-full border grid place-items-center order-first',
+                            groupSelected ? 'bg-primary border-primary text-primary-foreground' : 'bg-background',
+                          )}>
+                            {groupSelected && <CheckCircle2 className="w-4 h-4" />}
+                          </span>
+                        )}
+                        {!selectMode && (
+                          <Button
+                            size="icon" variant="ghost"
+                            className={cn('h-7 w-7 opacity-0 group-hover:opacity-100 shrink-0', outbound ? 'order-first' : 'order-last')}
+                            title="Select & forward"
+                            onClick={() => { setSelectMode(true); setSelectedMsgIds(ids); }}
+                          >
+                            <Forward className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
+                        {children}
+                      </div>
+                    </div>
+                  );
+
+                  // ---- WhatsApp-style album (2+ consecutive photos/videos) ----
+                  if (group.length > 1) {
+                    const caption = group.map(g => g.body).find(b => b && b.trim());
+                    return wrap(
+                      <div className={cn(
+                        'max-w-[75%] rounded-2xl p-1.5 text-sm shadow-sm cursor-pointer',
+                        outbound ? 'bg-primary text-primary-foreground rounded-br-md' : 'bg-card border rounded-bl-md',
+                      )}>
+                        <div className={cn('grid gap-0.5 rounded-xl overflow-hidden', group.length === 2 ? 'grid-cols-2' : 'grid-cols-2')}>
+                          {group.slice(0, 4).map((g, idx) => (
+                            <div key={g.id} className={cn(
+                              'relative bg-black/10',
+                              group.length === 3 && idx === 0 && 'col-span-2',
+                            )}>
+                              {g.message_type === 'video'
+                                ? <video src={g.media_url!} controls className="h-32 w-full object-cover" />
+                                : <img src={g.media_url!} alt="" loading="lazy" className="h-32 w-full object-cover" />}
+                              {idx === 3 && group.length > 4 && (
+                                <div className="absolute inset-0 bg-black/60 grid place-items-center text-white text-lg font-semibold">
+                                  +{group.length - 4}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        {caption && <div className="whitespace-pre-wrap break-words px-1.5 pt-1.5">{caption}</div>}
+                        <div className="px-1.5 pb-0.5">{stamp}</div>
+                      </div>,
+                    );
+                  }
+
+                  // ---- Single message ----
+                  const m = first;
+                  const tpl = m.template_name ? templates.find(t => t.name === m.template_name) : null;
                   const bodyText = tpl
                     ? renderTemplateText(tpl.body, contactLabel)
                     : (m.body && m.body !== m.template_name ? m.body : null);
-                  return (
-                  <div key={m.id}>
-                    {showDay && (
-                      <div className="flex justify-center my-3">
-                        <span className="rounded-lg bg-background/90 border px-3 py-1 text-[11px] uppercase tracking-wide text-muted-foreground shadow-sm">
-                          {dayLabel(m.created_at)}
-                        </span>
-                      </div>
-                    )}
-                    <div className={cn('flex', m.direction === 'outbound' ? 'justify-end' : 'justify-start')}>
+
+                  return wrap(
                     <div className={cn(
                       'max-w-[75%] rounded-2xl px-3 py-2 text-sm shadow-sm',
-                      m.direction === 'outbound' ? 'bg-primary text-primary-foreground rounded-br-md' : 'bg-card border rounded-bl-md',
+                      selectMode && 'cursor-pointer',
+                      outbound ? 'bg-primary text-primary-foreground rounded-br-md' : 'bg-card border rounded-bl-md',
                     )}>
                       {m.template_name && <div className="text-[10px] opacity-70 uppercase mb-1">Template · {m.template_name}</div>}
                       {tpl?.header_media_url && tpl.header_type === 'image' && (
@@ -749,7 +956,7 @@ const Inbox = () => {
                         <video src={m.media_url} controls className="rounded-lg mb-1 max-h-60 w-full" />
                       )}
                       {m.media_url && m.message_type === 'audio' && (
-                        <VoiceNote src={m.media_url} outbound={m.direction === 'outbound'} />
+                        <VoiceNote src={m.media_url} outbound={outbound} />
                       )}
                       {m.media_url && m.message_type === 'document' && (
                         <a href={m.media_url} target="_blank" rel="noreferrer" className="flex items-center gap-2 underline mb-1">
@@ -761,18 +968,13 @@ const Inbox = () => {
                         <div className="whitespace-pre-wrap break-words">{bodyText}</div>
                       )}
                       {tpl?.footer && <div className="text-[11px] opacity-70 mt-1">{tpl.footer}</div>}
-                      <div className="flex items-center gap-1 mt-1 text-[10px] opacity-70">
-                        <Clock className="w-2.5 h-2.5" />
-                        {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        {m.direction === 'outbound' && <span>· {m.status}</span>}
-                      </div>
+                      {stamp}
                       {m.error && <div className="text-[10px] text-red-500 mt-1">{m.error}</div>}
-                    </div>
-                    </div>
-                  </div>
+                    </div>,
                   );
                 })}
               </div>
+
 
               {!canCompose ? (
                 <div className="border-t p-4 bg-card shrink-0 flex justify-center">
@@ -814,10 +1016,21 @@ const Inbox = () => {
                         {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent side="top" align="start" className="w-52 p-1.5">
+                    <PopoverContent side="top" align="start" className="w-56 p-1.5">
+                      <label className="flex items-center gap-2 px-2 py-2 rounded-md text-sm hover:bg-muted cursor-pointer">
+                        <Images className="w-4 h-4 text-muted-foreground" /> Photos & videos
+                        <input
+                          type="file" multiple accept="image/*,video/*" className="hidden"
+                          onChange={e => {
+                            const fs = Array.from(e.target.files || []);
+                            e.currentTarget.value = '';
+                            if (!fs.length) return;
+                            setAlbumFiles(fs);
+                            setAlbumOpen(true);
+                          }}
+                        />
+                      </label>
                       {([
-                        { kind: 'image' as const, icon: ImageIcon, label: 'Photo', accept: 'image/*' },
-                        { kind: 'video' as const, icon: Video, label: 'Video', accept: 'video/*' },
                         { kind: 'document' as const, icon: FileText, label: 'Document', accept: '.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt' },
                         { kind: 'audio' as const, icon: Mic, label: 'Audio file', accept: 'audio/*' },
                       ]).map(({ kind, icon: Icon, label, accept }) => (
@@ -827,6 +1040,7 @@ const Inbox = () => {
                             onChange={e => { const f = e.target.files?.[0]; if (f) sendMedia(f, kind); e.currentTarget.value = ''; }} />
                         </label>
                       ))}
+
                       <button type="button" onClick={() => setLocOpen(true)}
                         className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm hover:bg-muted">
                         <MapPin className="w-4 h-4 text-muted-foreground" /> Location
@@ -893,6 +1107,28 @@ const Inbox = () => {
           </aside>
         )}
       </div>
+
+      {/* Multi-photo album composer */}
+      <AlbumComposer
+        open={albumOpen}
+        files={albumFiles}
+        sending={albumSending}
+        progress={albumProgress}
+        onOpenChange={v => { setAlbumOpen(v); if (!v) setAlbumFiles([]); }}
+        onAdd={fs => setAlbumFiles(p => [...p, ...fs])}
+        onRemove={i => setAlbumFiles(p => p.filter((_, idx) => idx !== i))}
+        onSend={sendAlbum}
+      />
+
+      {/* Forward selected messages */}
+      <ForwardDialog
+        open={forwardOpen}
+        onOpenChange={setForwardOpen}
+        targets={convs.map(c => ({ id: c.id, contact_phone: c.contact_phone, contact_name: c.contact_name }))}
+        count={selectedMsgIds.length}
+        sending={forwarding}
+        onForward={forwardMessages}
+      />
 
 
       {/* Send location */}
