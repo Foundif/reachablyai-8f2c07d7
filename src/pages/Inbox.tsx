@@ -1108,6 +1108,28 @@ const Inbox = () => {
         )}
       </div>
 
+      {/* Multi-photo album composer */}
+      <AlbumComposer
+        open={albumOpen}
+        files={albumFiles}
+        sending={albumSending}
+        progress={albumProgress}
+        onOpenChange={v => { setAlbumOpen(v); if (!v) setAlbumFiles([]); }}
+        onAdd={fs => setAlbumFiles(p => [...p, ...fs])}
+        onRemove={i => setAlbumFiles(p => p.filter((_, idx) => idx !== i))}
+        onSend={sendAlbum}
+      />
+
+      {/* Forward selected messages */}
+      <ForwardDialog
+        open={forwardOpen}
+        onOpenChange={setForwardOpen}
+        targets={convs.map(c => ({ id: c.id, contact_phone: c.contact_phone, contact_name: c.contact_name }))}
+        count={selectedMsgIds.length}
+        sending={forwarding}
+        onForward={forwardMessages}
+      />
+
 
       {/* Send location */}
       <Dialog open={locOpen} onOpenChange={setLocOpen}>
