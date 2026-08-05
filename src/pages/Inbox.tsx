@@ -783,7 +783,14 @@ const Inbox = () => {
                         <PhoneCall className="w-4 h-4 text-emerald-500" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent side="bottom" align="end" className="w-56 p-1.5">
+                    <PopoverContent side="bottom" align="end" className="w-60 p-1.5">
+                      <button
+                        type="button" disabled={calling} onClick={startVoiceCall}
+                        className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm hover:bg-muted disabled:opacity-60"
+                      >
+                        {calling ? <Loader2 className="w-4 h-4 animate-spin" /> : <PhoneCall className="w-4 h-4 text-emerald-500" />}
+                        In-app voice call
+                      </button>
                       <a href={`https://wa.me/${selected.contact_phone.replace(/[^\d]/g, '')}`} target="_blank" rel="noreferrer"
                         className="flex items-center gap-2 px-2 py-2 rounded-md text-sm hover:bg-muted">
                         <PhoneCall className="w-4 h-4 text-emerald-500" /> WhatsApp call
@@ -793,6 +800,7 @@ const Inbox = () => {
                         <Phone className="w-4 h-4 text-muted-foreground" /> Phone call
                       </a>
                     </PopoverContent>
+
                   </Popover>
                   <Button size="sm" variant="outline" className="h-8 hidden sm:inline-flex" onClick={toggleStatus}>
                     {selected.status === 'open' ? 'Resolve' : 'Reopen'}
