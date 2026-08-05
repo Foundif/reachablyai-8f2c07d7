@@ -114,6 +114,19 @@ const Inbox = () => {
   const [locOpen, setLocOpen] = useState(false);
   const [locForm, setLocForm] = useState({ latitude: '', longitude: '', name: '', address: '' });
 
+  // Multi-photo album composer
+  const [albumOpen, setAlbumOpen] = useState(false);
+  const [albumFiles, setAlbumFiles] = useState<File[]>([]);
+  const [albumSending, setAlbumSending] = useState(false);
+  const [albumProgress, setAlbumProgress] = useState<{ done: number; total: number } | null>(null);
+
+  // Multi-select + forward
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedMsgIds, setSelectedMsgIds] = useState<string[]>([]);
+  const [forwardOpen, setForwardOpen] = useState(false);
+  const [forwarding, setForwarding] = useState(false);
+
+
   const selected = useMemo(() => convs.find(c => c.id === selectedId) || null, [convs, selectedId]);
 
   useEffect(() => {
