@@ -1016,10 +1016,21 @@ const Inbox = () => {
                         {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent side="top" align="start" className="w-52 p-1.5">
+                    <PopoverContent side="top" align="start" className="w-56 p-1.5">
+                      <label className="flex items-center gap-2 px-2 py-2 rounded-md text-sm hover:bg-muted cursor-pointer">
+                        <Images className="w-4 h-4 text-muted-foreground" /> Photos & videos
+                        <input
+                          type="file" multiple accept="image/*,video/*" className="hidden"
+                          onChange={e => {
+                            const fs = Array.from(e.target.files || []);
+                            e.currentTarget.value = '';
+                            if (!fs.length) return;
+                            setAlbumFiles(fs);
+                            setAlbumOpen(true);
+                          }}
+                        />
+                      </label>
                       {([
-                        { kind: 'image' as const, icon: ImageIcon, label: 'Photo', accept: 'image/*' },
-                        { kind: 'video' as const, icon: Video, label: 'Video', accept: 'video/*' },
                         { kind: 'document' as const, icon: FileText, label: 'Document', accept: '.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt' },
                         { kind: 'audio' as const, icon: Mic, label: 'Audio file', accept: 'audio/*' },
                       ]).map(({ kind, icon: Icon, label, accept }) => (
@@ -1029,6 +1040,7 @@ const Inbox = () => {
                             onChange={e => { const f = e.target.files?.[0]; if (f) sendMedia(f, kind); e.currentTarget.value = ''; }} />
                         </label>
                       ))}
+
                       <button type="button" onClick={() => setLocOpen(true)}
                         className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm hover:bg-muted">
                         <MapPin className="w-4 h-4 text-muted-foreground" /> Location
