@@ -130,6 +130,10 @@ const Inbox = () => {
   const [forwardOpen, setForwardOpen] = useState(false);
   const [forwarding, setForwarding] = useState(false);
 
+  // Wati Astra voice calling
+  const [calling, setCalling] = useState(false);
+
+
 
   const selected = useMemo(() => convs.find(c => c.id === selectedId) || null, [convs, selectedId]);
 
@@ -374,7 +378,22 @@ const Inbox = () => {
 
 
 
+  /** Start a low-latency voice call with this contact via the Wati Astra agent. */
+  const startVoiceCall = async () => {
+    if (!selected || !wsId) return;
+    setCalling(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    const { data, error } = await supabase.functions.invoke('voice-call', {
+      body: { workspace_id: wsId, conversation_id: selected.id, to: selected.contact_phone },
+      headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+    });
+    setCalling(false);
+    if (error || (data as any)?.error) return toast.error((data as any)?.error || error?.message || 'Could not start the call');
+    toast.success('Calling ' + (selected.contact_name || selected.contact_phone));
+  };
+
   const toggleRecording = async () => {
+
     if (recording) { recorderRef.current?.stop(); setRecording(false); return; }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -783,7 +802,14 @@ const Inbox = () => {
                         <PhoneCall className="w-4 h-4 text-emerald-500" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent side="bottom" align="end" className="w-56 p-1.5">
+                    <PopoverContent side="bottom" align="end" className="w-60 p-1.5">
+                      <button
+                        type="button" disabled={calling} onClick={startVoiceCall}
+                        className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm hover:bg-muted disabled:opacity-60"
+                      >
+                        {calling ? <Loader2 className="w-4 h-4 animate-spin" /> : <PhoneCall className="w-4 h-4 text-emerald-500" />}
+                        In-app voice call
+                      </button>
                       <a href={`https://wa.me/${selected.contact_phone.replace(/[^\d]/g, '')}`} target="_blank" rel="noreferrer"
                         className="flex items-center gap-2 px-2 py-2 rounded-md text-sm hover:bg-muted">
                         <PhoneCall className="w-4 h-4 text-emerald-500" /> WhatsApp call
@@ -793,6 +819,7 @@ const Inbox = () => {
                         <Phone className="w-4 h-4 text-muted-foreground" /> Phone call
                       </a>
                     </PopoverContent>
+
                   </Popover>
                   <Button size="sm" variant="outline" className="h-8 hidden sm:inline-flex" onClick={toggleStatus}>
                     {selected.status === 'open' ? 'Resolve' : 'Reopen'}
