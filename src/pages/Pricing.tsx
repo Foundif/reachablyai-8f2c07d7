@@ -141,6 +141,8 @@ const PricingContent = () => {
   const [audience, setAudience] = useState<Audience>('business');
   const [busy, setBusy] = useState<string | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
+  const [aiBalance, setAiBalance] = useState<number | null>(null);
+  const [packIdx, setPackIdx] = useState(2);
 
   useEffect(() => {
     const a = new URLSearchParams(window.location.search).get('audience');
@@ -152,16 +154,20 @@ const PricingContent = () => {
     (async () => {
       const wsId = await resolveWorkspaceId(user.id, profile);
       if (!wsId) return;
-      const { data: cr } = await supabase.from('message_credits' as any).select('balance').eq('workspace_id', wsId).maybeSingle();
+      const { data: cr } = await supabase.from('message_credits' as any).select('balance, ai_balance').eq('workspace_id', wsId).maybeSingle();
       setBalance((cr as any)?.balance ?? 0);
+      setAiBalance((cr as any)?.ai_balance ?? 0);
     })();
   }, [user, profile]);
+
 
   const priceFor = (p: Plan) => billing === 'yearly' ? p.yearly : p.monthly;
   const perMonth = (p: Plan) => billing === 'yearly' ? Math.round(p.yearly / 12) : p.monthly;
   const savingsFor = (p: Plan) => p.monthly * 12 - p.yearly;
   const currentStatus = (profile as any)?.subscription_status;
   const activePlan = ['starter', 'growth', 'business'].includes(currentStatus) ? currentStatus : null;
+  const trialEnd = (profile as any)?.trial_end_date ? new Date((profile as any).trial_end_date) : null;
+  const trialEndLabel = trialEnd ? trialEnd.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
 
   const checkout = async (opts: {
     key: string; amount: number; name: string; description: string;
@@ -225,7 +231,36 @@ const PricingContent = () => {
 
   return (
     <div className="relative overflow-hidden">
+      {user && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
+          <h1 className="text-xl sm:text-2xl font-bold">Plans &amp; Subscription</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage your plan, credits and add-ons.</p>
+          <Card className="mt-4 p-5 flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
+            <div>
+              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Current plan</div>
+              <div className="text-lg font-bold mt-0.5 capitalize">
+                {activePlan ? PLANS.find(p => p.id === activePlan)?.name : 'Free trial'}
+              </div>
+              <div className="text-xs text-muted-foreground mt-0.5">
+                {activePlan
+                  ? 'Active subscription · renews automatically'
+                  : trialEndLabel ? `Trial ends on ${trialEndLabel}` : 'No active subscription'}
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Message credits</div>
+                <div className="text-lg font-bold">{(balance ?? 0).toLocaleString('en-IN')}</div>
+              </div>
+              <Button size="sm" onClick={() => document.getElementById('plan-grid')?.scrollIntoView({ behavior: 'smooth' })}>
+                {activePlan ? 'Change plan' : 'Purchase plan'}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
       <div className="relative">
+
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/5 via-background to-background" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-14 pb-8 text-center">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
@@ -270,7 +305,7 @@ const PricingContent = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-16">
         {/* Plans */}
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4 items-stretch">
+        <div id="plan-grid" className="grid gap-6 md:grid-cols-2 xl:grid-cols-4 items-stretch">
           {PLANS.map((plan, i) => {
             const Icon = plan.icon;
             const BadgeIcon = plan.badgeIcon;
@@ -399,30 +434,66 @@ const PricingContent = () => {
           <CreditWallet />
         </div>
 
-        {/* Message recharge packs */}
+        {/* Credit top-ups */}
         <div className="mt-14">
-          <div className="text-center mb-2">
-            <h2 className="text-2xl font-bold flex items-center justify-center gap-2"><Battery className="w-6 h-6" /> Message recharge packs</h2>
-            <p className="text-sm text-muted-foreground mt-1">Need more messages this month? Buy top-up packs — never expires while your plan is active.</p>
+          <div className="mb-5">
+            <h2 className="text-xl font-bold flex items-center gap-2"><Battery className="w-5 h-5" /> Credits</h2>
+            <p className="text-sm text-muted-foreground mt-1">Top up message credits anytime — they never expire while your plan is active.</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mt-6">
-            {PACKS.map(p => (
-              <Card key={p.id} className={cn('p-4 border-2 relative flex flex-col', p.badge === 'Best value' && 'border-primary')}>
-                {p.badge && <div className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold whitespace-nowrap">{p.badge}</div>}
-                <div className="text-xs text-muted-foreground mt-1">Top-up</div>
-                <div className="text-2xl font-bold">{p.msgs.toLocaleString('en-IN')}</div>
-                <div className="text-xs text-muted-foreground mb-3">messages · {p.perMsg}</div>
-                <div className="text-xl font-bold mb-3">{formatINR(p.price)}</div>
-                <Button size="sm" onClick={() => buyPack(p)} disabled={busy === `pack_${p.id}`} className="mt-auto">
-                  {busy === `pack_${p.id}` ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Buy now'}
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Message credits */}
+            <Card className="p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm font-semibold"><MessageSquare className="w-4 h-4" /> Message credits</div>
+                <span className="text-xs text-muted-foreground">{(balance ?? 0).toLocaleString('en-IN')} available</span>
+              </div>
+              <div className="mt-4 flex items-center gap-2">
+                <button onClick={() => setPackIdx(i => Math.max(0, i - 1))}
+                  className="w-9 h-9 rounded-md border border-border text-lg leading-none disabled:opacity-40" disabled={packIdx === 0}>−</button>
+                <div className="flex-1 h-9 rounded-md border border-border flex items-center justify-center text-sm font-semibold">
+                  {PACKS[packIdx].msgs.toLocaleString('en-IN')} messages
+                </div>
+                <button onClick={() => setPackIdx(i => Math.min(PACKS.length - 1, i + 1))}
+                  className="w-9 h-9 rounded-md border border-border text-lg leading-none disabled:opacity-40" disabled={packIdx === PACKS.length - 1}>+</button>
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold">{formatINR(PACKS[packIdx].price)}</div>
+                  <div className="text-[11px] text-muted-foreground">{PACKS[packIdx].perMsg}{PACKS[packIdx].badge ? ` · ${PACKS[packIdx].badge}` : ''}</div>
+                </div>
+                <Button size="sm" onClick={() => buyPack(PACKS[packIdx])} disabled={busy === `pack_${PACKS[packIdx].id}`}>
+                  {busy === `pack_${PACKS[packIdx].id}` ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Buy credits'}
                 </Button>
-              </Card>
-            ))}
+              </div>
+            </Card>
+
+            {/* AI credits */}
+            <Card className="p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm font-semibold"><Sparkles className="w-4 h-4" /> AI credits</div>
+                <span className="text-xs text-muted-foreground">{(aiBalance ?? 0).toLocaleString('en-IN')} available</span>
+              </div>
+              <p className="mt-4 text-xs text-muted-foreground">
+                AI credits power chatbot replies, template fixes and smart suggestions. They refresh with your plan each month.
+              </p>
+              <div className="mt-6 flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold">Included</div>
+                  <div className="text-[11px] text-muted-foreground">with every paid plan</div>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => document.getElementById('plan-grid')?.scrollIntoView({ behavior: 'smooth' })}>
+                  View plans
+                </Button>
+              </div>
+            </Card>
           </div>
-          <p className="text-[11px] text-muted-foreground mt-3 text-center">
-            Meta charges ≈ ₹0.86 per marketing message. Prices above include Reachably platform costs, safe-pacing infrastructure, and delivery retries.
+
+          <p className="text-[11px] text-muted-foreground mt-3">
+            Meta charges ≈ ₹0.86 per marketing message. Prices include Reachably platform costs, safe-pacing infrastructure and delivery retries.
           </p>
         </div>
+
 
         {/* Compare */}
         <div className="mt-14">

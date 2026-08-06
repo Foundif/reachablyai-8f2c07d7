@@ -19,7 +19,7 @@ import ShopInfo from "./pages/ShopInfo";
 import Guide from "./pages/Guide";
 import Pricing from "./pages/Pricing";
 import Auth from "./pages/Auth";
-import Onboarding from "./pages/Onboarding";
+import OnboardingGate from "@/components/onboarding/OnboardingGate";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
@@ -54,8 +54,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
   if (!user) return <Navigate to="/auth" replace />;
-  if (profile && !profile.onboarding_completed) return <Navigate to="/onboarding" replace />;
-  return (<><TrialExpiredModal /><TrialModal />{children}</>);
+  return (<><OnboardingGate /><TrialExpiredModal /><TrialModal />{children}</>);
 };
 
 const App = () => (
@@ -70,7 +69,7 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/auth" element={<Auth />} />
-                <Route path="/onboarding" element={<Onboarding />} />
+                <Route path="/onboarding" element={<Navigate to="/" replace />} />
                 <Route path="/whatsapp/callback" element={<WhatsAppCallback />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/privacy" element={<Privacy />} />
