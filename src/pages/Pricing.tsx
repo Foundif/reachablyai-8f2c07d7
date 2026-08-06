@@ -166,6 +166,8 @@ const PricingContent = () => {
   const savingsFor = (p: Plan) => p.monthly * 12 - p.yearly;
   const currentStatus = (profile as any)?.subscription_status;
   const activePlan = ['starter', 'growth', 'business'].includes(currentStatus) ? currentStatus : null;
+  const trialEnd = (profile as any)?.trial_end_date ? new Date((profile as any).trial_end_date) : null;
+  const trialEndLabel = trialEnd ? trialEnd.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
 
   const checkout = async (opts: {
     key: string; amount: number; name: string; description: string;
