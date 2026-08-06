@@ -19,7 +19,7 @@ import ShopInfo from "./pages/ShopInfo";
 import Guide from "./pages/Guide";
 import Pricing from "./pages/Pricing";
 import Auth from "./pages/Auth";
-import Onboarding from "./pages/Onboarding";
+import OnboardingGate from "@/components/onboarding/OnboardingGate";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
