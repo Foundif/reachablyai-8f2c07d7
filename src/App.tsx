@@ -54,8 +54,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
   if (!user) return <Navigate to="/auth" replace />;
-  if (profile && !profile.onboarding_completed) return <Navigate to="/onboarding" replace />;
-  return (<><TrialExpiredModal /><TrialModal />{children}</>);
+  return (<><OnboardingGate /><TrialExpiredModal /><TrialModal />{children}</>);
 };
 
 const App = () => (
