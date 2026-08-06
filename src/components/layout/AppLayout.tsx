@@ -5,6 +5,7 @@ import MobileHeader from './MobileHeader';
 import TopBar from './TopBar';
 import AppFooter from './AppFooter';
 import PaymentAlertBanner from './PaymentAlertBanner';
+import TrialBanner from './TrialBanner';
 import { useGlobalAlerts } from '@/hooks/useGlobalAlerts';
 
 interface AppLayoutProps {
