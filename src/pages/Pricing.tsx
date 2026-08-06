@@ -229,7 +229,36 @@ const PricingContent = () => {
 
   return (
     <div className="relative overflow-hidden">
+      {user && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
+          <h1 className="text-xl sm:text-2xl font-bold">Plans &amp; Subscription</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage your plan, credits and add-ons.</p>
+          <Card className="mt-4 p-5 flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
+            <div>
+              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Current plan</div>
+              <div className="text-lg font-bold mt-0.5 capitalize">
+                {activePlan ? PLANS.find(p => p.id === activePlan)?.name : 'Free trial'}
+              </div>
+              <div className="text-xs text-muted-foreground mt-0.5">
+                {activePlan
+                  ? 'Active subscription · renews automatically'
+                  : trialEndLabel ? `Trial ends on ${trialEndLabel}` : 'No active subscription'}
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Message credits</div>
+                <div className="text-lg font-bold">{(balance ?? 0).toLocaleString('en-IN')}</div>
+              </div>
+              <Button size="sm" onClick={() => document.getElementById('plan-grid')?.scrollIntoView({ behavior: 'smooth' })}>
+                {activePlan ? 'Change plan' : 'Purchase plan'}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
       <div className="relative">
+
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/5 via-background to-background" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-14 pb-8 text-center">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
