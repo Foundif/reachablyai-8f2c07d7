@@ -141,6 +141,8 @@ const PricingContent = () => {
   const [audience, setAudience] = useState<Audience>('business');
   const [busy, setBusy] = useState<string | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
+  const [aiBalance, setAiBalance] = useState<number | null>(null);
+  const [packIdx, setPackIdx] = useState(2);
 
   useEffect(() => {
     const a = new URLSearchParams(window.location.search).get('audience');
@@ -152,10 +154,12 @@ const PricingContent = () => {
     (async () => {
       const wsId = await resolveWorkspaceId(user.id, profile);
       if (!wsId) return;
-      const { data: cr } = await supabase.from('message_credits' as any).select('balance').eq('workspace_id', wsId).maybeSingle();
+      const { data: cr } = await supabase.from('message_credits' as any).select('balance, ai_balance').eq('workspace_id', wsId).maybeSingle();
       setBalance((cr as any)?.balance ?? 0);
+      setAiBalance((cr as any)?.ai_balance ?? 0);
     })();
   }, [user, profile]);
+
 
   const priceFor = (p: Plan) => billing === 'yearly' ? p.yearly : p.monthly;
   const perMonth = (p: Plan) => billing === 'yearly' ? Math.round(p.yearly / 12) : p.monthly;
