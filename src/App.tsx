@@ -69,7 +69,7 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/auth" element={<Auth />} />
-                <Route path="/onboarding" element={<Navigate to="/" replace />} />ationPlaceholder
+                <Route path="/onboarding" element={<Navigate to="/" replace />} />
                 <Route path="/whatsapp/callback" element={<WhatsAppCallback />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/privacy" element={<Privacy />} />
