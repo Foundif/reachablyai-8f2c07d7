@@ -844,6 +844,7 @@ export type Database = {
       }
       message_credits: {
         Row: {
+          ai_balance: number
           balance: number
           buffer_enabled: boolean
           credit_limit: number
@@ -854,6 +855,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          ai_balance?: number
           balance?: number
           buffer_enabled?: boolean
           credit_limit?: number
@@ -864,6 +866,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          ai_balance?: number
           balance?: number
           buffer_enabled?: boolean
           credit_limit?: number
@@ -897,18 +900,23 @@ export type Database = {
           full_name: string | null
           gst_number: string | null
           id: string
+          industry: string | null
           is_staff: boolean
+          job_role: string | null
           language: string | null
           logo_url: string | null
           notification_sound_enabled: boolean
           onboarding_completed: boolean | null
+          org_size: string | null
           owner_id: string | null
           phone: string | null
           price_list_url: string | null
           purpose: string | null
           referral_source: string | null
           role: string | null
+          sells: string | null
           services_concept: string | null
+          state: string | null
           store_name: string | null
           subscription_status: string | null
           tagline: string | null
@@ -916,6 +924,7 @@ export type Database = {
           trial_start_date: string | null
           updated_at: string
           user_id: string
+          website: string | null
         }
         Insert: {
           active_workspace_id?: string | null
@@ -930,18 +939,23 @@ export type Database = {
           full_name?: string | null
           gst_number?: string | null
           id?: string
+          industry?: string | null
           is_staff?: boolean
+          job_role?: string | null
           language?: string | null
           logo_url?: string | null
           notification_sound_enabled?: boolean
           onboarding_completed?: boolean | null
+          org_size?: string | null
           owner_id?: string | null
           phone?: string | null
           price_list_url?: string | null
           purpose?: string | null
           referral_source?: string | null
           role?: string | null
+          sells?: string | null
           services_concept?: string | null
+          state?: string | null
           store_name?: string | null
           subscription_status?: string | null
           tagline?: string | null
@@ -949,6 +963,7 @@ export type Database = {
           trial_start_date?: string | null
           updated_at?: string
           user_id: string
+          website?: string | null
         }
         Update: {
           active_workspace_id?: string | null
@@ -963,18 +978,23 @@ export type Database = {
           full_name?: string | null
           gst_number?: string | null
           id?: string
+          industry?: string | null
           is_staff?: boolean
+          job_role?: string | null
           language?: string | null
           logo_url?: string | null
           notification_sound_enabled?: boolean
           onboarding_completed?: boolean | null
+          org_size?: string | null
           owner_id?: string | null
           phone?: string | null
           price_list_url?: string | null
           purpose?: string | null
           referral_source?: string | null
           role?: string | null
+          sells?: string | null
           services_concept?: string | null
+          state?: string | null
           store_name?: string | null
           subscription_status?: string | null
           tagline?: string | null
@@ -982,6 +1002,7 @@ export type Database = {
           trial_start_date?: string | null
           updated_at?: string
           user_id?: string
+          website?: string | null
         }
         Relationships: []
       }
