@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => ({
       devOptions: {
         enabled: false,
       },
-      includeAssets: ["favicon.ico", "icon-192.png", "icon-512.png"],
+      includeAssets: ["favicon.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png", "icon-512-maskable.png"],
       manifest: {
         name: "Reachably — WhatsApp CRM & Campaigns",
         short_name: "Reachably",
@@ -46,7 +46,7 @@ export default defineConfig(({ mode }) => ({
             purpose: "any",
           },
           {
-            src: "/icon-512.png",
+            src: "/icon-512-maskable.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable",
