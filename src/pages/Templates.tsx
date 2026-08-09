@@ -156,72 +156,121 @@ const Templates = () => {
 
   const canEdit = (t: Template) => !!t.meta_template_id && ['approved', 'rejected', 'paused'].includes(t.status);
 
+  const [q, setQ] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [catFilter, setCatFilter] = useState('all');
+
+  const filtered = items.filter(t =>
+    (!q || t.name.toLowerCase().includes(q.toLowerCase())) &&
+    (statusFilter === 'all' || t.status === statusFilter) &&
+    (catFilter === 'all' || t.category === catFilter)
+  );
+
+  const ago = (d?: string | null) => {
+    if (!d) return '—';
+    const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
+    if (s < 3600) return `${Math.max(1, Math.floor(s / 60))} min ago`;
+    if (s < 86400) return `${Math.floor(s / 3600)} hours ago`;
+    const days = Math.floor(s / 86400);
+    return days === 1 ? 'a day ago' : `${days} days ago`;
+  };
+
+  const renderBody = (t: Template) => {
+    const parts = (t.body || '').split(/(\{\{\s*[a-zA-Z0-9_]+\s*\}\})/g);
+    return parts.map((p, i) =>
+      /^\{\{/.test(p)
+        ? <span key={i} className="rounded bg-emerald-500/15 text-emerald-600 px-1 py-0.5 mx-0.5">{p.replace(/[{}]/g, '').trim()}</span>
+        : <span key={i}>{p}</span>
+    );
+  };
+
   return (
     <AppLayout>
-      <div className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto">
+      <div className="p-4 md:p-8 space-y-5 max-w-6xl mx-auto">
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-              <MessageSquareText className="w-6 h-6" /> Message Templates
-            </h1>
-            <p className="text-muted-foreground text-sm">All templates come from Meta. Submit here → shown on Meta → usable once approved. Click <b>Sync from Meta</b> to refresh statuses.</p>
-          </div>
+          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
+            <MessageSquareText className="w-6 h-6" /> WhatsApp Templates
+          </h1>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={syncFromMeta} disabled={syncing || !wsId} className="gap-2">
+            <Button variant="outline" size="icon" onClick={syncFromMeta} disabled={syncing || !wsId} aria-label="Sync from Meta">
               {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-              Sync from Meta
             </Button>
-            <Button className="gap-2" disabled={!wsId} onClick={openNew}><Plus className="w-4 h-4" /> New Template</Button>
+            <Button className="gap-2" disabled={!wsId} onClick={openNew}><Plus className="w-4 h-4" /> Create New Template</Button>
           </div>
         </div>
 
-        <Card className="overflow-hidden">
-          {loading ? (
-            <div className="p-8 text-center text-muted-foreground">Loading…</div>
-          ) : items.length === 0 ? (
-            <div className="p-12 text-center">
-              <MessageSquareText className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-              <p className="font-medium">No templates yet</p>
-              <p className="text-sm text-muted-foreground">Click <b>Sync from Meta</b> to pull existing ones, or create a new one.</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Header</TableHead>
-                  <TableHead>Meta Status</TableHead>
-                  <TableHead>Last synced</TableHead>
-                  <TableHead className="text-right"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map(t => (
-                  <TableRow key={t.id}>
-                    <TableCell className="font-medium">
-                      {t.name}
-                      {t.rejection_reason && <div className="text-[11px] text-red-500 mt-0.5">{t.rejection_reason}</div>}
-                    </TableCell>
-                    <TableCell><Badge variant="outline">{t.category}</Badge></TableCell>
-                    <TableCell className="text-xs capitalize">{t.header_type || 'none'}</TableCell>
-                    <TableCell><Badge variant="outline" className={STATUS_STYLES[t.status] || STATUS_STYLES.draft}>{t.status.replace('_', ' ')}</Badge></TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {t.synced_at ? new Date(t.synced_at).toLocaleString() : '—'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button size="sm" variant="ghost" onClick={() => openEdit(t)} title={canEdit(t) ? 'Edit & resubmit to Meta' : 'View / duplicate'}>
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setPendingDelete(t)}><Trash2 className="w-4 h-4" /></Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </Card>
+        <div className="flex flex-wrap gap-2">
+          <Input placeholder="Search by name" value={q} onChange={e => setQ(e.target.value)} className="max-w-xs" />
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[160px]"><SelectValue placeholder="Status: All" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Status: All</SelectItem>
+              {['approved', 'pending', 'rejected', 'draft', 'paused'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={catFilter} onValueChange={setCatFilter}>
+            <SelectTrigger className="w-[170px]"><SelectValue placeholder="Category: All" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Category: All</SelectItem>
+              {['marketing', 'utility', 'authentication', 'carousel'].map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {loading ? (
+          <div className="p-8 text-center text-muted-foreground">Loading…</div>
+        ) : filtered.length === 0 ? (
+          <Card className="p-12 text-center">
+            <MessageSquareText className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+            <p className="font-medium">No templates found</p>
+            <p className="text-sm text-muted-foreground">Sync from Meta to pull existing ones, or create a new one.</p>
+          </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {filtered.map(t => (
+              <Card key={t.id} className="overflow-hidden flex flex-col">
+                <div className="p-3 flex items-start justify-between gap-2 border-b">
+                  <div className="min-w-0">
+                    <p className="font-semibold truncate">{t.name}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline" className={STATUS_STYLES[t.status] || STATUS_STYLES.draft}>{t.status.replace('_', ' ')}</Badge>
+                      <span className="text-xs text-muted-foreground capitalize">{t.category}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button size="sm" variant="outline" onClick={() => openEdit(t)}>View</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setPendingDelete(t)} aria-label={`Delete ${t.name}`}>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-muted/40 flex-1">
+                  <div className="rounded-xl bg-card border p-3 text-sm whitespace-pre-wrap max-h-56 overflow-y-auto custom-scrollbar">
+                    {t.header_type && !['none', 'text'].includes(t.header_type) && (
+                      <div className="mb-2 rounded-lg overflow-hidden bg-muted h-24 grid place-items-center text-xs text-muted-foreground capitalize">
+                        {t.header_type} header
+                      </div>
+                    )}
+                    {t.header_type === 'text' && t.header && <p className="font-semibold mb-1">{t.header}</p>}
+                    {renderBody(t)}
+                    {t.footer && <p className="text-xs text-muted-foreground mt-2">{t.footer}</p>}
+                  </div>
+                  {t.rejection_reason && (
+                    <p className="text-[11px] text-red-500 mt-2 flex gap-1"><AlertTriangle className="w-3 h-3 mt-0.5" />{t.rejection_reason}</p>
+                  )}
+                </div>
+
+                <div className="px-3 py-2 border-t flex items-center justify-between text-[11px] text-muted-foreground">
+                  <span className="uppercase">{t.language}</span>
+                  <span>{ago(t.synced_at || t.created_at)}</span>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
+
 
 
 
