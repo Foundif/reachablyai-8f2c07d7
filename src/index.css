@@ -206,35 +206,34 @@
 }
 
 @layer components {
-  /* WhatsApp-style doodle chat wallpaper (theme aware, real doodle artwork) */
+  /* WhatsApp-style doodle chat wallpaper — seamless tile, stays fixed while chat scrolls */
   .wa-doodle-bg {
     position: relative;
     background-color: hsl(var(--muted));
     isolation: isolate;
-    overflow: hidden;
-    /* makes the element a containing block so the fixed wallpaper stays put while chat scrolls */
+    /* containing block so the fixed wallpaper stays put while messages scroll */
     transform: translateZ(0);
   }
   .wa-doodle-bg::before {
     content: '';
-    position: absolute;
+    position: fixed;
     inset: 0;
     z-index: 0;
     pointer-events: none;
-    background-image: url("/doodle-tile.svg");
-    /* seamless tile — wraps perfectly in both axes */
+    background-image: url("/__l5e/assets-v1/e6832731-e477-40c4-8180-f580e514e726/doodle-tile.png");
     background-repeat: repeat;
-    background-size: 280px 280px;
-    background-position: top left;
-    /* tile strokes are white — invert for the light theme */
+    background-size: 420px 420px;
+    background-position: center;
+    /* artwork is light strokes on black — invert for the light theme */
     filter: invert(1);
-    opacity: 0.14;
+    opacity: 0.12;
   }
 
   .dark .wa-doodle-bg::before {
     filter: none;
-    opacity: 0.09;
+    opacity: 0.5;
   }
+
 
   .wa-doodle-bg > * {
     position: relative;
