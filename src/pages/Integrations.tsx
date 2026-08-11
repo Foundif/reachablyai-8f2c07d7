@@ -97,8 +97,9 @@ const PROVIDERS: Provider[] = [
 ];
 
 interface Row { id: string; provider: string; status: string; display_name: string | null; settings: Record<string, any> }
+interface WebhookRow { id: string; name: string; token: string; active: boolean; last_received_at: string | null; template_id: string | null }
 
-const WEBHOOK_URL = 'https://jpenkubzwugozbibtnqd.supabase.co/functions/v1/booking-api';
+const FN_BASE = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/generic-webhook`;
 
 const Logo = ({ src, alt, className = 'w-10 h-10' }: { src: string; alt: string; className?: string }) => (
   <div className={`${className} rounded-xl bg-muted/60 grid place-items-center overflow-hidden shrink-0`}>
@@ -108,14 +109,18 @@ const Logo = ({ src, alt, className = 'w-10 h-10' }: { src: string; alt: string;
 
 const Integrations = () => {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [wsId, setWsId] = useState<string | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
+  const [hooks, setHooks] = useState<WebhookRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState<Provider | null>(null);
   const [detail, setDetail] = useState<Provider | null>(null);
   const [form, setForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [pendingRemove, setPendingRemove] = useState<Provider | null>(null);
+  const [hookDialog, setHookDialog] = useState(false);
+  const [hookName, setHookName] = useState('');
 
   const load = async () => {
     if (!user) return;
@@ -123,19 +128,40 @@ const Integrations = () => {
     const id = await resolveWorkspaceId(user.id, profile);
     setWsId(id);
     if (!id) { setLoading(false); return; }
-    const { data } = await supabase.from('integrations' as any).select('*').eq('workspace_id', id);
+    const [{ data }, { data: wh }] = await Promise.all([
+      supabase.from('integrations' as any).select('*').eq('workspace_id', id),
+      supabase.from('webhook_endpoints' as any).select('id,name,token,active,last_received_at,template_id')
+        .eq('workspace_id', id).order('created_at', { ascending: false }),
+    ]);
     setRows(((data as any[]) || []) as Row[]);
+    setHooks(((wh as any[]) || []) as WebhookRow[]);
     setLoading(false);
   };
   useEffect(() => { load(); }, [user, profile]);
 
   const connected = useMemo(() => new Map(rows.map(r => [r.provider, r])), [rows]);
 
+  const createWebhook = async () => {
+    if (!wsId) return;
+    if (!hookName.trim()) return toast.error('Enter a webhook name');
+    setSaving(true);
+    const { data, error } = await supabase.from('webhook_endpoints' as any)
+      .insert({ workspace_id: wsId, name: hookName.trim(), created_by: user?.id } as any)
+      .select('id').maybeSingle();
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    setHookDialog(false);
+    setHookName('');
+    navigate(`/integrations/webhooks/${(data as any).id}`);
+  };
+
   const openConnect = (p: Provider) => {
+    if (p.id === 'webhook') { setHookName(''); setHookDialog(true); return; }
     const existing = connected.get(p.id);
     setForm((existing?.settings as Record<string, string>) || {});
     setActive(p);
   };
+
 
   const save = async () => {
     if (!active || !wsId) return;
