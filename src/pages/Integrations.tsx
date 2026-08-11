@@ -208,7 +208,47 @@ const Integrations = () => {
           <div className="p-10 text-center text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></div>
         ) : (
           <>
+            {hooks.length > 0 && (
+              <section className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-semibold">Generic Webhooks</h2>
+                  <Button size="sm" variant="outline" onClick={() => { setHookName(''); setHookDialog(true); }}>New webhook</Button>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {hooks.map(h => (
+                    <Card
+                      key={h.id}
+                      className="p-4 space-y-2 hover-lift cursor-pointer"
+                      onClick={() => navigate(`/integrations/webhooks/${h.id}`)}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Webhook className="w-4 h-4 shrink-0" />
+                          <p className="font-semibold truncate">{h.name}</p>
+                        </div>
+                        <Badge variant="outline" className={h.active && h.template_id ? 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30' : ''}>
+                          {h.template_id ? (h.active ? 'Active' : 'Paused') : 'Setup'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <code className="text-[11px] truncate flex-1 text-muted-foreground">{`${FN_BASE}/${h.token}`}</code>
+                        <Button size="sm" variant="ghost" aria-label="Copy webhook URL"
+                          onClick={(e) => { e.stopPropagation(); copy(`${FN_BASE}/${h.token}`); }}>
+                          <Copy className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                        {h.last_received_at ? `Last event ${new Date(h.last_received_at).toLocaleString()}` : 'No events yet'}
+                        <ChevronRight className="w-3 h-3" />
+                      </p>
+                    </Card>
+                  ))}
+                </div>
+              </section>
+            )}
+
             {myIntegrations.length > 0 && (
+
               <section className="space-y-3">
                 <h2 className="text-lg font-semibold">My Integrations</h2>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -291,14 +331,25 @@ const Integrations = () => {
                 </ul>
 
                 {detail.id === 'webhook' && (
-                  <div className="rounded-lg border p-3 space-y-1">
-                    <p className="text-xs font-medium">Your inbound webhook URL</p>
-                    <div className="flex items-center gap-2">
-                      <code className="text-[11px] truncate flex-1">{WEBHOOK_URL}</code>
-                      <Button size="sm" variant="outline" onClick={() => copy(WEBHOOK_URL)}><Copy className="w-3.5 h-3.5" /></Button>
-                    </div>
+                  <div className="rounded-lg border p-3 space-y-2">
+                    <p className="text-xs font-medium">How it works</p>
+                    <ol className="text-xs text-muted-foreground space-y-1 list-decimal pl-4">
+                      <li>Click Connect and give the webhook a name.</li>
+                      <li>Copy the generated webhook URL into your external platform.</li>
+                      <li>Trigger a test event, then hit “Capture webhook response”.</li>
+                      <li>Map recipient name &amp; number, pick a template, activate the workflow.</li>
+                      <li>Track everything under Logs (received / sent / failed).</li>
+                    </ol>
+                    <code className="block text-[11px] truncate text-muted-foreground">{`${FN_BASE}/<your-token>`}</code>
                   </div>
                 )}
+
+                {detail.id === 'shopify' && (
+                  <div className="pt-2 border-t space-y-3">
+                    <ShopifyRiskMapping workspaceId={wsId} />
+                  </div>
+                )}
+
               </div>
 
               <DialogFooter>
