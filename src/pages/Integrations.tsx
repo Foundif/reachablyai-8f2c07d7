@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { resolveWorkspaceId } from '@/lib/workspace';
 import { toast } from 'sonner';
-import { Copy, Loader2, Plug, Trash2, ExternalLink } from 'lucide-react';
+import { Copy, Loader2, Plug, Trash2, ExternalLink, Webhook, ChevronRight } from 'lucide-react';
+import ShopifyRiskMapping from '@/components/integrations/ShopifyRiskMapping';
 import razorpayLogo from '@/assets/razorpay.svg.asset.json';
 import shiprocketLogo from '@/assets/shiprocket.png.asset.json';
 
