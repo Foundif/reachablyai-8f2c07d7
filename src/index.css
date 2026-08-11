@@ -206,13 +206,13 @@
 }
 
 @layer components {
-  /* WhatsApp-style doodle chat wallpaper — seamless tile, stays fixed while chat scrolls */
+  /* WhatsApp-style doodle chat wallpaper — seamless tile, stays fixed while chat scrolls.
+     The wallpaper lives on its own promoted compositor layer so mobile scrolling of
+     messages/media never triggers a repaint of the (expensive, filtered) pattern. */
   .wa-doodle-bg {
     position: relative;
     background-color: hsl(var(--muted));
     isolation: isolate;
-    /* containing block so the fixed wallpaper stays put while messages scroll */
-    transform: translateZ(0);
   }
   .wa-doodle-bg::before {
     content: '';
@@ -227,6 +227,11 @@
     /* artwork is light strokes on black — invert for the light theme */
     filter: invert(1);
     opacity: 0.12;
+    /* rasterize once, then reuse the layer on every scroll frame */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    will-change: transform;
+    contain: strict;
   }
 
   .dark .wa-doodle-bg::before {
@@ -234,11 +239,18 @@
     opacity: 0.5;
   }
 
+  /* Coarse pointers (phones/tablets): drop the per-frame filter cost entirely by
+     painting the dark artwork over a light plate instead of inverting it. */
+  @media (hover: none) and (pointer: coarse) {
+    .wa-doodle-bg::before { filter: none; opacity: 0.07; }
+    .dark .wa-doodle-bg::before { opacity: 0.4; }
+  }
 
   .wa-doodle-bg > * {
     position: relative;
     z-index: 1;
   }
+
 
 
   .glass-panel {

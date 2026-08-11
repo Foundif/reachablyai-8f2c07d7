@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { resolveWorkspaceId } from '@/lib/workspace';
 import { toast } from 'sonner';
-import { Copy, Loader2, Plug, Trash2, ExternalLink } from 'lucide-react';
+import { Copy, Loader2, Plug, Trash2, ExternalLink, Webhook, ChevronRight } from 'lucide-react';
+import ShopifyRiskMapping from '@/components/integrations/ShopifyRiskMapping';
 import razorpayLogo from '@/assets/razorpay.svg.asset.json';
 import shiprocketLogo from '@/assets/shiprocket.png.asset.json';
 
@@ -95,8 +97,9 @@ const PROVIDERS: Provider[] = [
 ];
 
 interface Row { id: string; provider: string; status: string; display_name: string | null; settings: Record<string, any> }
+interface WebhookRow { id: string; name: string; token: string; active: boolean; last_received_at: string | null; template_id: string | null }
 
-const WEBHOOK_URL = 'https://jpenkubzwugozbibtnqd.supabase.co/functions/v1/booking-api';
+const FN_BASE = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/generic-webhook`;
 
 const Logo = ({ src, alt, className = 'w-10 h-10' }: { src: string; alt: string; className?: string }) => (
   <div className={`${className} rounded-xl bg-muted/60 grid place-items-center overflow-hidden shrink-0`}>
@@ -106,14 +109,18 @@ const Logo = ({ src, alt, className = 'w-10 h-10' }: { src: string; alt: string;
 
 const Integrations = () => {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [wsId, setWsId] = useState<string | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
+  const [hooks, setHooks] = useState<WebhookRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState<Provider | null>(null);
   const [detail, setDetail] = useState<Provider | null>(null);
   const [form, setForm] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [pendingRemove, setPendingRemove] = useState<Provider | null>(null);
+  const [hookDialog, setHookDialog] = useState(false);
+  const [hookName, setHookName] = useState('');
 
   const load = async () => {
     if (!user) return;
@@ -121,19 +128,40 @@ const Integrations = () => {
     const id = await resolveWorkspaceId(user.id, profile);
     setWsId(id);
     if (!id) { setLoading(false); return; }
-    const { data } = await supabase.from('integrations' as any).select('*').eq('workspace_id', id);
+    const [{ data }, { data: wh }] = await Promise.all([
+      supabase.from('integrations' as any).select('*').eq('workspace_id', id),
+      supabase.from('webhook_endpoints' as any).select('id,name,token,active,last_received_at,template_id')
+        .eq('workspace_id', id).order('created_at', { ascending: false }),
+    ]);
     setRows(((data as any[]) || []) as Row[]);
+    setHooks(((wh as any[]) || []) as WebhookRow[]);
     setLoading(false);
   };
   useEffect(() => { load(); }, [user, profile]);
 
   const connected = useMemo(() => new Map(rows.map(r => [r.provider, r])), [rows]);
 
+  const createWebhook = async () => {
+    if (!wsId) return;
+    if (!hookName.trim()) return toast.error('Enter a webhook name');
+    setSaving(true);
+    const { data, error } = await supabase.from('webhook_endpoints' as any)
+      .insert({ workspace_id: wsId, name: hookName.trim(), created_by: user?.id } as any)
+      .select('id').maybeSingle();
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    setHookDialog(false);
+    setHookName('');
+    navigate(`/integrations/webhooks/${(data as any).id}`);
+  };
+
   const openConnect = (p: Provider) => {
+    if (p.id === 'webhook') { setHookName(''); setHookDialog(true); return; }
     const existing = connected.get(p.id);
     setForm((existing?.settings as Record<string, string>) || {});
     setActive(p);
   };
+
 
   const save = async () => {
     if (!active || !wsId) return;
@@ -180,7 +208,47 @@ const Integrations = () => {
           <div className="p-10 text-center text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></div>
         ) : (
           <>
+            {hooks.length > 0 && (
+              <section className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-semibold">Generic Webhooks</h2>
+                  <Button size="sm" variant="outline" onClick={() => { setHookName(''); setHookDialog(true); }}>New webhook</Button>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {hooks.map(h => (
+                    <Card
+                      key={h.id}
+                      className="p-4 space-y-2 hover-lift cursor-pointer"
+                      onClick={() => navigate(`/integrations/webhooks/${h.id}`)}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Webhook className="w-4 h-4 shrink-0" />
+                          <p className="font-semibold truncate">{h.name}</p>
+                        </div>
+                        <Badge variant="outline" className={h.active && h.template_id ? 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30' : ''}>
+                          {h.template_id ? (h.active ? 'Active' : 'Paused') : 'Setup'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <code className="text-[11px] truncate flex-1 text-muted-foreground">{`${FN_BASE}/${h.token}`}</code>
+                        <Button size="sm" variant="ghost" aria-label="Copy webhook URL"
+                          onClick={(e) => { e.stopPropagation(); copy(`${FN_BASE}/${h.token}`); }}>
+                          <Copy className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                        {h.last_received_at ? `Last event ${new Date(h.last_received_at).toLocaleString()}` : 'No events yet'}
+                        <ChevronRight className="w-3 h-3" />
+                      </p>
+                    </Card>
+                  ))}
+                </div>
+              </section>
+            )}
+
             {myIntegrations.length > 0 && (
+
               <section className="space-y-3">
                 <h2 className="text-lg font-semibold">My Integrations</h2>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -263,14 +331,25 @@ const Integrations = () => {
                 </ul>
 
                 {detail.id === 'webhook' && (
-                  <div className="rounded-lg border p-3 space-y-1">
-                    <p className="text-xs font-medium">Your inbound webhook URL</p>
-                    <div className="flex items-center gap-2">
-                      <code className="text-[11px] truncate flex-1">{WEBHOOK_URL}</code>
-                      <Button size="sm" variant="outline" onClick={() => copy(WEBHOOK_URL)}><Copy className="w-3.5 h-3.5" /></Button>
-                    </div>
+                  <div className="rounded-lg border p-3 space-y-2">
+                    <p className="text-xs font-medium">How it works</p>
+                    <ol className="text-xs text-muted-foreground space-y-1 list-decimal pl-4">
+                      <li>Click Connect and give the webhook a name.</li>
+                      <li>Copy the generated webhook URL into your external platform.</li>
+                      <li>Trigger a test event, then hit “Capture webhook response”.</li>
+                      <li>Map recipient name &amp; number, pick a template, activate the workflow.</li>
+                      <li>Track everything under Logs (received / sent / failed).</li>
+                    </ol>
+                    <code className="block text-[11px] truncate text-muted-foreground">{`${FN_BASE}/<your-token>`}</code>
                   </div>
                 )}
+
+                {detail.id === 'shopify' && (
+                  <div className="pt-2 border-t space-y-3">
+                    <ShopifyRiskMapping workspaceId={wsId} />
+                  </div>
+                )}
+
               </div>
 
               <DialogFooter>
@@ -283,6 +362,28 @@ const Integrations = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Create generic webhook */}
+      <Dialog open={hookDialog} onOpenChange={setHookDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Generic Webhook</DialogTitle>
+            <DialogDescription>Give this webhook a name. You'll get a unique URL to paste into your platform.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor="hook-name">Webhook name</Label>
+            <Input id="hook-name" placeholder="Lead Capture Webhook" value={hookName}
+              onChange={(e) => setHookName(e.target.value)} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setHookDialog(false)}>Cancel</Button>
+            <Button onClick={createWebhook} disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}Submit
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Connect form */}
       <Dialog open={!!active} onOpenChange={(o) => !o && setActive(null)}>
