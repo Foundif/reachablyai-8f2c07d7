@@ -33,6 +33,7 @@ import Leads from "./pages/Leads";
 import ComingSoonModule from "./pages/ComingSoonModule";
 import Templates from "./pages/Templates";
 import Integrations from "./pages/Integrations";
+import WebhookDetail from "./pages/WebhookDetail";
 import TemplateEditor from "./pages/TemplateEditor";
 
 import Campaigns, { CampaignDetail } from "./pages/Campaigns";
@@ -91,6 +92,8 @@ const App = () => (
                 <Route path="/scraper" element={<ProtectedRoute><ComingSoonModule title="Lead Scraper" description="Google Maps / GMB lead scraper with location, keyword and 'website missing' filters — shipping in step 2h." /></ProtectedRoute>} />
                 <Route path="/templates" element={<ProtectedRoute><Templates /></ProtectedRoute>} />
                 <Route path="/integrations" element={<ProtectedRoute><Integrations /></ProtectedRoute>} />
+                <Route path="/integrations/webhooks/:id" element={<ProtectedRoute><WebhookDetail /></ProtectedRoute>} />
+
                 <Route path="/templates/new" element={<ProtectedRoute><TemplateEditor /></ProtectedRoute>} />
                 <Route path="/templates/:id" element={<ProtectedRoute><TemplateEditor /></ProtectedRoute>} />
 
