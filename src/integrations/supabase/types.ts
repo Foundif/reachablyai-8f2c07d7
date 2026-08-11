@@ -1408,6 +1408,132 @@ export type Database = {
           },
         ]
       }
+      webhook_endpoints: {
+        Row: {
+          active: boolean
+          conditions: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          last_payload: Json | null
+          last_received_at: string | null
+          name: string
+          name_field: string | null
+          phone_field: string | null
+          template_id: string | null
+          token: string
+          updated_at: string
+          variable_map: Json
+          workflow_name: string | null
+          workspace_id: string
+        }
+        Insert: {
+          active?: boolean
+          conditions?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_payload?: Json | null
+          last_received_at?: string | null
+          name: string
+          name_field?: string | null
+          phone_field?: string | null
+          template_id?: string | null
+          token?: string
+          updated_at?: string
+          variable_map?: Json
+          workflow_name?: string | null
+          workspace_id: string
+        }
+        Update: {
+          active?: boolean
+          conditions?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_payload?: Json | null
+          last_received_at?: string | null
+          name?: string
+          name_field?: string | null
+          phone_field?: string | null
+          template_id?: string | null
+          token?: string
+          updated_at?: string
+          variable_map?: Json
+          workflow_name?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_endpoints_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_endpoints_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_logs: {
+        Row: {
+          created_at: string
+          endpoint_id: string | null
+          error: string | null
+          id: string
+          payload: Json | null
+          phone: string | null
+          recipient_name: string | null
+          status: string
+          wa_message_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          endpoint_id?: string | null
+          error?: string | null
+          id?: string
+          payload?: Json | null
+          phone?: string | null
+          recipient_name?: string | null
+          status?: string
+          wa_message_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          endpoint_id?: string | null
+          error?: string | null
+          id?: string
+          payload?: Json | null
+          phone?: string | null
+          recipient_name?: string | null
+          status?: string
+          wa_message_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_logs_endpoint_id_fkey"
+            columns: ["endpoint_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_endpoints"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_logs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_credentials: {
         Row: {
           access_token: string | null
