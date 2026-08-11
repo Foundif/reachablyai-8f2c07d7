@@ -363,6 +363,28 @@ const Integrations = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Create generic webhook */}
+      <Dialog open={hookDialog} onOpenChange={setHookDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Generic Webhook</DialogTitle>
+            <DialogDescription>Give this webhook a name. You'll get a unique URL to paste into your platform.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor="hook-name">Webhook name</Label>
+            <Input id="hook-name" placeholder="Lead Capture Webhook" value={hookName}
+              onChange={(e) => setHookName(e.target.value)} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setHookDialog(false)}>Cancel</Button>
+            <Button onClick={createWebhook} disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}Submit
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
       {/* Connect form */}
       <Dialog open={!!active} onOpenChange={(o) => !o && setActive(null)}>
         <DialogContent>
