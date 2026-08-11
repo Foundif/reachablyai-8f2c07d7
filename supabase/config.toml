@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.widget-js]
 verify_jwt = false
+
+[functions.generic-webhook]
+verify_jwt = false
