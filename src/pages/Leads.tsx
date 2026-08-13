@@ -568,3 +568,391 @@ const loadRazorpay = () => new Promise<boolean>((resolve) => {
   document.body.appendChild(s);
 });
 
+function ScrapeLeadsDialog({ wsId, onDone }: { wsId: string | null; onDone: () => void }) {
+  const { user, profile } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [payLoading, setPayLoading] = useState(false);
+  const [form, setForm] = useState({
+    keyword: '', location: '',
+    hasWebsite: 'any' as 'any' | 'yes' | 'no',
+    requirePhone: true,
+    minRating: '', minReviews: '',
+    maxResults: 40,
+    temps: ['hot', 'warm'] as string[],
+  });
+  const [result, setResult] = useState<any | null>(null);
+  const [quota, setQuota] = useState<{ used: number; allowance: number; plan: string } | null>(null);
+  const [unlockOpen, setUnlockOpen] = useState(false);
+  const [topupQty, setTopupQty] = useState(100);
+
+  // Bring-your-own scraper API key
+  const [byo, setByo] = useState({ provider: 'apify', api_key: '', actor_id: 'compass~crawler-google-places', enabled: true, saved: false });
+  const [byoSaving, setByoSaving] = useState(false);
+
+  const refreshQuota = async () => {
+    if (!wsId) return;
+    const now = new Date();
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+    const monthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+    const plan = String((profile as any)?.subscription_status || 'trial').toLowerCase();
+    const BASE: Record<string, number> = { starter: 150, growth: 1000, business: 5000, trial: 30 };
+    const base = BASE[plan] ?? 30;
+    const [{ count }, { data: tops }, { data: settings }] = await Promise.all([
+      supabase.from('leads').select('id', { count: 'exact', head: true })
+        .eq('workspace_id', wsId).eq('source', 'scraped').gte('created_at', monthStart),
+      supabase.from('scrape_topups' as any).select('leads_granted')
+        .eq('workspace_id', wsId).eq('month_key', monthKey),
+      supabase.from('scraper_settings' as any).select('provider,api_key,actor_id,enabled')
+        .eq('workspace_id', wsId).maybeSingle(),
+    ]);
+    const topTotal = ((tops as any[]) || []).reduce((s, r) => s + (r.leads_granted || 0), 0);
+    setQuota({ used: count || 0, allowance: base + topTotal, plan });
+    const st = settings as any;
+    if (st) setByo({ provider: st.provider || 'apify', api_key: st.api_key || '', actor_id: st.actor_id || 'compass~crawler-google-places', enabled: st.enabled !== false, saved: !!st.api_key });
+  };
+
+  useEffect(() => { if (open) refreshQuota(); }, [open, wsId]);
+
+  const usingOwnKey = byo.saved && byo.enabled && !!byo.api_key;
+
+  const saveByo = async () => {
+    if (!wsId) return toast.error('Workspace not ready');
+    if (!byo.api_key.trim()) return toast.error('Paste your API key / token first');
+    setByoSaving(true);
+    const { error } = await supabase.from('scraper_settings' as any).upsert({
+      workspace_id: wsId,
+      provider: byo.provider,
+      api_key: byo.api_key.trim(),
+      actor_id: byo.provider === 'apify' ? (byo.actor_id.trim() || 'compass~crawler-google-places') : null,
+      enabled: true,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'workspace_id' });
+    setByoSaving(false);
+    if (error) return toast.error(error.message);
+    setByo(b => ({ ...b, saved: true, enabled: true }));
+    toast.success('Your scraper key is connected — scraping is now free & unlimited on your quota');
+  };
+
+  const removeByo = async () => {
+    if (!wsId) return;
+    const { error } = await supabase.from('scraper_settings' as any).delete().eq('workspace_id', wsId);
+    if (error) return toast.error(error.message);
+    setByo({ provider: 'apify', api_key: '', actor_id: 'compass~crawler-google-places', enabled: true, saved: false });
+    toast.success('Removed — back to the Reachably scraper');
+  };
+
+  const run = async () => {
+    if (!wsId) return toast.error('Workspace not ready');
+    if (!form.keyword.trim()) return toast.error('Enter a keyword like "salons" or "cafes"');
+    setLoading(true); setResult(null);
+    const { data, error } = await supabase.functions.invoke('leads-scrape', {
+      body: {
+        workspace_id: wsId,
+        keyword: form.keyword, location: form.location,
+        hasWebsite: form.hasWebsite,
+        requirePhone: form.requirePhone,
+        minRating: Number(form.minRating) || 0,
+        minReviews: Number(form.minReviews) || 0,
+        temperatures: form.temps,
+        maxResults: form.maxResults,
+        saveAsLeads: true,
+      },
+    });
+    setLoading(false);
+    const payload = (data as any) || {};
+    if (payload?.error === 'quota_exceeded' || (error as any)?.context?.status === 402) {
+      setUnlockOpen(true);
+      return;
+    }
+    if (error) return toast.error(error.message);
+    if (payload?.error) return toast.error(payload.error);
+    setResult(payload);
+    toast.success(`Scraped ${payload.matched} matches, added ${payload.inserted} new contacts`);
+    await refreshQuota();
+    onDone();
+  };
+
+  const unlockPay = async () => {
+    if (!user) return;
+    const qty = Math.max(50, Math.min(10000, Math.round(topupQty)));
+    setPayLoading(true);
+    try {
+      const ok = await loadRazorpay();
+      if (!ok) throw new Error('Failed to load Razorpay');
+      const { data, error } = await supabase.functions.invoke('razorpay-create-order', {
+        body: { amount: qty, leads: qty, kind: 'scrape_topup' },
+      });
+      if (error || (data as any)?.error) throw new Error((data as any)?.error || error?.message || 'Order failed');
+      const { order, key_id } = data as any;
+      const rzp = new window.Razorpay({
+        key: key_id, amount: order.amount, currency: order.currency, order_id: order.id,
+        name: 'Reachably', description: `${qty} leads · ₹1 per lead`,
+        prefill: {
+          email: user.email || '',
+          name: (profile as any)?.full_name || (profile as any)?.store_name || '',
+        },
+        theme: { color: '#111111' },
+        handler: async (resp: any) => {
+          try {
+            const { data: v, error: vErr } = await supabase.functions.invoke('razorpay-verify', {
+              body: {
+                razorpay_order_id: resp.razorpay_order_id,
+                razorpay_payment_id: resp.razorpay_payment_id,
+                razorpay_signature: resp.razorpay_signature,
+                kind: 'scrape_topup',
+              },
+            });
+            if (vErr || (v as any)?.error) throw new Error((v as any)?.error || vErr?.message || 'Verify failed');
+            toast.success(`Added ${(v as any)?.credited ?? qty} leads to this month's balance`);
+            setUnlockOpen(false);
+            await refreshQuota();
+          } catch (e: any) {
+            toast.error(e.message || 'Verification failed');
+          }
+        },
+        modal: { ondismiss: () => setPayLoading(false) },
+      });
+      rzp.on('payment.failed', (r: any) => {
+        toast.error(r?.error?.description || 'Payment failed');
+        setPayLoading(false);
+      });
+      rzp.open();
+    } catch (e: any) {
+      toast.error(e.message || 'Payment error');
+    } finally {
+      setPayLoading(false);
+    }
+  };
+
+  const remaining = quota ? Math.max(0, quota.allowance - quota.used) : null;
+  const pct = quota && quota.allowance ? Math.min(100, Math.round((quota.used / quota.allowance) * 100)) : 0;
+  const planLabel = quota?.plan ? quota.plan[0].toUpperCase() + quota.plan.slice(1) : '';
+  const toggleTemp = (t: string) =>
+    setForm(f => ({ ...f, temps: f.temps.includes(t) ? f.temps.filter(x => x !== t) : [...f.temps, t] }));
+
+  return (
+    <>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="gap-1"><Sparkles className="w-4 h-4" /> Find Leads</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Lead finder — Google Maps</DialogTitle>
+        </DialogHeader>
+
+        <Tabs defaultValue="find">
+          <TabsList className="grid grid-cols-3 w-full">
+            <TabsTrigger value="find" className="text-xs">Find leads</TabsTrigger>
+            <TabsTrigger value="key" className="text-xs gap-1"><KeyRound className="w-3 h-3" /> My API key</TabsTrigger>
+            <TabsTrigger value="help" className="text-xs gap-1"><BookOpen className="w-3 h-3" /> How to</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="find" className="space-y-3 pt-3">
+            {usingOwnKey ? (
+              <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 text-xs">
+                Using <b>your own {byo.provider === 'apify' ? 'Apify' : 'SerpAPI'} key</b> — leads are free and don't touch your Reachably quota.
+              </div>
+            ) : quota && (
+              <div className="rounded-md border bg-muted/40 p-3 space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-medium">{planLabel} plan · this month</span>
+                  <span className="text-muted-foreground">{quota.used} / {quota.allowance} used</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div className="h-full bg-foreground transition-all" style={{ width: `${pct}%` }} />
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                  <span>{remaining} leads remaining</span>
+                  <button onClick={() => setUnlockOpen(true)} className="text-primary hover:underline font-medium">
+                    Top up · ₹1 per lead
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground">Keyword *</label>
+                <Input value={form.keyword} onChange={e => setForm({ ...form, keyword: e.target.value })} placeholder="salons, gyms, dentists…" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Location</label>
+                <Input value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} placeholder="Coimbatore" />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs text-muted-foreground">Lead temperature (auto-tagged)</label>
+              <div className="flex gap-2 mt-1.5">
+                {[['hot', '🔥 Hot'], ['warm', '🌤 Warm'], ['cold', '❄️ Cold']].map(([v, label]) => (
+                  <button key={v} type="button" onClick={() => toggleTemp(v)}
+                    className={`px-3 py-1.5 rounded-md border text-xs font-medium transition-colors ${form.temps.includes(v) ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground'}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1.5">
+                Hot = no website + phone + strong ratings (needs your service most). Warm = partial signals. Cold = already well established online.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground">Website</label>
+                <Select value={form.hasWebsite} onValueChange={(v: any) => setForm({ ...form, hasWebsite: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Any</SelectItem>
+                    <SelectItem value="no">No website</SelectItem>
+                    <SelectItem value="yes">Has website</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Min rating</label>
+                <Input type="number" step="0.1" min="0" max="5" value={form.minRating} onChange={e => setForm({ ...form, minRating: e.target.value })} placeholder="4.0" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Min reviews</label>
+                <Input type="number" min="0" value={form.minReviews} onChange={e => setForm({ ...form, minReviews: e.target.value })} placeholder="20" />
+              </div>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={form.requirePhone} onChange={e => setForm({ ...form, requirePhone: e.target.checked })} />
+              Only keep businesses with a phone number
+            </label>
+
+            <div>
+              <label className="text-xs text-muted-foreground">Max results ({form.maxResults})</label>
+              <input type="range" min="10" max="200" step="10" value={form.maxResults} onChange={e => setForm({ ...form, maxResults: Number(e.target.value) })} className="w-full" />
+            </div>
+
+            {result && (
+              <div className="text-xs bg-muted/40 border rounded-md p-3 space-y-1">
+                <div>Found <b>{result.total_found}</b>, matched <b>{result.matched}</b>, added <b>{result.inserted}</b> new contacts.</div>
+                <div className="flex gap-2">
+                  <Badge variant="outline" className={TEMP_COLORS.hot}>🔥 {result.breakdown?.hot ?? 0} hot</Badge>
+                  <Badge variant="outline" className={TEMP_COLORS.warm}>🌤 {result.breakdown?.warm ?? 0} warm</Badge>
+                  <Badge variant="outline" className={TEMP_COLORS.cold}>❄️ {result.breakdown?.cold ?? 0} cold</Badge>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOpen(false)}>Close</Button>
+              <Button onClick={run} disabled={loading || (!usingOwnKey && remaining === 0)}>
+                {loading ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Finding…</> : <><Globe className="w-4 h-4 mr-1" /> Find leads</>}
+              </Button>
+            </DialogFooter>
+          </TabsContent>
+
+          <TabsContent value="key" className="space-y-3 pt-3">
+            <p className="text-xs text-muted-foreground">
+              Connect your own free scraper API and Reachably will use it instead of ours — you pay nothing to us per lead.
+            </p>
+            <div>
+              <label className="text-xs text-muted-foreground">Provider</label>
+              <Select value={byo.provider} onValueChange={v => setByo({ ...byo, provider: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="apify">Apify (free $5 credit / month)</SelectItem>
+                  <SelectItem value="serpapi">SerpAPI (free 100 searches / month)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">{byo.provider === 'apify' ? 'Apify API token' : 'SerpAPI key'}</label>
+              <Input type="password" value={byo.api_key} onChange={e => setByo({ ...byo, api_key: e.target.value })} placeholder={byo.provider === 'apify' ? 'apify_api_…' : 'Paste your SerpAPI key'} />
+            </div>
+            {byo.provider === 'apify' && (
+              <div>
+                <label className="text-xs text-muted-foreground">Actor ID (leave default if unsure)</label>
+                <Input value={byo.actor_id} onChange={e => setByo({ ...byo, actor_id: e.target.value })} placeholder="compass~crawler-google-places" />
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Button onClick={saveByo} disabled={byoSaving}>
+                {byoSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-1" /> Save & use my key</>}
+              </Button>
+              {byo.saved && <Button variant="outline" onClick={removeByo}>Remove</Button>}
+            </div>
+            {byo.saved && <p className="text-[11px] text-emerald-600">Connected — your key is used for every search.</p>}
+          </TabsContent>
+
+          <TabsContent value="help" className="pt-3 text-xs leading-relaxed space-y-3">
+            <div>
+              <p className="font-semibold text-sm mb-1">Use the Reachably scraper (easiest)</p>
+              <ol className="list-decimal ml-4 space-y-1 text-muted-foreground">
+                <li>Type a keyword (e.g. "beauty salon") and a city.</li>
+                <li>Pick which temperatures you want — hot leads have no website, so they buy faster.</li>
+                <li>Press <b>Find leads</b>. Each saved lead costs ₹1 once your plan quota is used; top up any amount from 50 leads upward.</li>
+                <li>Leads land in Contacts, auto-tagged with temperature, city and category, with a notes line you can edit anytime.</li>
+              </ol>
+            </div>
+            <div>
+              <p className="font-semibold text-sm mb-1">Use your own free Apify key (₹0 per lead)</p>
+              <ol className="list-decimal ml-4 space-y-1 text-muted-foreground">
+                <li>Go to <b>apify.com</b> and create a free account (no card needed — you get free monthly credit).</li>
+                <li>Open <b>Settings → Integrations → API tokens</b> and copy the token that starts with <code>apify_api_</code>.</li>
+                <li>Come back here, open the <b>My API key</b> tab, choose <b>Apify</b>, paste the token and press Save.</li>
+                <li>Keep the default actor <code>compass~crawler-google-places</code> (Google Maps scraper).</li>
+                <li>Search as usual — results now come through your Apify account and cost you nothing here.</li>
+              </ol>
+            </div>
+            <div>
+              <p className="font-semibold text-sm mb-1">Prefer SerpAPI?</p>
+              <ol className="list-decimal ml-4 space-y-1 text-muted-foreground">
+                <li>Sign up free at <b>serpapi.com</b> (100 free searches per month).</li>
+                <li>Copy the key from your dashboard's <b>API Key</b> page.</li>
+                <li>Paste it in the <b>My API key</b> tab with provider set to SerpAPI.</li>
+              </ol>
+            </div>
+            <p className="text-muted-foreground">Only scrape publicly listed business contacts and always send your first WhatsApp message with an approved template.</p>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog open={unlockOpen} onOpenChange={setUnlockOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Top up leads — ₹1 per lead</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            You've used {quota?.used ?? 0} of {quota?.allowance ?? 0} leads this month on the <b>{planLabel}</b> plan.
+          </p>
+          <div className="rounded-lg border-2 border-primary/40 bg-primary/5 p-4 space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {[50, 100, 250, 500, 1000].map(q => (
+                <button key={q} type="button" onClick={() => setTopupQty(q)}
+                  className={`px-3 py-1.5 rounded-md border text-xs font-medium ${topupQty === q ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground'}`}>
+                  {q}
+                </button>
+              ))}
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Leads (min 50)</label>
+              <Input type="number" min={50} max={10000} value={topupQty} onChange={e => setTopupQty(Number(e.target.value))} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Valid for the current month</span>
+              <div className="text-2xl font-bold">₹{Math.max(50, Math.round(topupQty || 0)).toLocaleString('en-IN')}</div>
+            </div>
+            <Button className="w-full" onClick={unlockPay} disabled={payLoading}>
+              {payLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading…</> : `Pay ₹${Math.max(50, Math.round(topupQty || 0))} & unlock ${Math.max(50, Math.round(topupQty || 0))} leads`}
+            </Button>
+          </div>
+          <div className="text-center text-xs text-muted-foreground">— or scrape for free —</div>
+          <Button variant="outline" className="w-full" onClick={() => setUnlockOpen(false)}>
+            <KeyRound className="w-4 h-4 mr-1" /> Connect my own Apify / SerpAPI key
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
+  );
+}
