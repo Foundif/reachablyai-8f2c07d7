@@ -15,11 +15,14 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import {
   Plus, Search, Upload, MessageCircle, LayoutGrid, List, Trash2, Tag, Globe, Loader2, Sparkles,
+  StickyNote, KeyRound, BookOpen, Save,
 } from 'lucide-react';
 import { resolveWorkspaceId } from '@/lib/workspace';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -54,6 +57,14 @@ const SOURCE_COLORS: Record<LeadSource, string> = {
   scraped: 'bg-purple-500/15 text-purple-600 border-purple-500/30',
   booking: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30',
 };
+
+const TEMPS = ['hot', 'warm', 'cold'] as const;
+const TEMP_COLORS: Record<string, string> = {
+  hot: 'bg-red-500/15 text-red-600 border-red-500/30',
+  warm: 'bg-amber-500/15 text-amber-600 border-amber-500/30',
+  cold: 'bg-sky-500/15 text-sky-600 border-sky-500/30',
+};
+const tempOf = (tags: string[] = []) => TEMPS.find(t => tags.map(x => x.toLowerCase()).includes(t)) || null;
 
 // Detect the delimiter actually used by the file (Excel/DB exports often use ; or tab)
 function detectDelimiter(text: string): string {
@@ -106,6 +117,9 @@ const Leads = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
+  const [tempFilter, setTempFilter] = useState('all');
+  const [noteLead, setNoteLead] = useState<Lead | null>(null);
+  const [noteDraft, setNoteDraft] = useState({ notes: '', tags: '' });
   const [addOpen, setAddOpen] = useState(false);
   const [wsId, setWsId] = useState<string | null>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
@@ -149,9 +163,25 @@ const Leads = () => {
         const q = search.toLowerCase();
         if (!(l.name?.toLowerCase().includes(q) || l.phone?.includes(q) || l.email?.toLowerCase().includes(q))) return false;
       }
+      if (tempFilter !== 'all' && tempOf(l.tags) !== tempFilter) return false;
       return true;
     });
-  }, [leads, statusFilter, sourceFilter, search]);
+  }, [leads, statusFilter, sourceFilter, search, tempFilter]);
+
+  const openNotes = (l: Lead) => {
+    setNoteLead(l);
+    setNoteDraft({ notes: l.notes || '', tags: (l.tags || []).join(', ') });
+  };
+  const saveNotes = async () => {
+    if (!noteLead) return;
+    const tags = noteDraft.tags.split(',').map(t => t.trim()).filter(Boolean);
+    const { error } = await supabase.from('leads' as any)
+      .update({ notes: noteDraft.notes.trim() || null, tags }).eq('id', noteLead.id);
+    if (error) return toast.error(error.message);
+    setLeads(prev => prev.map(l => l.id === noteLead.id ? { ...l, notes: noteDraft.notes, tags } : l));
+    setNoteLead(null);
+    toast.success('Notes saved');
+  };
 
   const handleAdd = async () => {
     if (!form.name.trim()) return toast.error('Name required');
@@ -351,6 +381,15 @@ const Leads = () => {
                 <SelectItem value="booking">Booking</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={tempFilter} onValueChange={setTempFilter}>
+              <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All temperatures</SelectItem>
+                <SelectItem value="hot">🔥 Hot leads</SelectItem>
+                <SelectItem value="warm">🌤 Warm leads</SelectItem>
+                <SelectItem value="cold">❄️ Cold leads</SelectItem>
+              </SelectContent>
+            </Select>
             <div className="ml-auto flex gap-1">
               <Button variant={view === 'table' ? 'default' : 'outline'} size="icon" onClick={() => setView('table')}>
                 <List className="w-4 h-4" />
@@ -421,13 +460,16 @@ const Leads = () => {
                     </TableCell>
                     <TableCell>
                       {l.tags?.length ? l.tags.slice(0, 3).map(t => (
-                        <Badge key={t} variant="secondary" className="mr-1 text-[10px]">{t}</Badge>
+                        <Badge key={t} variant="outline" className={`mr-1 text-[10px] ${TEMP_COLORS[t.toLowerCase()] || ''}`}>{t}</Badge>
                       )) : <span className="text-xs text-muted-foreground">—</span>}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{new Date(l.created_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleOpenWhatsApp(l)} title="Open WhatsApp">
                         <MessageCircle className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => openNotes(l)} title="Notes & tags">
+                        <StickyNote className="w-4 h-4" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => handleDelete(l)} title="Delete">
                         <Trash2 className="w-4 h-4" />
@@ -475,6 +517,25 @@ const Leads = () => {
           {filtered.length} of {leads.length} contact(s) · Inbound WhatsApp messages automatically create contacts.
         </p>
       </div>
+      <Dialog open={!!noteLead} onOpenChange={(o) => !o && setNoteLead(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Notes for {noteLead?.name}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-muted-foreground">Tags (comma separated — e.g. hot, Coimbatore, salon)</label>
+              <Input value={noteDraft.tags} onChange={e => setNoteDraft({ ...noteDraft, tags: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Notes</label>
+              <Textarea rows={5} value={noteDraft.notes} onChange={e => setNoteDraft({ ...noteDraft, notes: e.target.value })} placeholder="Call summary, requirements, follow-up date…" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNoteLead(null)}>Cancel</Button>
+            <Button onClick={saveNotes}><Save className="w-4 h-4 mr-1" /> Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <ConfirmDialog
         open={!!pendingDelete}
         onOpenChange={(o) => !o && setPendingDelete(null)}
@@ -506,242 +567,4 @@ const loadRazorpay = () => new Promise<boolean>((resolve) => {
   s.onerror = () => resolve(false);
   document.body.appendChild(s);
 });
-
-function ScrapeLeadsDialog({ wsId, onDone }: { wsId: string | null; onDone: () => void }) {
-  const { user, profile } = useAuth();
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [payLoading, setPayLoading] = useState(false);
-  const [form, setForm] = useState({
-    keyword: '', location: '',
-    hasWebsite: 'any' as 'any' | 'yes' | 'no',
-    requirePhone: true,
-    minRating: '', minReviews: '',
-    maxResults: 40,
-  });
-  const [result, setResult] = useState<any | null>(null);
-  const [quota, setQuota] = useState<{ used: number; allowance: number; plan: string } | null>(null);
-  const [unlockOpen, setUnlockOpen] = useState(false);
-
-  const refreshQuota = async () => {
-    if (!wsId) return;
-    const now = new Date();
-    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
-    const monthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
-    const plan = String((profile as any)?.subscription_status || 'trial').toLowerCase();
-    const BASE: Record<string, number> = { starter: 150, growth: 1000, business: 5000, trial: 30 };
-    const base = BASE[plan] ?? 30;
-    const [{ count }, { data: tops }] = await Promise.all([
-      supabase.from('leads').select('id', { count: 'exact', head: true })
-        .eq('workspace_id', wsId).eq('source', 'scraped').gte('created_at', monthStart),
-      supabase.from('scrape_topups' as any).select('leads_granted')
-        .eq('workspace_id', wsId).eq('month_key', monthKey),
-    ]);
-    const topTotal = ((tops as any[]) || []).reduce((s, r) => s + (r.leads_granted || 0), 0);
-    setQuota({ used: count || 0, allowance: base + topTotal, plan });
-  };
-
-  useEffect(() => { if (open) refreshQuota(); }, [open, wsId]);
-
-  const run = async () => {
-    if (!wsId) return toast.error('Workspace not ready');
-    if (!form.keyword.trim()) return toast.error('Enter a keyword like "salons" or "cafes"');
-    setLoading(true); setResult(null);
-    const { data, error } = await supabase.functions.invoke('leads-scrape', {
-      body: {
-        workspace_id: wsId,
-        keyword: form.keyword, location: form.location,
-        hasWebsite: form.hasWebsite,
-        requirePhone: form.requirePhone,
-        minRating: Number(form.minRating) || 0,
-        minReviews: Number(form.minReviews) || 0,
-        maxResults: form.maxResults,
-        saveAsLeads: true,
-      },
-    });
-    setLoading(false);
-    const payload = (data as any) || {};
-    if (payload?.error === 'quota_exceeded' || (error as any)?.context?.status === 402) {
-      setUnlockOpen(true);
-      return;
-    }
-    if (error) return toast.error(error.message);
-    if (payload?.error) return toast.error(payload.error);
-    setResult(payload);
-    toast.success(`Scraped ${payload.matched} matches, added ${payload.inserted} new contacts`);
-    await refreshQuota();
-    onDone();
-  };
-
-  const unlockPay = async () => {
-    if (!user) return;
-    setPayLoading(true);
-    try {
-      const ok = await loadRazorpay();
-      if (!ok) throw new Error('Failed to load Razorpay');
-      const { data, error } = await supabase.functions.invoke('razorpay-create-order', {
-        body: { amount: 299, kind: 'scrape_topup' },
-      });
-      if (error || (data as any)?.error) throw new Error((data as any)?.error || error?.message || 'Order failed');
-      const { order, key_id } = data as any;
-      const rzp = new window.Razorpay({
-        key: key_id, amount: order.amount, currency: order.currency, order_id: order.id,
-        name: 'Reachably', description: 'Scrape Top-up — 150 leads',
-        prefill: {
-          email: user.email || '',
-          name: (profile as any)?.full_name || (profile as any)?.store_name || '',
-        },
-        theme: { color: '#d946ef' },
-        handler: async (resp: any) => {
-          try {
-            const { data: v, error: vErr } = await supabase.functions.invoke('razorpay-verify', {
-              body: {
-                razorpay_order_id: resp.razorpay_order_id,
-                razorpay_payment_id: resp.razorpay_payment_id,
-                razorpay_signature: resp.razorpay_signature,
-                kind: 'scrape_topup',
-              },
-            });
-            if (vErr || (v as any)?.error) throw new Error((v as any)?.error || vErr?.message || 'Verify failed');
-            toast.success('Unlocked 150 more leads for this month!');
-            setUnlockOpen(false);
-            await refreshQuota();
-          } catch (e: any) {
-            toast.error(e.message || 'Verification failed');
-          }
-        },
-        modal: { ondismiss: () => setPayLoading(false) },
-      });
-      rzp.on('payment.failed', (r: any) => {
-        toast.error(r?.error?.description || 'Payment failed');
-        setPayLoading(false);
-      });
-      rzp.open();
-    } catch (e: any) {
-      toast.error(e.message || 'Payment error');
-    } finally {
-      setPayLoading(false);
-    }
-  };
-
-  const remaining = quota ? Math.max(0, quota.allowance - quota.used) : null;
-  const pct = quota && quota.allowance ? Math.min(100, Math.round((quota.used / quota.allowance) * 100)) : 0;
-  const planLabel = quota?.plan ? quota.plan[0].toUpperCase() + quota.plan.slice(1) : '';
-
-  return (
-    <>
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="gap-1"><Sparkles className="w-4 h-4" /> Scrape Contacts</Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Scrape Google Maps contacts</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          {quota && (
-            <div className="rounded-md border bg-muted/40 p-3 space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-medium">{planLabel} plan · this month</span>
-                <span className="text-muted-foreground">{quota.used} / {quota.allowance} used</span>
-              </div>
-              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-fuchsia-500 to-pink-500 transition-all" style={{ width: `${pct}%` }} />
-              </div>
-              <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                <span>{remaining} contacts remaining</span>
-                <button onClick={() => setUnlockOpen(true)} className="text-primary hover:underline font-medium">
-                  Unlock 150 more · ₹299
-                </button>
-              </div>
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-muted-foreground">Keyword *</label>
-              <Input value={form.keyword} onChange={e => setForm({ ...form, keyword: e.target.value })} placeholder="salons, gyms, dentists…" />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">Location</label>
-              <Input value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} placeholder="Coimbatore" />
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="text-xs text-muted-foreground">Website</label>
-              <Select value={form.hasWebsite} onValueChange={(v: any) => setForm({ ...form, hasWebsite: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="any">Any</SelectItem>
-                  <SelectItem value="no">No website (best for cold outreach)</SelectItem>
-                  <SelectItem value="yes">Has website</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">Min rating</label>
-              <Input type="number" step="0.1" min="0" max="5" value={form.minRating} onChange={e => setForm({ ...form, minRating: e.target.value })} placeholder="4.0" />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">Min reviews</label>
-              <Input type="number" min="0" value={form.minReviews} onChange={e => setForm({ ...form, minReviews: e.target.value })} placeholder="20" />
-            </div>
-          </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={form.requirePhone} onChange={e => setForm({ ...form, requirePhone: e.target.checked })} />
-            Only keep businesses with a phone number
-          </label>
-          <div>
-            <label className="text-xs text-muted-foreground">Max results ({form.maxResults})</label>
-            <input type="range" min="10" max="100" step="10" value={form.maxResults} onChange={e => setForm({ ...form, maxResults: Number(e.target.value) })} className="w-full" />
-          </div>
-          {result && (
-            <div className="text-xs bg-muted/40 border rounded-md p-3">
-              Found <b>{result.total_found}</b>, matched filters <b>{result.matched}</b>, new contacts added <b>{result.inserted}</b>.
-            </div>
-          )}
-          <p className="text-[11px] text-muted-foreground">
-            Starter plan includes 150 scraped contacts / month. Unlock 150 more anytime for ₹299 or upgrade your plan.
-          </p>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>Close</Button>
-          <Button onClick={run} disabled={loading || remaining === 0}>
-            {loading ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Scraping…</> : <><Globe className="w-4 h-4 mr-1" /> Scrape now</>}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-
-    <Dialog open={unlockOpen} onOpenChange={setUnlockOpen}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Monthly scraping limit reached</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            You've used {quota?.used ?? 0} of {quota?.allowance ?? 0} scraped contacts this month on the <b>{planLabel}</b> plan.
-          </p>
-          <div className="rounded-lg border-2 border-primary/40 bg-primary/5 p-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-semibold">Unlock 150 more leads</div>
-                <div className="text-xs text-muted-foreground">Valid for the current month</div>
-              </div>
-              <div className="text-2xl font-bold">₹299</div>
-            </div>
-            <Button className="w-full" onClick={unlockPay} disabled={payLoading}>
-              {payLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading…</> : 'Pay ₹299 & unlock'}
-            </Button>
-          </div>
-          <div className="text-center text-xs text-muted-foreground">— or —</div>
-          <Button variant="outline" className="w-full" onClick={() => { setUnlockOpen(false); setOpen(false); window.location.href = '/pricing'; }}>
-            Upgrade to a higher plan
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-    </>
-  );
-}
 
