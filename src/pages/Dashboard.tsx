@@ -2,14 +2,11 @@ import { useEffect, useState } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useTrial } from '@/hooks/useTrial';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-  Contact, Inbox, Megaphone, Workflow, ArrowRight, MessageSquareText, Send,
-  Upload, Bot, Wallet, Sparkles, CalendarClock, AlertCircle, PlayCircle,
+  Contact, Inbox, Megaphone, Workflow, ArrowRight, Send, Wallet, Sparkles,
 } from 'lucide-react';
 import { resolveWorkspaceId } from '@/lib/workspace';
 import ConnectWhatsAppCard from '@/components/home/ConnectWhatsAppCard';
@@ -57,7 +54,6 @@ const ModuleTile = ({ icon: Icon, label, value, hint, gradient, to, navigate }: 
 const Dashboard = () => {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
-  const trial = useTrial();
   const [wsId, setWsId] = useState<string | null>(null);
   const [stats, setStats] = useState({
     leadsNew: 0, leadsTotal: 0, campaignsMonth: 0, messagesSent: 0,
