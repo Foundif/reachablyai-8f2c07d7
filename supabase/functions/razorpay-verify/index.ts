@@ -107,13 +107,32 @@ Deno.serve(async (req) => {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+      // Server is source of truth: read the paid amount from Razorpay (₹1 = 1 lead).
+      const key_id = Deno.env.get('RAZORPAY_KEY_ID')!;
+      const orderRes = await fetch(`https://api.razorpay.com/v1/orders/${razorpay_order_id}`, {
+        headers: { Authorization: `Basic ${btoa(`${key_id}:${key_secret}`)}` },
+      });
+      const orderJson = await orderRes.json();
+      if (!orderRes.ok) {
+        console.error('Razorpay order fetch failed', orderRes.status, orderJson);
+        return new Response(JSON.stringify({ error: 'Could not verify order amount', details: orderJson }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const amountPaise = Number(orderJson.amount || 0);
+      const leadsGranted = Math.floor(amountPaise / 100); // ₹1 per lead
+      if (leadsGranted < 1) {
+        return new Response(JSON.stringify({ error: 'Invalid top-up amount' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       const now = new Date();
       const monthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
       await admin.from('scrape_topups').insert({
-        workspace_id: ws.id, user_id, leads_granted: 150, month_key: monthKey,
-        amount_paise: 29900, razorpay_order_id, razorpay_payment_id,
+        workspace_id: ws.id, user_id, leads_granted: leadsGranted, month_key: monthKey,
+        amount_paise: amountPaise, razorpay_order_id, razorpay_payment_id,
       });
-      return new Response(JSON.stringify({ success: true, credited: 150, month_key: monthKey }), {
+      return new Response(JSON.stringify({ success: true, credited: leadsGranted, month_key: monthKey }), {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
