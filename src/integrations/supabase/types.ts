@@ -1083,6 +1083,47 @@ export type Database = {
           },
         ]
       }
+      scraper_settings: {
+        Row: {
+          actor_id: string | null
+          api_key: string | null
+          created_at: string
+          enabled: boolean
+          id: string
+          provider: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          api_key?: string | null
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          provider?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          api_key?: string | null
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          provider?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scraper_settings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       super_admins: {
         Row: {
           created_at: string | null
