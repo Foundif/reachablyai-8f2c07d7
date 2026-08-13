@@ -49,10 +49,14 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    if (kind === 'scrape_topup' && amount !== 299) {
-      return new Response(JSON.stringify({ error: 'Invalid scrape top-up amount' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    // Lead top-ups are priced at a flat ₹1 per lead.
+    const leads = Math.round(Number(body.leads || 0));
+    if (kind === 'scrape_topup') {
+      if (!leads || leads < 50 || leads > 10000 || amount !== leads) {
+        return new Response(JSON.stringify({ error: 'Lead top-ups are ₹1 per lead (min 50, max 10000)' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
 
     const key_id = Deno.env.get('RAZORPAY_KEY_ID');
@@ -72,7 +76,7 @@ Deno.serve(async (req) => {
         amount: Math.round(amount * 100),
         currency: 'INR',
         receipt: `${receiptBase}-${Date.now()}`.slice(0, 40),
-        notes: { user_id: claims.claims.sub, kind, plan_id, pack_id, billing_period },
+        notes: { user_id: claims.claims.sub, kind, plan_id, pack_id, billing_period, leads: String(leads || '') },
       }),
     });
     const orderJson = await orderRes.json();

@@ -140,7 +140,7 @@ const OnboardingGate = () => {
                 <Label className="text-xs">Country<Req /></Label>
                 <Select value={country} onValueChange={v => { setCountry(v); setState(''); }}>
                   <SelectTrigger className="mt-1"><SelectValue placeholder="Select your country" /></SelectTrigger>
-                  <SelectContent>{COUNTRIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                  <SelectContent position="popper" className="z-[300]">{COUNTRIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div>
@@ -148,7 +148,7 @@ const OnboardingGate = () => {
                 {country === 'India' ? (
                   <Select value={state} onValueChange={setState}>
                     <SelectTrigger className="mt-1"><SelectValue placeholder="Select your state" /></SelectTrigger>
-                    <SelectContent>{INDIAN_STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                    <SelectContent position="popper" className="z-[300]">{INDIAN_STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                   </Select>
                 ) : (
                   <Input className="mt-1" value={state} onChange={e => setState(e.target.value)} placeholder="Enter your state" />
@@ -195,7 +195,7 @@ const OnboardingGate = () => {
                 <Label className="text-xs">Selling products or services<Req /></Label>
                 <Select value={sells} onValueChange={setSells}>
                   <SelectTrigger className="mt-1"><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" className="z-[300]">
                     <SelectItem value="Products">Products</SelectItem>
                     <SelectItem value="Services">Services</SelectItem>
                     <SelectItem value="Both">Both</SelectItem>
