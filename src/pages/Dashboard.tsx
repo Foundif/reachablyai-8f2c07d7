@@ -12,6 +12,7 @@ import {
   Upload, Bot, Wallet, Sparkles, CalendarClock, AlertCircle, PlayCircle,
 } from 'lucide-react';
 import { resolveWorkspaceId } from '@/lib/workspace';
+import ConnectWhatsAppCard from '@/components/home/ConnectWhatsAppCard';
 
 const QuickCard = ({ icon: Icon, title, desc, cta, to, navigate, tint }: any) => (
   <button
@@ -159,173 +160,56 @@ const Dashboard = () => {
 
   return (
     <AppLayout>
-      <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto">
-        {/* Trial / plan banner */}
-        {trial.isTrialing && (
-          <div className="rounded-xl border bg-muted/50 px-4 py-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-            <AlertCircle className="w-4 h-4 shrink-0 text-muted-foreground" />
-            <span>
-              Your Reachably free trial will expire in <strong>{trial.daysLeft} day{trial.daysLeft === 1 ? '' : 's'}</strong>.
-            </span>
-            <button onClick={() => navigate('/pricing')} className="underline font-medium">I'm ready to upgrade</button>
-            <span className="text-muted-foreground hidden sm:inline">·</span>
-            <button onClick={() => navigate('/guide')} className="underline text-muted-foreground">Book a free walkthrough</button>
-          </div>
-        )}
-
+      <div className="p-4 md:p-8 space-y-5 max-w-6xl mx-auto">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">
-            Hey {firstName || 'there'} 👋, welcome to Reachably.
+            Hey {firstName || 'there'} 👋
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">Explore what you can do with Reachably today for your business</p>
+          <p className="text-muted-foreground text-sm mt-1">Here's your WhatsApp growth desk for today.</p>
         </div>
 
-        {/* Competitor-style quick action cards */}
+        {/* WhatsApp coexistence connection */}
+        <ConnectWhatsAppCard connected={stats.waConnected} onConnected={() => wsId && loadStats(wsId)} />
+
+        {/* Quick actions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
-          <QuickCard icon={Contact} title="Contacts" desc="Import or add leads & customers to start conversations." cta="Go to Contacts" to="/leads" navigate={navigate} tint="bg-gradient-to-br from-emerald-500 to-teal-500" />
-          <QuickCard icon={Send} title="Broadcasts" desc="Send targeted WhatsApp campaigns & track delivery." cta="Go to Broadcasts" to="/campaigns" navigate={navigate} tint="bg-gradient-to-br from-indigo-500 to-violet-500" />
-          <QuickCard icon={Inbox} title="Chat Inbox" desc="Engage in real-time, resolve queries & build trust." cta="Go to Chat Inbox" to="/inbox" navigate={navigate} tint="bg-gradient-to-br from-sky-500 to-blue-500" />
+          <QuickCard icon={Contact} title="Contacts" desc="Import, scrape or add leads." cta="Open Contacts" to="/leads" navigate={navigate} tint="bg-foreground" />
+          <QuickCard icon={Send} title="Broadcasts" desc="Send campaigns & track delivery." cta="Open Broadcasts" to="/campaigns" navigate={navigate} tint="bg-foreground" />
+          <QuickCard icon={Inbox} title="Chat Inbox" desc="Reply with your team in real time." cta="Open Inbox" to="/inbox" navigate={navigate} tint="bg-foreground" />
         </div>
 
-        {/* Onboarding helpers */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
-          <Card className="p-5">
-            <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-xl bg-muted shrink-0"><Upload className="w-5 h-5" /></div>
-              <div className="min-w-0">
-                <h3 className="font-semibold">Import contacts via Excel or CSV</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Upload your Excel or CSV file to quickly import existing leads and start conversations without manual effort.
-                </p>
-                <Button className="mt-4" onClick={() => navigate('/leads?import=1')}>
-                  Import Contacts <ArrowRight className="w-4 h-4 ml-1" />
-                </Button>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-5">
-            <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-xl bg-muted shrink-0"><Sparkles className="w-5 h-5" /></div>
-              <div className="min-w-0">
-                <h3 className="font-semibold">Let AI handle customer queries</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Train an AI chatbot on your website, PDFs and FAQs, then embed it anywhere or let it reply on WhatsApp.
-                </p>
-                <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <Button variant="outline" onClick={() => navigate('/chatbots')}>
-                    <Bot className="w-4 h-4 mr-1" /> {stats.botsActive > 0 ? 'Manage bots' : 'Create your first bot'}
-                  </Button>
-                  <Badge variant="outline" className="text-[11px]">{stats.botsActive} active</Badge>
-                </div>
-              </div>
-            </div>
-          </Card>
+        {/* KPI grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          <ModuleTile icon={Contact} label="Contacts" value={stats.leadsTotal} hint={`${stats.leadsNew} new this week`} gradient="bg-foreground" to="/leads" navigate={navigate} />
+          <ModuleTile icon={Inbox} label="Inbox" value={stats.inboxUnread} hint={`${stats.inboxConversations} chats · ${stats.messagesToday} today`} gradient="bg-foreground" to="/inbox" navigate={navigate} />
+          <ModuleTile icon={Megaphone} label="Campaigns" value={stats.campaignsMonth} hint={`${stats.messagesSent} sent this month`} gradient="bg-foreground" to="/campaigns" navigate={navigate} />
+          <ModuleTile icon={Workflow} label="Automation" value={stats.automationsActive} hint="Active flows" gradient="bg-foreground" to="/automation" navigate={navigate} />
         </div>
 
         {/* Credits */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
-          <Card className="p-5">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold flex items-center gap-2">
-              <Wallet className="w-3.5 h-3.5" /> Message credits
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">Available balance</p>
-            <p className="text-4xl font-bold mt-1">{stats.msgCredits.toLocaleString('en-IN')}</p>
-            <Button className="mt-4" onClick={() => navigate('/pricing')}>Add Credits</Button>
-          </Card>
-
-          <Card className="p-5">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold flex items-center gap-2">
-              <Sparkles className="w-3.5 h-3.5" /> AI replies
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">Sent by your bots this month</p>
-            <p className="text-4xl font-bold mt-1">{stats.aiRepliesMonth.toLocaleString('en-IN')}</p>
-            <Button variant="outline" className="mt-4" onClick={() => navigate('/chatbots')}>View chatbots</Button>
-          </Card>
-        </div>
-
-        {/* KPI tiles */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-          <ModuleTile icon={Contact} label="Contacts" value={stats.leadsNew} hint={`${stats.leadsTotal} total · new this week`} gradient="bg-gradient-to-br from-fuchsia-500 to-pink-500" to="/leads" navigate={navigate} />
-          <ModuleTile icon={Inbox} label="Inbox" value={stats.inboxUnread} hint={`${stats.inboxConversations} chats · ${stats.messagesToday} msgs today`} gradient="bg-gradient-to-br from-blue-500 to-indigo-500" to="/inbox" navigate={navigate} />
-          <ModuleTile icon={Megaphone} label="Campaigns" value={stats.campaignsMonth} hint={`${stats.messagesSent} messages this month`} gradient="bg-gradient-to-br from-orange-500 to-rose-500" to="/campaigns" navigate={navigate} />
-          <ModuleTile icon={Workflow} label="Automation" value={stats.automationsActive} hint="Active flows" gradient="bg-gradient-to-br from-emerald-500 to-teal-500" to="/automation" navigate={navigate} />
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-4">
-          <Card className="p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold flex items-center gap-2"><Contact className="w-4 h-4" /> Recent contacts</h3>
-              <button onClick={() => navigate('/leads')} className="text-xs text-primary hover:underline">View all</button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+          <Card className="p-4 flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-muted"><Wallet className="w-4 h-4" /></div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground">Message credits</p>
+              <p className="text-2xl font-bold leading-tight">{stats.msgCredits.toLocaleString('en-IN')}</p>
             </div>
-            {loading ? <p className="text-sm text-muted-foreground">Loading…</p>
-              : recentLeads.length === 0 ? <p className="text-sm text-muted-foreground">No contacts yet. Import a CSV to get started.</p>
-              : (
-                <div className="space-y-2">
-                  {recentLeads.map(l => (
-                    <div key={l.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 text-sm">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-fuchsia-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold">{(l.name || '?')[0]?.toUpperCase()}</div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{l.name || 'Unnamed'}</div>
-                        <div className="text-xs text-muted-foreground truncate">{l.phone || '—'}</div>
-                      </div>
-                      <Badge variant="outline" className="text-[10px]">{l.status}</Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
+            <Button size="sm" onClick={() => navigate('/pricing')}>Top up</Button>
           </Card>
-
-          <Card className="p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold flex items-center gap-2"><Send className="w-4 h-4" /> Recent campaigns</h3>
-              <button onClick={() => navigate('/campaigns')} className="text-xs text-primary hover:underline">View all</button>
+          <Card className="p-4 flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-muted"><Sparkles className="w-4 h-4" /></div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground">AI replies this month</p>
+              <p className="text-2xl font-bold leading-tight">{stats.aiRepliesMonth.toLocaleString('en-IN')}</p>
             </div>
-            {loading ? <p className="text-sm text-muted-foreground">Loading…</p>
-              : recentCampaigns.length === 0 ? <p className="text-sm text-muted-foreground">No campaigns this month.</p>
-              : (
-                <div className="space-y-2">
-                  {recentCampaigns.map(c => {
-                    const rate = c.total_count ? Math.round((c.delivered_count || 0) * 100 / c.total_count) : 0;
-                    return (
-                      <div key={c.id} onClick={() => navigate(`/campaigns/${c.id}`)} className="p-3 rounded-lg hover:bg-muted/50 cursor-pointer border">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-medium text-sm truncate">{c.name}</span>
-                          <Badge variant="outline" className="text-[10px]">{c.status}</Badge>
-                        </div>
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>{c.sent_count}/{c.total_count} sent</span>
-                          <span>{rate}% delivered</span>
-                        </div>
-                        <div className="h-1 bg-muted rounded-full mt-2 overflow-hidden"><div className="h-full bg-gradient-to-r from-fuchsia-500 to-pink-500" style={{ width: `${rate}%` }} /></div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+            <Button size="sm" variant="outline" onClick={() => navigate('/chatbots')}>Bots</Button>
           </Card>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Card className="p-4"><div className="text-xs text-muted-foreground">Approved templates</div><div className="text-2xl font-bold mt-1 flex items-center gap-2"><MessageSquareText className="w-5 h-5 text-primary" />{stats.templatesApproved}</div></Card>
-          <Card className="p-4"><div className="text-xs text-muted-foreground">WhatsApp status</div><div className="text-2xl font-bold mt-1">{stats.waConnected ? <span className="text-emerald-500">Live</span> : <span className="text-amber-500">Setup</span>}</div></Card>
-          <Card className="p-4"><div className="text-xs text-muted-foreground">Active automations</div><div className="text-2xl font-bold mt-1">{stats.automationsActive}</div></Card>
-          <Card className="p-4"><div className="text-xs text-muted-foreground">Messages this month</div><div className="text-2xl font-bold mt-1">{stats.messagesSent}</div></Card>
-        </div>
-
-        {/* Help / demo banner */}
-        <Card className="p-5 flex flex-wrap items-center gap-3 justify-between">
-          <div className="flex items-start gap-3 min-w-0">
-            <div className="p-2.5 rounded-xl bg-muted shrink-0"><CalendarClock className="w-5 h-5" /></div>
-            <div className="min-w-0">
-              <h3 className="font-semibold">Have questions?</h3>
-              <p className="text-sm text-muted-foreground">Walk through setup, WhatsApp approval and campaigns step by step.</p>
-            </div>
-          </div>
-          <Button variant="outline" onClick={() => navigate('/guide')}>
-            <PlayCircle className="w-4 h-4 mr-1" /> Open setup guide
-          </Button>
-        </Card>
+        <p className="text-xs text-muted-foreground text-center">
+          Need help getting started?{' '}
+          <button onClick={() => navigate('/guide')} className="underline font-medium">Open the setup guide</button>
+        </p>
       </div>
     </AppLayout>
   );
