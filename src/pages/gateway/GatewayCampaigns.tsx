@@ -56,7 +56,7 @@ const GatewayCampaigns = () => {
     const { instanceId } = getGatewaySettings();
     setSending(true); setProgress(0);
     try {
-      const payload = list.map(r => ({ number: r.number, message: message.replaceAll('{{name}}', r.name) }));
+      const payload = list.map(r => ({ number: r.number, message: message.split('{{name}}').join(r.name) }));
       if (payload.length === 1) {
         await gatewayApi.send(instanceId, payload[0].number, payload[0].message);
       } else {
