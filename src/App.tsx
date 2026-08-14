@@ -41,6 +41,14 @@ import Automations from "./pages/Automations";
 import AutoReplies from "./pages/AutoReplies";
 import Chatbots from "./pages/Chatbots";
 import ChatbotDetail from "./pages/ChatbotDetail";
+import GatewayDashboard from "./pages/gateway/GatewayDashboard";
+import GatewayConnect from "./pages/gateway/GatewayConnect";
+import GatewayContacts from "./pages/gateway/GatewayContacts";
+import GatewayCampaigns from "./pages/gateway/GatewayCampaigns";
+import GatewayInbox from "./pages/gateway/GatewayInbox";
+import GatewaySettings from "./pages/gateway/GatewaySettings";
+
+
 
 
 
@@ -98,7 +106,15 @@ const App = () => (
                 <Route path="/templates/:id" element={<ProtectedRoute><TemplateEditor /></ProtectedRoute>} />
 
 
+                <Route path="/gateway" element={<ProtectedRoute><GatewayDashboard /></ProtectedRoute>} />
+                <Route path="/gateway/connect" element={<ProtectedRoute><GatewayConnect /></ProtectedRoute>} />
+                <Route path="/gateway/contacts" element={<ProtectedRoute><GatewayContacts /></ProtectedRoute>} />
+                <Route path="/gateway/campaigns" element={<ProtectedRoute><GatewayCampaigns /></ProtectedRoute>} />
+                <Route path="/gateway/inbox" element={<ProtectedRoute><GatewayInbox /></ProtectedRoute>} />
+                <Route path="/gateway/settings" element={<ProtectedRoute><GatewaySettings /></ProtectedRoute>} />
+
                 <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+
                 <Route path="/accounting" element={<ProtectedRoute><Accounting /></ProtectedRoute>} />
                 <Route path="/whatsapp-settings" element={<ProtectedRoute><WhatsAppSettings /></ProtectedRoute>} />
 
