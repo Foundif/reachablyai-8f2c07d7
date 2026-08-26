@@ -141,6 +141,8 @@ const OnboardingGate = () => {
             {step === 0 && 'Tell us about your business'}
             {step === 1 && <>A little more about you <Sparkles className="w-4 h-4 text-primary" /></>}
             {step === 2 && 'Create your Workspace'}
+            {step === 3 && 'Connect your WhatsApp'}
+
           </h2>
           <button onClick={signOut} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1.5 shrink-0">
             <LogOut className="w-3.5 h-3.5" /> Logout
