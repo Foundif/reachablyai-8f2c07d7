@@ -353,6 +353,23 @@ const Leads = () => {
           </div>
         </div>
 
+        {/* Overview */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            { label: 'Total contacts', value: leads.length },
+            { label: 'New this week', value: leads.filter(l => Date.now() - new Date(l.created_at).getTime() < 7 * 86400000).length },
+            { label: '🔥 Hot leads', value: leads.filter(l => tempOf(l.tags) === 'hot').length },
+            { label: 'Converted', value: leads.filter(l => l.status === 'converted').length },
+          ].map(s => (
+            <Card key={s.label} className="p-4">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">{s.label}</p>
+              <p className="text-2xl md:text-3xl font-bold mt-1">{s.value}</p>
+            </Card>
+          ))}
+        </div>
+
+
+
         {/* Filters */}
         <Card className="p-4">
           <div className="flex flex-wrap gap-3 items-center">
