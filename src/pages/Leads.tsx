@@ -22,7 +22,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import {
   Plus, Search, Upload, MessageCircle, LayoutGrid, List, Trash2, Tag, Globe, Loader2, Sparkles,
-  StickyNote, KeyRound, BookOpen, Save,
+  StickyNote, KeyRound, BookOpen, Save, Download,
 } from 'lucide-react';
 import { resolveWorkspaceId } from '@/lib/workspace';
 import ConfirmDialog from '@/components/ConfirmDialog';
