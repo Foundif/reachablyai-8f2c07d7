@@ -317,6 +317,22 @@ const Leads = () => {
             <Button variant="outline" className="flex-1 sm:flex-none min-w-[140px]" onClick={() => csvInputRef.current?.click()}>
               <Upload className="w-4 h-4 mr-2" /> Import CSV
             </Button>
+            <Button
+              variant="outline"
+              className="flex-1 sm:flex-none min-w-[140px]"
+              onClick={() => {
+                const rows = [['Name', 'Phone', 'Email', 'Status', 'Source', 'Tags', 'Created']]
+                  .concat(leads.map(l => [l.name, l.phone || '', l.email || '', l.status, l.source, (l.tags || []).join('|'), l.created_at]));
+                const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+                const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+                const a = document.createElement('a');
+                a.href = url; a.download = 'contacts.csv'; a.click();
+                URL.revokeObjectURL(url);
+              }}
+            >
+              <Download className="w-4 h-4 mr-2" /> Export CSV
+            </Button>
+
             <ScrapeLeadsDialog wsId={wsId} onDone={loadLeads} />
             <Dialog open={addOpen} onOpenChange={setAddOpen}>
               <DialogTrigger asChild>
