@@ -237,6 +237,16 @@ const OnboardingGate = () => {
             <button onClick={() => setStep(1)} className="text-xs text-muted-foreground hover:text-foreground">Previous</button>
           </div>
         )}
+
+        {step === 3 && (
+          <div className="space-y-3">
+            <ConnectWhatsAppCard connected={waConnected} onConnected={() => setWaConnected(true)} />
+            <Button className="w-full" disabled={saving} onClick={complete}>
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : waConnected ? 'Go to Reachably' : 'Skip for now'}
+            </Button>
+          </div>
+        )}
+
       </div>
     </div>
   );
