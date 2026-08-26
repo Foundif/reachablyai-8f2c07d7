@@ -36,6 +36,9 @@ const OnboardingGate = () => {
   const { user, profile, updateProfile, refreshProfile, signOut } = useAuth();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [waConnected, setWaConnected] = useState(false);
+
+
 
   const [businessName, setBusinessName] = useState('');
   const [website, setWebsite] = useState('');
