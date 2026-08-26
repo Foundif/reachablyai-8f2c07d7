@@ -2,8 +2,8 @@ import {
   Inbox, Contact, MessageSquareText,
   UserCog, Settings, UserCircle,
   LayoutDashboard, BarChart3, Wallet, Megaphone, Workflow, Bot, Plug,
-  Smartphone, QrCode,
 } from 'lucide-react';
+
 
 
 
@@ -37,17 +37,8 @@ export const MODULE_GROUPS: ModuleGroup[] = [
     ],
   },
 
-  {
-    label: 'Gateway',
-    items: [
-      { to: '/gateway', icon: Smartphone, label: 'Gateway Home', status: 'live' },
-      { to: '/gateway/connect', icon: QrCode, label: 'Connect QR', status: 'live' },
-      { to: '/gateway/contacts', icon: Contact, label: 'Gateway Contacts', status: 'live' },
-      { to: '/gateway/campaigns', icon: Megaphone, label: 'Gateway Campaigns', status: 'live' },
-      { to: '/gateway/inbox', icon: Inbox, label: 'Gateway Inbox', status: 'live' },
-      { to: '/gateway/settings', icon: Settings, label: 'Gateway Settings', status: 'live' },
-    ],
-  },
+
+
   {
     label: 'Insights',
     items: [

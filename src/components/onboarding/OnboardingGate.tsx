@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Building2, LogOut, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import ConnectWhatsAppCard from '@/components/home/ConnectWhatsAppCard';
+
 
 const COUNTRIES = ['India', 'United States', 'United Arab Emirates', 'United Kingdom', 'Singapore', 'Australia', 'Canada', 'Other'];
 const INDIAN_STATES = ['Andhra Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Delhi', 'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Odisha', 'Punjab', 'Rajasthan', 'Tamil Nadu', 'Telangana', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal'];
@@ -34,6 +36,9 @@ const OnboardingGate = () => {
   const { user, profile, updateProfile, refreshProfile, signOut } = useAuth();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [waConnected, setWaConnected] = useState(false);
+
+
 
   const [businessName, setBusinessName] = useState('');
   const [website, setWebsite] = useState('');
@@ -95,21 +100,38 @@ const OnboardingGate = () => {
         industry,
         sells,
         active_workspace_id: wsId,
-        onboarding_completed: true,
-        ...((profile as any).trial_end_date ? {} : {
-          trial_start_date: now.toISOString(),
-          trial_end_date: trialEnd.toISOString(),
-        }),
       } as any);
       if (pErr) throw pErr;
-      await refreshProfile();
       toast.success('Workspace created — your 7-day free trial has started');
+      setStep(3);
     } catch (e: any) {
       toast.error(e.message || 'Could not complete setup');
     } finally {
       setSaving(false);
     }
   };
+
+  const complete = async () => {
+    setSaving(true);
+    try {
+      const now = new Date();
+      const trialEnd = new Date(now.getTime() + 7 * 86_400_000);
+      const { error } = await updateProfile({
+        onboarding_completed: true,
+        ...((profile as any).trial_end_date ? {} : {
+          trial_start_date: now.toISOString(),
+          trial_end_date: trialEnd.toISOString(),
+        }),
+      } as any);
+      if (error) throw error;
+      await refreshProfile();
+    } catch (e: any) {
+      toast.error(e.message || 'Could not finish setup');
+    } finally {
+      setSaving(false);
+    }
+  };
+
 
   return (
     <div className="fixed inset-0 z-[100] bg-foreground/40 backdrop-blur-[2px] flex items-center justify-center p-4">
@@ -119,6 +141,8 @@ const OnboardingGate = () => {
             {step === 0 && 'Tell us about your business'}
             {step === 1 && <>A little more about you <Sparkles className="w-4 h-4 text-primary" /></>}
             {step === 2 && 'Create your Workspace'}
+            {step === 3 && 'Connect your WhatsApp'}
+
           </h2>
           <button onClick={signOut} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1.5 shrink-0">
             <LogOut className="w-3.5 h-3.5" /> Logout
@@ -220,6 +244,16 @@ const OnboardingGate = () => {
             <button onClick={() => setStep(1)} className="text-xs text-muted-foreground hover:text-foreground">Previous</button>
           </div>
         )}
+
+        {step === 3 && (
+          <div className="space-y-3">
+            <ConnectWhatsAppCard connected={waConnected} onConnected={() => setWaConnected(true)} />
+            <Button className="w-full" disabled={saving} onClick={complete}>
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : waConnected ? 'Go to Reachably' : 'Skip for now'}
+            </Button>
+          </div>
+        )}
+
       </div>
     </div>
   );

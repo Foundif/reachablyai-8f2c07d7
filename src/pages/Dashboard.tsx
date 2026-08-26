@@ -6,8 +6,9 @@ import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
-  Contact, Inbox, Megaphone, Workflow, ArrowRight, Send, Wallet, Sparkles,
+  Contact, Inbox, Megaphone, Workflow, ArrowRight, Send, Wallet, Sparkles, Upload,
 } from 'lucide-react';
+
 import { resolveWorkspaceId } from '@/lib/workspace';
 import ConnectWhatsAppCard from '@/components/home/ConnectWhatsAppCard';
 
@@ -202,10 +203,16 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        <p className="text-xs text-muted-foreground text-center">
-          Need help getting started?{' '}
-          <button onClick={() => navigate('/guide')} className="underline font-medium">Open the setup guide</button>
-        </p>
+        {/* Import contacts */}
+        <Card className="p-4 flex flex-wrap items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-muted"><Upload className="w-4 h-4" /></div>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-sm">Import contacts via Excel or CSV</p>
+            <p className="text-xs text-muted-foreground">Bring your existing lists in and start conversations without manual effort.</p>
+          </div>
+          <Button size="sm" onClick={() => navigate('/leads')}>Import contacts</Button>
+        </Card>
+
       </div>
     </AppLayout>
   );

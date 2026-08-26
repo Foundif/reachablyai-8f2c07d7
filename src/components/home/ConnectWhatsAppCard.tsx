@@ -85,7 +85,7 @@ const ConnectWhatsAppCard = ({ connected, onConnected }: { connected: boolean; o
           <p className="font-medium text-sm">WhatsApp is connected</p>
           <p className="text-xs text-muted-foreground">Messages sync to your Team Inbox in real time.</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => navigate('/whatsapp')}>Manage</Button>
+        <Button variant="outline" size="sm" onClick={() => navigate('/whatsapp-settings')}>Manage</Button>
       </Card>
     );
   }
@@ -110,7 +110,7 @@ const ConnectWhatsAppCard = ({ connected, onConnected }: { connected: boolean; o
           <Facebook className="w-4 h-4" />
           {loading ? 'Waiting for Facebook…' : 'Continue with Facebook'}
         </Button>
-        <Button variant="outline" onClick={() => navigate('/whatsapp')}>Manual API setup</Button>
+        <Button variant="outline" onClick={() => navigate('/whatsapp-settings')}>Manual API setup</Button>
       </div>
 
       <button onClick={() => setHowOpen(o => !o)} className="flex items-center gap-1 text-xs font-medium text-primary">

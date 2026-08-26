@@ -22,7 +22,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import {
   Plus, Search, Upload, MessageCircle, LayoutGrid, List, Trash2, Tag, Globe, Loader2, Sparkles,
-  StickyNote, KeyRound, BookOpen, Save,
+  StickyNote, KeyRound, BookOpen, Save, Download,
 } from 'lucide-react';
 import { resolveWorkspaceId } from '@/lib/workspace';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -317,6 +317,22 @@ const Leads = () => {
             <Button variant="outline" className="flex-1 sm:flex-none min-w-[140px]" onClick={() => csvInputRef.current?.click()}>
               <Upload className="w-4 h-4 mr-2" /> Import CSV
             </Button>
+            <Button
+              variant="outline"
+              className="flex-1 sm:flex-none min-w-[140px]"
+              onClick={() => {
+                const rows = [['Name', 'Phone', 'Email', 'Status', 'Source', 'Tags', 'Created']]
+                  .concat(leads.map(l => [l.name, l.phone || '', l.email || '', l.status, l.source, (l.tags || []).join('|'), l.created_at]));
+                const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+                const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+                const a = document.createElement('a');
+                a.href = url; a.download = 'contacts.csv'; a.click();
+                URL.revokeObjectURL(url);
+              }}
+            >
+              <Download className="w-4 h-4 mr-2" /> Export CSV
+            </Button>
+
             <ScrapeLeadsDialog wsId={wsId} onDone={loadLeads} />
             <Dialog open={addOpen} onOpenChange={setAddOpen}>
               <DialogTrigger asChild>
@@ -352,6 +368,23 @@ const Leads = () => {
             </Dialog>
           </div>
         </div>
+
+        {/* Overview */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            { label: 'Total contacts', value: leads.length },
+            { label: 'New this week', value: leads.filter(l => Date.now() - new Date(l.created_at).getTime() < 7 * 86400000).length },
+            { label: '🔥 Hot leads', value: leads.filter(l => tempOf(l.tags) === 'hot').length },
+            { label: 'Converted', value: leads.filter(l => l.status === 'converted').length },
+          ].map(s => (
+            <Card key={s.label} className="p-4">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">{s.label}</p>
+              <p className="text-2xl md:text-3xl font-bold mt-1">{s.value}</p>
+            </Card>
+          ))}
+        </div>
+
+
 
         {/* Filters */}
         <Card className="p-4">
