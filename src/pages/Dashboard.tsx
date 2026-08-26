@@ -6,8 +6,9 @@ import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
-  Contact, Inbox, Megaphone, Workflow, ArrowRight, Send, Wallet, Sparkles,
+  Contact, Inbox, Megaphone, Workflow, ArrowRight, Send, Wallet, Sparkles, Upload,
 } from 'lucide-react';
+
 import { resolveWorkspaceId } from '@/lib/workspace';
 import ConnectWhatsAppCard from '@/components/home/ConnectWhatsAppCard';
 
