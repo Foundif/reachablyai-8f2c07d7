@@ -95,21 +95,38 @@ const OnboardingGate = () => {
         industry,
         sells,
         active_workspace_id: wsId,
-        onboarding_completed: true,
-        ...((profile as any).trial_end_date ? {} : {
-          trial_start_date: now.toISOString(),
-          trial_end_date: trialEnd.toISOString(),
-        }),
       } as any);
       if (pErr) throw pErr;
-      await refreshProfile();
       toast.success('Workspace created — your 7-day free trial has started');
+      setStep(3);
     } catch (e: any) {
       toast.error(e.message || 'Could not complete setup');
     } finally {
       setSaving(false);
     }
   };
+
+  const complete = async () => {
+    setSaving(true);
+    try {
+      const now = new Date();
+      const trialEnd = new Date(now.getTime() + 7 * 86_400_000);
+      const { error } = await updateProfile({
+        onboarding_completed: true,
+        ...((profile as any).trial_end_date ? {} : {
+          trial_start_date: now.toISOString(),
+          trial_end_date: trialEnd.toISOString(),
+        }),
+      } as any);
+      if (error) throw error;
+      await refreshProfile();
+    } catch (e: any) {
+      toast.error(e.message || 'Could not finish setup');
+    } finally {
+      setSaving(false);
+    }
+  };
+
 
   return (
     <div className="fixed inset-0 z-[100] bg-foreground/40 backdrop-blur-[2px] flex items-center justify-center p-4">
