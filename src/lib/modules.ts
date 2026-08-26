@@ -2,8 +2,8 @@ import {
   Inbox, Contact, MessageSquareText,
   UserCog, Settings, UserCircle,
   LayoutDashboard, BarChart3, Wallet, Megaphone, Workflow, Bot, Plug,
-  Smartphone, QrCode,
 } from 'lucide-react';
+
 
 
 
