@@ -472,6 +472,11 @@ const Leads = () => {
       if (error) { toast.error('Import failed: ' + error.message); return; }
     }
     toast.success(`Imported ${payload.length} contact(s)`);
+    setImportHistory(prev => {
+      const next = [{ file: file.name, count: payload.length, at: new Date().toISOString() }, ...prev].slice(0, 20);
+      localStorage.setItem('reachably.contacts.imports', JSON.stringify(next));
+      return next;
+    });
     if (csvInputRef.current) csvInputRef.current.value = '';
     loadLeads();
   };
@@ -479,9 +484,9 @@ const Leads = () => {
   // ---- Bulk selection ----
   const toggleSelect = (id: string) =>
     setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  const allVisibleSelected = filtered.length > 0 && filtered.every(l => selected.has(l.id));
+  const allVisibleSelected = pageRows.length > 0 && pageRows.every(l => selected.has(l.id));
   const toggleSelectAll = () =>
-    setSelected(allVisibleSelected ? new Set() : new Set(filtered.map(l => l.id)));
+    setSelected(allVisibleSelected ? new Set() : new Set(pageRows.map(l => l.id)));
 
   const confirmBulkDelete = async () => {
     const ids = Array.from(selected);
