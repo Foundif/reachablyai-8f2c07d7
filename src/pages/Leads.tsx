@@ -943,6 +943,43 @@ const Leads = () => {
   );
 };
 
+function FilterBuilder({ rules, onChange }: { rules: FilterRule[]; onChange: (r: FilterRule[]) => void }) {
+  const update = (i: number, patch: Partial<FilterRule>) =>
+    onChange(rules.map((r, idx) => idx === i ? { ...r, ...patch } : r));
+  return (
+    <div className="space-y-2">
+      {rules.length === 0 && <p className="text-xs text-muted-foreground">No filters yet. Add one to narrow the list.</p>}
+      {rules.map((r, i) => (
+        <div key={i} className="flex items-center gap-1.5">
+          <Select value={r.field} onValueChange={v => update(i, { field: v as FieldKey })}>
+            <SelectTrigger className="h-8 flex-1 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {FIELDS.map(f => <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={r.condition} onValueChange={v => update(i, { condition: v as Condition })}>
+            <SelectTrigger className="h-8 w-[110px] text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {CONDITIONS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          {!['is_empty', 'is_not_empty'].includes(r.condition) && (
+            <Input className="h-8 w-[110px] text-xs" value={r.value} placeholder="Value"
+              onChange={e => update(i, { value: e.target.value })} />
+          )}
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => onChange(rules.filter((_, idx) => idx !== i))}>
+            <X className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      ))}
+      <Button variant="outline" size="sm" className="w-full gap-1"
+        onClick={() => onChange([...rules, { field: 'name', condition: 'contains', value: '' }])}>
+        <Plus className="w-3.5 h-3.5" /> Add filter
+      </Button>
+    </div>
+  );
+}
+
 export default Leads;
 
 declare global { interface Window { Razorpay?: any } }
