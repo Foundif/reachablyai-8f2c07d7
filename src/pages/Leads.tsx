@@ -161,11 +161,8 @@ const Leads = () => {
   const navigate = useNavigate();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<'cards' | 'table'>('table');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [sourceFilter, setSourceFilter] = useState<string>('all');
-  const [tempFilter, setTempFilter] = useState('all');
+  const [searchOpen, setSearchOpen] = useState(false);
   const [noteLead, setNoteLead] = useState<Lead | null>(null);
   const [noteDraft, setNoteDraft] = useState({ notes: '', tags: '' });
   const [addOpen, setAddOpen] = useState(false);
@@ -175,7 +172,35 @@ const Leads = () => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
 
-  const [form, setForm] = useState({ name: '', phone: '', email: '', tags: '' });
+  // Turbodev-style table state
+  const [tab, setTab] = useState<'contacts' | 'segments'>('contacts');
+  const [columns, setColumns] = useState<FieldKey[]>(() => {
+    try {
+      const raw = localStorage.getItem(COLS_KEY);
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (Array.isArray(parsed) && parsed.length) return parsed as FieldKey[];
+    } catch { /* ignore */ }
+    return DEFAULT_COLUMNS;
+  });
+  const [colSheet, setColSheet] = useState(false);
+  const [rules, setRules] = useState<FilterRule[]>([]);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(20);
+  const [importHistory, setImportHistory] = useState<{ file: string; count: number; at: string }[]>(() => {
+    try { return JSON.parse(localStorage.getItem('reachably.contacts.imports') || '[]'); } catch { return []; }
+  });
+
+  // Segments
+  const [segments, setSegments] = useState<any[]>([]);
+  const [segOpen, setSegOpen] = useState(false);
+  const [segDraft, setSegDraft] = useState<{ name: string; rules: FilterRule[] }>({ name: '', rules: [] });
+  const [pendingSegDelete, setPendingSegDelete] = useState<any | null>(null);
+
+  useEffect(() => { localStorage.setItem(COLS_KEY, JSON.stringify(columns)); }, [columns]);
+
+  const [form, setForm] = useState({
+    name: '', phone: '+91', email: '', tags: '', optIn: 'no', notes: '', status: 'new' as LeadStatus,
+  });
 
   // Deep link from Home: /leads?import=1 opens the CSV file picker
   useEffect(() => {
