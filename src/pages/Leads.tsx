@@ -226,20 +226,52 @@ const Leads = () => {
     setLoading(false);
   };
 
-  useEffect(() => { loadWorkspace(); loadLeads(); }, [user, profile]);
+  const loadSegments = async () => {
+    const { data } = await supabase.from('contact_segments' as any).select('*').order('created_at', { ascending: false });
+    setSegments((data as any[]) || []);
+  };
+
+  useEffect(() => { loadWorkspace(); loadLeads(); loadSegments(); }, [user, profile]);
+
+  // ---- Filter engine (shared by the Filter popover and Segments) ----
+  const fieldValue = (l: Lead, f: FieldKey): string => {
+    switch (f) {
+      case 'temperature': return tempOf(l.tags) || '';
+      case 'tags': return (l.tags || []).join(', ');
+      case 'updated_at': return l.created_at;
+      default: return String((l as any)[f] ?? '');
+    }
+  };
+  const matchRule = (l: Lead, r: FilterRule) => {
+    const v = fieldValue(l, r.field).toLowerCase();
+    const q = (r.value || '').toLowerCase().trim();
+    switch (r.condition) {
+      case 'is': return !q || v === q;
+      case 'is_not': return !q || v !== q;
+      case 'contains': return !q || v.includes(q);
+      case 'not_contains': return !q || !v.includes(q);
+      case 'is_empty': return !v;
+      case 'is_not_empty': return !!v;
+      default: return true;
+    }
+  };
+  const applyRules = (list: Lead[], rs: FilterRule[]) => list.filter(l => rs.every(r => matchRule(l, r)));
 
   const filtered = useMemo(() => {
-    return leads.filter(l => {
-      if (statusFilter !== 'all' && l.status !== statusFilter) return false;
-      if (sourceFilter !== 'all' && l.source !== sourceFilter) return false;
-      if (search) {
-        const q = search.toLowerCase();
-        if (!(l.name?.toLowerCase().includes(q) || l.phone?.includes(q) || l.email?.toLowerCase().includes(q))) return false;
-      }
-      if (tempFilter !== 'all' && tempOf(l.tags) !== tempFilter) return false;
-      return true;
-    });
-  }, [leads, statusFilter, sourceFilter, search, tempFilter]);
+    let list = applyRules(leads, rules);
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(l =>
+        l.name?.toLowerCase().includes(q) || l.phone?.includes(q) || l.email?.toLowerCase().includes(q));
+    }
+    return list;
+  }, [leads, rules, search]);
+
+  useEffect(() => { setPage(1); }, [rules, search, perPage]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
+  const pageRows = useMemo(
+    () => filtered.slice((page - 1) * perPage, page * perPage),
+    [filtered, page, perPage]);
 
   const openNotes = (l: Lead) => {
     setNoteLead(l);
@@ -257,22 +289,117 @@ const Leads = () => {
   };
 
   const handleAdd = async () => {
-    if (!form.name.trim()) return toast.error('Name required');
+    if (!form.name.trim()) return toast.error('Name is required');
     if (!wsId) return toast.error('Workspace not ready');
     const tags = form.tags.split(',').map(t => t.trim()).filter(Boolean);
+    if (form.optIn === 'yes') tags.push('marketing-opt-in');
+    const phone = form.phone.replace(/\s/g, '');
     const { error } = await supabase.from('leads' as any).insert({
       workspace_id: wsId,
       name: form.name.trim(),
-      phone: form.phone.trim() || null,
+      phone: phone && phone !== '+91' ? phone : null,
       email: form.email.trim() || null,
+      notes: form.notes.trim() || null,
+      status: form.status,
       source: 'manual',
       tags,
     });
     if (error) return toast.error(error.message);
-    toast.success('Lead added');
+    toast.success('Contact created');
     setAddOpen(false);
-    setForm({ name: '', phone: '', email: '', tags: '' });
+    setForm({ name: '', phone: '+91', email: '', tags: '', optIn: 'no', notes: '', status: 'new' });
     loadLeads();
+  };
+
+  // ---- Segments ----
+  const saveSegment = async () => {
+    if (!segDraft.name.trim()) return toast.error('Segment name is required');
+    if (!wsId) return toast.error('Workspace not ready');
+    const { error } = await supabase.from('contact_segments' as any).insert({
+      workspace_id: wsId,
+      name: segDraft.name.trim(),
+      filters: segDraft.rules as any,
+      created_by: user?.id ?? null,
+    });
+    if (error) return toast.error(error.message);
+    toast.success('Segment created');
+    setSegOpen(false);
+    setSegDraft({ name: '', rules: [] });
+    loadSegments();
+  };
+  const confirmSegDelete = async () => {
+    const s = pendingSegDelete;
+    setPendingSegDelete(null);
+    if (!s) return;
+    const { error } = await supabase.from('contact_segments' as any).delete().eq('id', s.id);
+    if (error) return toast.error(error.message);
+    setSegments(prev => prev.filter(x => x.id !== s.id));
+    toast.success('Segment deleted');
+  };
+  const segmentCount = (s: any) => applyRules(leads, (s.filters as FilterRule[]) || []).length;
+
+  const exportContacts = () => {
+    const cols = FIELDS.filter(f => columns.includes(f.key));
+    const rows = [cols.map(c => c.label)]
+      .concat(filtered.map(l => cols.map(c => fieldValue(l, c.key))));
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = 'contacts.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const renderCell = (l: Lead, key: FieldKey) => {
+    switch (key) {
+      case 'name':
+        return (
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className={`w-7 h-7 shrink-0 rounded-full grid place-items-center text-[11px] font-semibold ${toneOf(l.name)}`}>
+              {initials(l.name)}
+            </span>
+            <span className="font-medium truncate">{l.name}</span>
+          </div>
+        );
+      case 'phone':
+        return l.phone
+          ? <span className="inline-flex items-center gap-1.5 text-sm"><Phone className="w-3.5 h-3.5 text-muted-foreground" />{l.phone}</span>
+          : <span className="text-muted-foreground">–</span>;
+      case 'status':
+        return (
+          <Select value={l.status} onValueChange={(v) => handleStatusChange(l.id, v as LeadStatus)}>
+            <SelectTrigger className={`h-7 w-[118px] text-xs ${STATUS_COLORS[l.status]}`}><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="new">New</SelectItem>
+              <SelectItem value="contacted">Contacted</SelectItem>
+              <SelectItem value="converted">Converted</SelectItem>
+              <SelectItem value="lost">Lost</SelectItem>
+            </SelectContent>
+          </Select>
+        );
+      case 'source':
+        return <Badge variant="outline" className={SOURCE_COLORS[l.source]}>{l.source}</Badge>;
+      case 'temperature': {
+        const t = tempOf(l.tags);
+        return t
+          ? <Badge variant="outline" className={TEMP_COLORS[t]}>{t}</Badge>
+          : <span className="text-muted-foreground">–</span>;
+      }
+      case 'tags':
+        return l.tags?.length
+          ? <div className="flex flex-wrap gap-1">{l.tags.slice(0, 3).map(t => (
+              <Badge key={t} variant="outline" className={`text-[10px] ${TEMP_COLORS[t.toLowerCase()] || ''}`}>{t}</Badge>))}</div>
+          : <span className="text-muted-foreground">–</span>;
+      case 'notes':
+        return <span className="text-sm text-muted-foreground line-clamp-1 max-w-[260px]">{l.notes || '–'}</span>;
+      case 'email':
+        return <span className="text-sm">{l.email || <span className="text-muted-foreground">–</span>}</span>;
+      case 'created_at':
+        return <span className="text-sm whitespace-nowrap">{fmtDate(l.created_at)}</span>;
+      case 'updated_at':
+        return <span className="text-sm whitespace-nowrap">{fmtDateTime(l.created_at)}</span>;
+      default:
+        return null;
+    }
   };
 
   const handleStatusChange = async (id: string, status: LeadStatus) => {
