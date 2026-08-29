@@ -17,15 +17,63 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
+} from '@/components/ui/sheet';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import {
-  Plus, Search, Upload, MessageCircle, LayoutGrid, List, Trash2, Tag, Globe, Loader2, Sparkles,
-  StickyNote, KeyRound, BookOpen, Save, Download,
+  Plus, Search, Upload, MessageCircle, Trash2, Tag, Globe, Loader2, Sparkles,
+  StickyNote, KeyRound, BookOpen, Save, Download, Filter as FilterIcon, X, ChevronDown,
+  Phone, GripVertical, MoreVertical, Columns3, History,
 } from 'lucide-react';
 import { resolveWorkspaceId } from '@/lib/workspace';
 import ConfirmDialog from '@/components/ConfirmDialog';
+
+// ---------- Contact table fields (Turbodev-style column manager) ----------
+type FieldKey = 'name' | 'phone' | 'email' | 'status' | 'source' | 'temperature' | 'tags' | 'notes' | 'created_at' | 'updated_at';
+interface FieldDef { key: FieldKey; label: string; kind: 'text' | 'option' | 'date' | 'list' }
+const FIELDS: FieldDef[] = [
+  { key: 'name', label: 'Name', kind: 'text' },
+  { key: 'phone', label: 'Phone', kind: 'text' },
+  { key: 'email', label: 'Email', kind: 'text' },
+  { key: 'status', label: 'Status', kind: 'option' },
+  { key: 'source', label: 'Source', kind: 'option' },
+  { key: 'temperature', label: 'Temperature', kind: 'option' },
+  { key: 'tags', label: 'Tags', kind: 'list' },
+  { key: 'notes', label: 'Notes', kind: 'text' },
+  { key: 'created_at', label: 'Created At', kind: 'date' },
+  { key: 'updated_at', label: 'Updated At', kind: 'date' },
+];
+const DEFAULT_COLUMNS: FieldKey[] = ['name', 'phone', 'status', 'source', 'created_at'];
+const COLS_KEY = 'reachably.contacts.columns';
+
+type Condition = 'is' | 'is_not' | 'contains' | 'not_contains' | 'is_empty' | 'is_not_empty';
+const CONDITIONS: { value: Condition; label: string }[] = [
+  { value: 'is', label: 'Is' },
+  { value: 'is_not', label: 'Is not' },
+  { value: 'contains', label: 'Contains' },
+  { value: 'not_contains', label: 'Does not contain' },
+  { value: 'is_empty', label: 'Is empty' },
+  { value: 'is_not_empty', label: 'Is not empty' },
+];
+interface FilterRule { field: FieldKey; condition: Condition; value: string }
+
+const initials = (n: string) =>
+  (n || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+const AVATAR_TONES = [
+  'bg-red-500/15 text-red-600', 'bg-blue-500/15 text-blue-600', 'bg-emerald-500/15 text-emerald-600',
+  'bg-amber-500/15 text-amber-600', 'bg-purple-500/15 text-purple-600', 'bg-sky-500/15 text-sky-600',
+];
+const toneOf = (s: string) => AVATAR_TONES[[...(s || 'x')].reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_TONES.length];
+const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+const fmtDateTime = (d: string) =>
+  `${fmtDate(d)} | ${new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
 type LeadStatus = 'new' | 'contacted' | 'converted' | 'lost';
 type LeadSource = 'manual' | 'csv' | 'meta_ads' | 'scraped' | 'booking';
