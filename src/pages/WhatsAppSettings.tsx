@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { Settings, ShieldCheck, ShieldAlert, Copy, Bug, RefreshCw, CheckCircle2, XCircle, MinusCircle, Inbox as InboxIcon, Facebook, Zap, Unplug } from 'lucide-react';
 import { META_APP_ID, META_CONFIG_ID } from '@/lib/metaConfig';
 import { loadFacebookSdk } from '@/lib/facebookSdk';
+import WhatsAppBusinessProfile from '@/components/settings/WhatsAppBusinessProfile';
 
 import { resolveWorkspaceId } from '@/lib/workspace';
 
@@ -29,6 +30,16 @@ interface Creds {
   connection_type: 'manual' | 'embedded' | null;
   connected_at: string | null;
   status: string | null;
+  profile_picture_url?: string | null;
+  profile_address?: string | null;
+  profile_description?: string | null;
+  profile_email?: string | null;
+  profile_vertical?: string | null;
+  profile_websites?: string[] | null;
+  profile_about?: string | null;
+  verified_name?: string | null;
+  quality_rating?: string | null;
+  messaging_limit?: string | null;
 }
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -253,6 +264,23 @@ const WhatsAppSettings = () => {
 
           {creds?.last_error && <p className="text-sm text-red-600">{creds.last_error}</p>}
         </Card>
+
+        {wsId && (
+          <WhatsAppBusinessProfile
+            workspaceId={wsId}
+            connected={creds?.status === 'connected' || Boolean(creds?.verified)}
+            fallbackName={creds?.verified_name || profile?.store_name || 'Business'}
+            cachedProfile={{
+              profile_picture_url: creds?.profile_picture_url || '',
+              address: creds?.profile_address || '',
+              description: creds?.profile_description || '',
+              email: creds?.profile_email || '',
+              vertical: creds?.profile_vertical || 'OTHER',
+              websites: creds?.profile_websites?.length ? creds.profile_websites : [''],
+              about: creds?.profile_about || '',
+            }}
+          />
+        )}
 
         {/* Two connection methods */}
         <Card className="p-6 space-y-4">
