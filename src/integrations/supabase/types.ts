@@ -1615,11 +1615,22 @@ export type Database = {
           created_at: string
           last_analytics_sync: string | null
           last_error: string | null
+          messaging_limit: string | null
           phone_number_id: string | null
+          profile_about: string | null
+          profile_address: string | null
+          profile_description: string | null
+          profile_email: string | null
+          profile_picture_url: string | null
+          profile_synced_at: string | null
+          profile_vertical: string | null
+          profile_websites: Json
+          quality_rating: string | null
           status: string
           updated_at: string
           verified: boolean
           verified_at: string | null
+          verified_name: string | null
           waba_id: string | null
           webhook_verify_token: string | null
           workspace_id: string
@@ -1633,11 +1644,22 @@ export type Database = {
           created_at?: string
           last_analytics_sync?: string | null
           last_error?: string | null
+          messaging_limit?: string | null
           phone_number_id?: string | null
+          profile_about?: string | null
+          profile_address?: string | null
+          profile_description?: string | null
+          profile_email?: string | null
+          profile_picture_url?: string | null
+          profile_synced_at?: string | null
+          profile_vertical?: string | null
+          profile_websites?: Json
+          quality_rating?: string | null
           status?: string
           updated_at?: string
           verified?: boolean
           verified_at?: string | null
+          verified_name?: string | null
           waba_id?: string | null
           webhook_verify_token?: string | null
           workspace_id: string
@@ -1651,11 +1673,22 @@ export type Database = {
           created_at?: string
           last_analytics_sync?: string | null
           last_error?: string | null
+          messaging_limit?: string | null
           phone_number_id?: string | null
+          profile_about?: string | null
+          profile_address?: string | null
+          profile_description?: string | null
+          profile_email?: string | null
+          profile_picture_url?: string | null
+          profile_synced_at?: string | null
+          profile_vertical?: string | null
+          profile_websites?: Json
+          quality_rating?: string | null
           status?: string
           updated_at?: string
           verified?: boolean
           verified_at?: string | null
+          verified_name?: string | null
           waba_id?: string | null
           webhook_verify_token?: string | null
           workspace_id?: string
