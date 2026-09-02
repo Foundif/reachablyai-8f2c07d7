@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useRef, useState } from 'react';
+import { ChangeEvent, ReactNode, useEffect, useRef, useState } from 'react';
 import { Building2, Camera, Loader2, Plus, RefreshCw, Save, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -172,7 +172,7 @@ const WhatsAppBusinessProfile = ({ workspaceId, connected, fallbackName, cachedP
   );
 };
 
-const Field = ({ label, hint, children }: { label: string; hint: string; children: React.ReactNode }) => (
+const Field = ({ label, hint, children }: { label: string; hint: string; children: ReactNode }) => (
   <div className="grid gap-2 md:grid-cols-[180px_minmax(0,1fr)] md:gap-5">
     <div><Label>{label}</Label><p className="mt-1 text-xs text-muted-foreground">{hint}</p></div>
     <div>{children}</div>

@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
       return json({ verified: false, error: 'Missing access token or phone number ID' });
     }
 
-    const resp = await fetch(`https://graph.facebook.com/v20.0/${creds.phone_number_id}?fields=display_phone_number,verified_name`, {
+    const resp = await fetch(`https://graph.facebook.com/v20.0/${creds.phone_number_id}?fields=display_phone_number,verified_name,quality_rating,name_status`, {
       headers: { Authorization: `Bearer ${creds.access_token}` },
     });
     const body = await resp.json();
@@ -35,6 +35,9 @@ Deno.serve(async (req) => {
       connected_at: new Date().toISOString(),
       last_error: null,
       business_phone: body.display_phone_number || creds.business_phone,
+      verified_name: body.verified_name || creds.verified_name,
+      quality_rating: body.quality_rating || creds.quality_rating,
+      messaging_limit: body.name_status || creds.messaging_limit,
     }).eq('workspace_id', workspace_id);
 
     return json({ verified: true, phone: body.display_phone_number, name: body.verified_name });
