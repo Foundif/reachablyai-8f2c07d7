@@ -670,7 +670,13 @@ const Leads = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
 
+                <Button variant="outline" size="sm" className="gap-2" onClick={syncFromWhatsApp} disabled={syncing}>
+                  {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
+                  Sync WhatsApp
+                </Button>
+
                 <ScrapeLeadsDialog wsId={wsId} onDone={loadLeads} />
+
 
                 <Button size="sm" className="gap-2" onClick={() => setAddOpen(true)}>
                   <Plus className="w-4 h-4" /> Add contact
