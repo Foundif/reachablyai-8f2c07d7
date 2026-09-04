@@ -156,6 +156,33 @@ const TemplateEditor = () => {
     }
   };
 
+  /** Uploads several images/videos at once and turns each one into its own card. */
+  const uploadManyAsCards = async (files: File[]) => {
+    if (!wsId || !files.length) return;
+    setUploading(true);
+    let added = 0;
+    try {
+      for (const file of files.slice(0, 10)) {
+        const ext = file.name.split('.').pop() || 'bin';
+        const path = `template-media/${wsId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const { error } = await supabase.storage.from('salon-assets').upload(path, file, { upsert: false, contentType: file.type || undefined });
+        if (error) throw error;
+        const { data: pub } = supabase.storage.from('salon-assets').getPublicUrl(path);
+        const isVideo = (file.type || '').startsWith('video');
+        setForm(f => f.carousel_cards.length >= 10 ? f : ({
+          ...f,
+          carousel_cards: [...f.carousel_cards, { header_media_url: pub.publicUrl, header_type: isVideo ? 'video' : 'image', body: '', buttons: [] }],
+        }));
+        added++;
+      }
+      toast.success(`${added} ${added === 1 ? 'card' : 'cards'} added`);
+    } catch (e: any) {
+      toast.error(e.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const runAiFix = async (autoApply: boolean) => {
     setAiBusy(true);
     setAiIssues(null);
@@ -239,6 +266,13 @@ const TemplateEditor = () => {
 
   const MediaPicker = ({ value, kind, onChange }: { value: string; kind: 'image' | 'video' | 'document'; onChange: (u: string) => void }) => (
     <div className="space-y-2">
+      {value && kind !== 'document' && (
+        <div className="rounded-lg overflow-hidden bg-muted h-28">
+          {kind === 'video'
+            ? <video src={value} muted controls className="h-28 w-full object-cover" />
+            : <img src={value} alt="Selected media preview" className="h-28 w-full object-cover" />}
+        </div>
+      )}
       <div className="flex gap-2">
         <Input value={value} onChange={e => onChange(e.target.value)} placeholder="Public URL (JPG/PNG/MP4/PDF) or upload →" />
         <Button type="button" variant="outline" size="icon" asChild disabled={uploading}>
@@ -397,7 +431,23 @@ const TemplateEditor = () => {
                 </TabsContent>
 
                 <TabsContent value="carousel" className="space-y-3 pt-4">
-                  <p className="text-xs text-muted-foreground">2–10 media cards. Each card needs its own image/video and body text.</p>
+                  <div className="rounded-lg border border-dashed p-4 text-center space-y-2">
+                    <p className="text-sm font-medium">Add several photos at once</p>
+                    <p className="text-xs text-muted-foreground">
+                      Pick 2–10 photos or videos together — each one becomes its own card that customers swipe through. Then just write a line of text under each.
+                    </p>
+                    <Button type="button" variant="outline" size="sm" asChild disabled={uploading}>
+                      <label className="cursor-pointer">
+                        {uploading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Upload className="w-4 h-4 mr-1" />}
+                        {uploading ? 'Uploading…' : 'Choose photos'}
+                        <input
+                          type="file" multiple className="hidden" accept="image/png,image/jpeg,video/mp4"
+                          onChange={e => { const fs = Array.from(e.target.files || []); e.currentTarget.value = ''; if (fs.length) uploadManyAsCards(fs); }}
+                        />
+                      </label>
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{form.carousel_cards.length}/10 cards added. Each card needs a photo (or video) and a short description.</p>
                   {form.carousel_cards.map((c, i) => (
                     <div key={i} className="p-3 border rounded-lg space-y-2 relative">
                       <button className="absolute top-2 right-2 text-muted-foreground hover:text-destructive" onClick={() => rmCard(i)}><X className="w-4 h-4" /></button>

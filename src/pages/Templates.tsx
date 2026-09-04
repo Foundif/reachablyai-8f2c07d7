@@ -248,8 +248,29 @@ const Templates = () => {
                 <div className="p-3 bg-muted/40 flex-1">
                   <div className="rounded-xl bg-card border p-3 text-sm whitespace-pre-wrap max-h-56 overflow-y-auto custom-scrollbar">
                     {t.header_type && !['none', 'text'].includes(t.header_type) && (
-                      <div className="mb-2 rounded-lg overflow-hidden bg-muted h-24 grid place-items-center text-xs text-muted-foreground capitalize">
-                        {t.header_type} header
+                      <div className="mb-2 rounded-lg overflow-hidden bg-muted h-24">
+                        {t.header_media_url && t.header_type === 'image' ? (
+                          <img src={t.header_media_url} alt={`${t.name} header image`} loading="lazy" className="h-24 w-full object-cover" />
+                        ) : t.header_media_url && t.header_type === 'video' ? (
+                          <video src={t.header_media_url} muted className="h-24 w-full object-cover" />
+                        ) : (
+                          <div className="h-24 grid place-items-center text-xs text-muted-foreground capitalize">{t.header_type} header</div>
+                        )}
+                      </div>
+                    )}
+                    {Array.isArray(t.carousel_cards) && t.carousel_cards.length > 0 && (
+                      <div className="mb-2 flex gap-2 overflow-x-auto">
+                        {t.carousel_cards.map((c, i) => (
+                          <div key={i} className="h-20 w-24 shrink-0 rounded-lg overflow-hidden bg-muted">
+                            {c.header_media_url && c.header_type === 'video' ? (
+                              <video src={c.header_media_url} muted className="h-full w-full object-cover" />
+                            ) : c.header_media_url ? (
+                              <img src={c.header_media_url} alt={`Card ${i + 1}`} loading="lazy" className="h-full w-full object-cover" />
+                            ) : (
+                              <div className="h-full grid place-items-center text-[10px] text-muted-foreground">Card {i + 1}</div>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     )}
                     {t.header_type === 'text' && t.header && <p className="font-semibold mb-1">{t.header}</p>}
