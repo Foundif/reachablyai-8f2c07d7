@@ -239,6 +239,13 @@ const TemplateEditor = () => {
 
   const MediaPicker = ({ value, kind, onChange }: { value: string; kind: 'image' | 'video' | 'document'; onChange: (u: string) => void }) => (
     <div className="space-y-2">
+      {value && kind !== 'document' && (
+        <div className="rounded-lg overflow-hidden bg-muted h-28">
+          {kind === 'video'
+            ? <video src={value} muted controls className="h-28 w-full object-cover" />
+            : <img src={value} alt="Selected media preview" className="h-28 w-full object-cover" />}
+        </div>
+      )}
       <div className="flex gap-2">
         <Input value={value} onChange={e => onChange(e.target.value)} placeholder="Public URL (JPG/PNG/MP4/PDF) or upload →" />
         <Button type="button" variant="outline" size="icon" asChild disabled={uploading}>
