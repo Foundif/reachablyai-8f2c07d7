@@ -641,6 +641,8 @@ const Leads = () => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={exportContacts}>Export contacts</DropdownMenuItem>
+                    <DropdownMenuItem onClick={exportForMeta}>Export for Meta customer list</DropdownMenuItem>
+
                   </DropdownMenuContent>
                 </DropdownMenu>
 
