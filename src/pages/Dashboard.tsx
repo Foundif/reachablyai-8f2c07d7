@@ -113,7 +113,7 @@ const Dashboard = () => {
       messagesSent,
       templatesApproved: templatesApproved || 0,
       automationsActive: automationsActive || 0,
-      waConnected: !!(cred?.verified || cred?.phone_number_id),
+      waConnected: !!(cred?.verified || cred?.phone_number_id || ['connected', 'active'].includes(String(cred?.status || '').toLowerCase())),
       inboxUnread,
       inboxConversations: convs.length,
       messagesToday: messagesToday || 0,
