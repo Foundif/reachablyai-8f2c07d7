@@ -171,6 +171,8 @@ const Leads = () => {
   const [pendingDelete, setPendingDelete] = useState<Lead | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
 
   // Turbodev-style table state
   const [tab, setTab] = useState<'contacts' | 'segments'>('contacts');
