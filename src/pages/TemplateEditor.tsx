@@ -156,6 +156,33 @@ const TemplateEditor = () => {
     }
   };
 
+  /** Uploads several images/videos at once and turns each one into its own card. */
+  const uploadManyAsCards = async (files: File[]) => {
+    if (!wsId || !files.length) return;
+    setUploading(true);
+    let added = 0;
+    try {
+      for (const file of files.slice(0, 10)) {
+        const ext = file.name.split('.').pop() || 'bin';
+        const path = `template-media/${wsId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const { error } = await supabase.storage.from('salon-assets').upload(path, file, { upsert: false, contentType: file.type || undefined });
+        if (error) throw error;
+        const { data: pub } = supabase.storage.from('salon-assets').getPublicUrl(path);
+        const isVideo = (file.type || '').startsWith('video');
+        setForm(f => f.carousel_cards.length >= 10 ? f : ({
+          ...f,
+          carousel_cards: [...f.carousel_cards, { header_media_url: pub.publicUrl, header_type: isVideo ? 'video' : 'image', body: '', buttons: [] }],
+        }));
+        added++;
+      }
+      toast.success(`${added} ${added === 1 ? 'card' : 'cards'} added`);
+    } catch (e: any) {
+      toast.error(e.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const runAiFix = async (autoApply: boolean) => {
     setAiBusy(true);
     setAiIssues(null);
