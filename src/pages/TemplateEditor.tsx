@@ -431,7 +431,23 @@ const TemplateEditor = () => {
                 </TabsContent>
 
                 <TabsContent value="carousel" className="space-y-3 pt-4">
-                  <p className="text-xs text-muted-foreground">2–10 media cards. Each card needs its own image/video and body text.</p>
+                  <div className="rounded-lg border border-dashed p-4 text-center space-y-2">
+                    <p className="text-sm font-medium">Add several photos at once</p>
+                    <p className="text-xs text-muted-foreground">
+                      Pick 2–10 photos or videos together — each one becomes its own card that customers swipe through. Then just write a line of text under each.
+                    </p>
+                    <Button type="button" variant="outline" size="sm" asChild disabled={uploading}>
+                      <label className="cursor-pointer">
+                        {uploading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Upload className="w-4 h-4 mr-1" />}
+                        {uploading ? 'Uploading…' : 'Choose photos'}
+                        <input
+                          type="file" multiple className="hidden" accept="image/png,image/jpeg,video/mp4"
+                          onChange={e => { const fs = Array.from(e.target.files || []); e.currentTarget.value = ''; if (fs.length) uploadManyAsCards(fs); }}
+                        />
+                      </label>
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{form.carousel_cards.length}/10 cards added. Each card needs a photo (or video) and a short description.</p>
                   {form.carousel_cards.map((c, i) => (
                     <div key={i} className="p-3 border rounded-lg space-y-2 relative">
                       <button className="absolute top-2 right-2 text-muted-foreground hover:text-destructive" onClick={() => rmCard(i)}><X className="w-4 h-4" /></button>
