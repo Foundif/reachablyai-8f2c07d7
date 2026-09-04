@@ -171,6 +171,8 @@ const Leads = () => {
   const [pendingDelete, setPendingDelete] = useState<Lead | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
 
   // Turbodev-style table state
   const [tab, setTab] = useState<'contacts' | 'segments'>('contacts');
@@ -348,6 +350,73 @@ const Leads = () => {
     a.href = url; a.download = 'contacts.csv'; a.click();
     URL.revokeObjectURL(url);
   };
+
+  // Export in the format Meta Business Suite / Ads Manager accepts for a customer list
+  const exportForMeta = () => {
+    const rows = [['phone', 'email', 'fn']].concat(
+      filtered
+        .filter(l => l.phone || l.email)
+        .map(l => [
+          (l.phone || '').replace(/[^\d+]/g, ''),
+          (l.email || '').toLowerCase(),
+          (l.name || '').split(' ')[0] || '',
+        ]),
+    );
+    if (rows.length < 2) return toast.error('No contacts with a phone or email to export');
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = 'meta-customer-list.csv'; a.click();
+    URL.revokeObjectURL(url);
+    toast.success('File ready — upload it in Meta Business Suite > Audiences > Create customer list');
+  };
+
+  // Pull everyone who has chatted on WhatsApp into Contacts
+  const syncFromWhatsApp = async () => {
+    if (!wsId) return toast.error('Workspace not ready yet, try again in a moment');
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase
+        .from('wa_conversations' as any)
+        .select('contact_phone, contact_name, last_message_at')
+        .eq('workspace_id', wsId)
+        .is('deleted_at', null);
+      if (error) throw error;
+      const convos = (data as any[]) || [];
+      const norm = (p?: string | null) => (p || '').replace(/[^\d]/g, '').slice(-10);
+      const existing = new Set(leads.map(l => norm(l.phone)).filter(Boolean));
+      const seen = new Set<string>();
+      const payload: any[] = [];
+      for (const c of convos) {
+        const key = norm(c.contact_phone);
+        if (!key || existing.has(key) || seen.has(key)) continue;
+        seen.add(key);
+        payload.push({
+          workspace_id: wsId,
+          name: c.contact_name || c.contact_phone,
+          phone: c.contact_phone,
+          source: 'whatsapp',
+          status: 'new',
+          tags: ['whatsapp'],
+        });
+      }
+      if (!payload.length) {
+        toast.info('All WhatsApp chats are already in your contacts');
+        return;
+      }
+      for (let i = 0; i < payload.length; i += 100) {
+        const { error: insErr } = await supabase.from('leads' as any).insert(payload.slice(i, i + 100));
+        if (insErr) throw insErr;
+      }
+      toast.success(`Added ${payload.length} contact(s) from WhatsApp`);
+      loadLeads();
+    } catch (e: any) {
+      toast.error(e.message || 'Sync failed');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
 
   const renderCell = (l: Lead, key: FieldKey) => {
     switch (key) {
@@ -572,6 +641,8 @@ const Leads = () => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={exportContacts}>Export contacts</DropdownMenuItem>
+                    <DropdownMenuItem onClick={exportForMeta}>Export for Meta customer list</DropdownMenuItem>
+
                   </DropdownMenuContent>
                 </DropdownMenu>
 
@@ -599,7 +670,13 @@ const Leads = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
 
+                <Button variant="outline" size="sm" className="gap-2" onClick={syncFromWhatsApp} disabled={syncing}>
+                  {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
+                  Sync WhatsApp
+                </Button>
+
                 <ScrapeLeadsDialog wsId={wsId} onDone={loadLeads} />
+
 
                 <Button size="sm" className="gap-2" onClick={() => setAddOpen(true)}>
                   <Plus className="w-4 h-4" /> Add contact
