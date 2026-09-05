@@ -2,6 +2,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { buildTemplatePayload } from '../_shared/templatePayload.ts';
+import { chargeCredits, refundCredits, categoryOf } from '../_shared/credits.ts';
 
 const json = (b: any, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -80,6 +81,8 @@ Deno.serve(async (req) => {
     }
 
     let sent = 0, failed = 0, skipped = 0;
+    const msgCategory = categoryOf(mode === 'template' ? template?.category : 'service');
+    let creditsExhausted = false;
 
     for (let i = 0; i < recipients.length; i++) {
       const r = recipients[i];
