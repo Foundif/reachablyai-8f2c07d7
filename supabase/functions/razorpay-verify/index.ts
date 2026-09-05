@@ -62,7 +62,29 @@ Deno.serve(async (req) => {
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
     if (kind === 'recharge') {
-      const pack = PACKS[pack_id];
+      // Custom amount: server reads the real paid amount from Razorpay and
+      // credits floor(amount / ₹1.10) messages — never trust the client.
+      let pack = PACKS[pack_id];
+      if (!pack && pack_id === 'custom') {
+        const key_id = Deno.env.get('RAZORPAY_KEY_ID')!;
+        const orderRes = await fetch(`https://api.razorpay.com/v1/orders/${razorpay_order_id}`, {
+          headers: { Authorization: `Basic ${btoa(`${key_id}:${key_secret}`)}` },
+        });
+        const orderJson = await orderRes.json();
+        if (!orderRes.ok) {
+          return new Response(JSON.stringify({ error: 'Could not verify order amount', details: orderJson }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        const amountPaise = Number(orderJson.amount || 0);
+        const msgs = Math.floor(amountPaise / 110); // ₹1.10 per message
+        if (msgs < 100) {
+          return new Response(JSON.stringify({ error: 'Minimum custom recharge is ₹110 (100 messages)' }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        pack = { msgs, amount: amountPaise / 100 };
+      }
       if (!pack) {
         return new Response(JSON.stringify({ error: 'Unknown pack' }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
