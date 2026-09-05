@@ -99,12 +99,14 @@ Deno.serve(async (req) => {
       waPayload = { messaging_product: 'whatsapp', to, type: kind, [kind]: payload };
     }
 
+    let category: MessageCategory = 'service';
     if (template_id) {
       const { data: tpl } = await admin.from('templates').select('*').eq('id', template_id).maybeSingle();
       if (!tpl) return json({ error: 'Template not found' }, 404);
       if (tpl.status !== 'approved') return json({ error: 'Template must be approved' }, 400);
       msgType = 'template';
       tplName = tpl.name;
+      category = categoryOf(tpl.category);
 
       const supplied: Record<string, string> = (variables && typeof variables === 'object') ? variables : {};
 
