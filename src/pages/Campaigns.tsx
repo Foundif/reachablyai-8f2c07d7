@@ -557,7 +557,7 @@ export const CampaignDetail = () => {
         const { data: tpl } = await supabase.from('templates' as any).select('category').eq('id', campaign.template_id).maybeSingle();
         if (String((tpl as any)?.category || '').toLowerCase() === 'marketing') perMsg = 2;
       }
-      const { data: w } = await supabase.from('message_credits' as any).select('balance').eq('workspace_id', campaign.workspace_id).maybeSingle();
+      const { data: w } = await supabase.from('message_credits' as any).select('balance').eq('workspace_id', (campaign as any).workspace_id).maybeSingle();
       const bal = (w as any)?.balance ?? 0;
       const needed = pending * perMsg;
       if (bal < needed) {
