@@ -230,6 +230,18 @@ const PricingContent = () => {
     onSuccess: (v: any) => setBalance(b => (b || 0) + (v?.credited || pack.msgs)),
   });
 
+  const buyCustom = () => {
+    const amt = Math.round(Number(customAmt));
+    if (!amt || amt < 110) return toast.error('Minimum custom recharge is ₹110 (100 messages)');
+    const msgs = Math.floor(amt / 1.1);
+    checkout({
+      key: 'pack_custom', amount: amt, name: `${msgs} messages`,
+      description: `Message recharge — ${msgs.toLocaleString('en-IN')} msgs`,
+      body: { kind: 'recharge', amount: amt, pack_id: 'custom' },
+      onSuccess: (v: any) => { setBalance(b => (b || 0) + (v?.credited || msgs)); setCustomAmt(''); },
+    });
+  };
+
   const paySetup = () => checkout({
     key: 'setup', amount: SETUP_FEE, name: 'Setup', description: 'One-time WhatsApp API & CRM setup',
     body: { kind: 'setup', amount: SETUP_FEE },
@@ -441,7 +453,7 @@ const PricingContent = () => {
         </div>
 
         {/* Credit top-ups */}
-        <div className="mt-14">
+        <div className="mt-14" id="credits">
           <div className="mb-5">
             <h2 className="text-xl font-bold flex items-center gap-2"><Battery className="w-5 h-5" /> Credits</h2>
             <p className="text-sm text-muted-foreground mt-1">Top up message credits anytime — they never expire while your plan is active.</p>
