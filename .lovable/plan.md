@@ -1,355 +1,44 @@
-Perfect — this is **exactly the right direction**.  
-I’ve now rewritten your prompt so **Lovable extends your existing WhatsApp CRM (Reachably-style)** instead of building a new app from scratch.
-
-This is now a **feature module: “AI Chatbots” inside your current system** 👇
-
----
-
-# 🚀 LOVABLE MASTER PROMPT (EXTEND EXISTING WHATSAPP CRM)
-
-**IMPORTANT:**  
-Do NOT create a new app.  
-Extend the **existing WhatsApp CRM system** and reuse:
-
-- workspaces
-- workspace_members
-- auth
-- sidebar layout
-- inbox/conversations logic
-- UI components (shadcn, AppLayout)
-
----
-
-# 🧠 FEATURE: AI CUSTOMER SUPPORT PLATFORM (ADD-ON MODULE)
-
-Build an **AI Chatbot module inside the existing CRM**, similar to Intercom/Tidio, powered by **Gemini via Lovable AI Gateway**.
-
-This should live as a **new feature**, not a separate product.
-
----
-
-# 📍 SIDEBAR PLACEMENT
-
-Add a new sidebar item:
-
-👉 **Growth → AI Chatbots**
-
-Place it near:
-
-- Auto-replies
-- Campaigns
-
----
-
-# 🧩 SCOPE (INTEGRATED MODE)
-
-## ✅ INCLUDE
-
-### 1. Chatbots Module (NEW)
-
-- Create / edit / delete chatbots
-- Each chatbot belongs to existing **workspace_id**
-- Reuse workspace isolation logic
-
----
-
-### 2. Chatbot Capabilities
-
-Each chatbot should support:
-
-- Name
-- System prompt (AI behavior)
-- Tone (friendly / sales / support)
-- Brand color
-- Position (left/right)
-- Avatar
-- Welcome message
-- Launcher text
-- Enable/disable
-
----
-
-### 3. AI TRAINING (RAG SYSTEM)
-
-Allow training using:
-
-- Website URLs (crawler)
-- PDF uploads
-- FAQ (Q&A pairs)
-- Custom instructions
-
----
-
-### 4. GEMINI AI (REUSE LOVABLE AI GATEWAY)
-
-- Use existing `LOVABLE_API_KEY`
-- Model:
-  - `google/gemini-3.6-flash` (responses)
-  - `google/text-embedding-004` (embeddings)
-
----
-
-### 5. EMBED SYSTEM
-
-Generate script:
-
-```html
-<script src="https://<project>.functions.supabase.co/widget-js?bot=BOT_PUBLIC_KEY" async></script>
-
-```
-
-- Works on any website
-- No auth required
-- Public access via bot key
-
----
-
-### 6. LIVE CHAT + CONVERSATIONS
-
-Reuse CRM inbox concepts but separate entity:
-
-- AI chatbot conversations (web visitors)
-- NOT WhatsApp conversations
-
----
-
-### Features:
-
-- Conversations list
-- Transcript view
-- “Reply as human” → disables AI for that thread
-- Store visitor name/email (lead capture)
-
----
-
-# ❌ EXCLUDE (IMPORTANT)
-
-Do NOT build:
-
-- Payments / billing
-- WhatsApp features (already exists)
-- SLA / ticketing
-- Team routing
-- Voice / multilingual
-
----
-
-# 🧱 ARCHITECTURE (INTEGRATED)
-
-```
-Website (widget.js)
-   ↓
-Edge Function: chatbot-message (public)
-   ↓
-Retrieve bot config + embeddings
-   ↓
-Gemini (via Lovable AI Gateway)
-   ↓
-Save conversation (Supabase)
-   ↓
-Return streamed response
-
-```
-
----
-
-# 🗄️ DATABASE (NEW TABLES ONLY)
-
-Create NEW tables (do not modify existing ones):
-
----
-
-### chatbots
-
-- id
-- workspace_id
-- name
-- system_prompt
-- welcome_message
-- tone
-- brand_color
-- position
-- avatar_url
-- launcher_text
-- enabled
-- public_key
-
----
-
-### chatbot_sources
-
-- chatbot_id
-- type (url | pdf | faq | text)
-- status
-- chars_ingested
-
----
-
-### chatbot_chunks
-
-- chatbot_id
-- content
-- embedding (vector)
-
----
-
-### chatbot_conversations
-
-- chatbot_id
-- visitor_id
-- visitor_name
-- visitor_email
-- human_takeover (boolean)
-- last_message_at
-
----
-
-### chatbot_messages
-
-- conversation_id
-- role (user | assistant | agent)
-- content
-
----
-
-# ⚙️ EDGE FUNCTIONS
-
-## 1. chatbot-ingest
-
-- Crawl URL / parse PDF
-- Chunk text (~800 chars)
-- Generate embeddings
-- Store in `chatbot_chunks`
-
----
-
-## 2. chatbot-message (PUBLIC API)
-
-- No auth required
-- Input: bot_public_key + message
-- Flow:
-  - Load chatbot config
-  - Retrieve top-K chunks
-  - Generate response using Gemini
-  - Save conversation + messages
-  - Stream response
-
----
-
-## 3. widget-js
-
-- Returns JS widget
-- Renders floating chat bubble
-- Uses Shadow DOM
-- Sends messages to chatbot-message API
-
----
-
-# 🖥️ DASHBOARD PAGES
-
-## /chatbots
-
-- List all bots
-- Create new bot
-
----
-
-## /chatbots/:id
-
-Tabs:
-
-1. Overview → basic settings
-2. Train → upload URLs/PDF/FAQ
-3. Appearance → UI customization
-4. Test → live preview
-5. Install → embed script
-6. Conversations → chat history
-
----
-
-# 🔁 INTEGRATION WITH EXISTING CRM
-
-### IMPORTANT LOGIC
-
-- Do NOT mix with WhatsApp messages
-- Keep chatbot conversations separate
-- BUT reuse:
-  - UI components
-  - layout
-  - auth
-  - workspace
-
----
-
-# ⚡ PERFORMANCE + LIMITS
-
-- Rate limit:
-  - 20 messages / conversation / hour
-- Widget size:
-  - ~10KB gzipped
-- Cache widget:
-  - 5 minutes
-
----
-
-# 🔐 SECURITY
-
-- Use public_key (NOT chatbot_id)
-- Gemini calls only via backend
-- RLS enforced via workspace_id
-- Edge functions use service role
-
----
-
-# 🚀 DELIVERY ORDER (FOLLOW STRICTLY)
-
-1. DB migration (tables + vector support)
-2. Edge functions:
-  - chatbot-ingest
-  - chatbot-message
-  - widget-js
-3. Dashboard UI (all tabs)
-4. Sidebar integration
-5. End-to-end test
-
----
-
-# 🎯 FINAL GOAL
-
-Extend your CRM into:
-
-👉 **WhatsApp CRM + AI Website Chatbot Platform**
-
-So you now sell:
-
-- WhatsApp automation (existing)
-- AI website chatbot (new)
-- Flow + automation (future sync)
-
----
-
-## ✅ WHAT YOU SHOULD TELL LOVABLE
-
-Paste this and say:
-
-👉 **"Build this as an extension of my existing CRM, not a new project."**
-
----
-
-## 🔥 REAL TALK (IMPORTANT)
-
-This architecture is 🔥
-
-You’re basically building:
-
-👉 **WATI (WhatsApp) + Intercom (Website AI chat) in one SaaS**
-
-You can easily price this at:
-
-- ₹2,999/month (starter)
-- ₹4,999/month (growth)
-- ₹7,999/month (pro)
-
----
-
-&nbsp;
+# Wati-style Message Wallet for Coexistence Clients
+
+## Goal
+Clients never touch a Meta card. You hold the Meta billing; they buy message credits from you in-app via Razorpay (same keys as subscriptions — it's YOUR account collecting, since you pay Meta). The wallet stops being "dummy" and becomes the real pay-as-you-go meter.
+
+## How clients pay (the Wati model)
+1. **Prepaid recharge packs** (already partially built — we make them the only way to send):
+   - 1,000 msgs — ₹1,099 · 3,000 — ₹2,999 · 6,000 — ₹5,999 · 10,000 — ₹8,999
+   - Paid in-app via Razorpay (UPI/cards/netbanking — client pays you, not Meta).
+   - Every new workspace gets a **free 250-message trial pack** so it works before first recharge.
+2. **Credit buffer** (already exists): keep sending ~100 msgs past zero, settled on next recharge.
+3. **Auto-recharge** (optional toggle): when balance drops below 100, auto-create a Razorpay link for the chosen pack and WhatsApp it to the owner — one tap to top up.
+
+## Making credits real (not dummy)
+Today only the inbox single-send charges a credit. Fix the meter everywhere:
+
+- **Charge on every outbound message** — campaigns, automations, webhook triggers, auto-replies — not just inbox sends. Refund automatically if Meta rejects the send (already the pattern in whatsapp-send).
+- **Meta-category pricing**: instead of flat 1 credit = 1 message, price by Meta conversation category so you never lose money:
+  - Utility template = 1 credit · Marketing template = 2 credits · Service/free-form reply = 1 credit (inbound 24h window).
+  - Markup is baked into pack prices (₹1.10/msg avg vs Meta's ~₹0.35–0.88 in India) → ~30–60% margin, like Wati's 20–40%.
+- **Inbound messages stay free** for the client (Meta doesn't charge for user-initiated).
+
+## What the client sees
+1. **Billing page → Message wallet** section (exists) upgraded:
+   - Big balance, "Recharge" button → pack picker → Razorpay checkout → instant credit.
+   - Recharge history (credit_transactions) with invoices.
+   - Low-balance banner across the app when balance < 100, blocking banner at 0 (buffer off) or buffer exhausted.
+2. **Campaigns/bulk send**: pre-flight check shows "This campaign needs ~2,400 credits, you have 1,100 — Recharge" before starting.
+3. No card-on-Meta step anywhere; the "No card on Meta needed" badge stays true.
+
+## Build list
+1. **Enforce charging everywhere** — call `chargeCredits` in campaign-dispatch, automations, generic-webhook, auto-reply paths (shared helper already exists).
+2. **Category-aware pricing** — extend `chargeCredits(admin, ws, msgs, category)`; marketing=2, utility=1, service=1.
+3. **Recharge UI** — pack grid + Razorpay checkout on Billing page (functions exist: razorpay-create-order kind='recharge', razorpay-verify credits the wallet); add transaction history list.
+4. **Trial grant** — 250 free credits on workspace creation.
+5. **Low-balance UX** — global banner + campaign pre-flight credit check.
+6. **Auto-recharge link** — toggle in credit settings; sends owner a Razorpay payment link on WhatsApp when balance < 100 (reuses razorpay-create-order).
+
+## Not building (keeps it simple like Wati)
+- No monthly invoicing/postpaid — prepaid only.
+- No per-category pack splitting — one wallet, category multiplier handles margin.
+
+## Effort
+~1 build pass: 4 edge-function touch-ups, 1 Billing UI section, 1 global banner. No new tables needed (message_credits, credit_settings, credit_transactions, packs all exist).
