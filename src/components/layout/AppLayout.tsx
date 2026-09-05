@@ -6,6 +6,7 @@ import TopBar from './TopBar';
 import AppFooter from './AppFooter';
 import PaymentAlertBanner from './PaymentAlertBanner';
 import TrialBanner from './TrialBanner';
+import LowBalanceBanner from './LowBalanceBanner';
 import { useGlobalAlerts } from '@/hooks/useGlobalAlerts';
 
 interface AppLayoutProps {
@@ -25,6 +26,7 @@ const AppLayout = ({ children, fullBleed = false }: AppLayoutProps) => {
         <MobileHeader />
         {!fullBleed && <TopBar />}
         <PaymentAlertBanner />
+        <LowBalanceBanner />
         <div className={fullBleed ? 'relative flex-1 w-full min-h-0' : 'relative max-w-[1600px] mx-auto flex-1 w-full'}>
           {children}
         </div>

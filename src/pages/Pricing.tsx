@@ -143,6 +143,8 @@ const PricingContent = () => {
   const [balance, setBalance] = useState<number | null>(null);
   const [aiBalance, setAiBalance] = useState<number | null>(null);
   const [packIdx, setPackIdx] = useState(2);
+  const [customAmt, setCustomAmt] = useState('');
+  const [history, setHistory] = useState<any[]>([]);
 
   useEffect(() => {
     const a = new URLSearchParams(window.location.search).get('audience');
@@ -154,9 +156,13 @@ const PricingContent = () => {
     (async () => {
       const wsId = await resolveWorkspaceId(user.id, profile);
       if (!wsId) return;
-      const { data: cr } = await supabase.from('message_credits' as any).select('balance, ai_balance').eq('workspace_id', wsId).maybeSingle();
+      const [{ data: cr }, { data: tx }] = await Promise.all([
+        supabase.from('message_credits' as any).select('balance, ai_balance').eq('workspace_id', wsId).maybeSingle(),
+        supabase.from('credit_transactions' as any).select('*').eq('workspace_id', wsId).order('created_at', { ascending: false }).limit(20),
+      ]);
       setBalance((cr as any)?.balance ?? 0);
       setAiBalance((cr as any)?.ai_balance ?? 0);
+      setHistory((tx as any[]) || []);
     })();
   }, [user, profile]);
 
@@ -223,6 +229,18 @@ const PricingContent = () => {
     body: { kind: 'recharge', amount: pack.price, pack_id: pack.id },
     onSuccess: (v: any) => setBalance(b => (b || 0) + (v?.credited || pack.msgs)),
   });
+
+  const buyCustom = () => {
+    const amt = Math.round(Number(customAmt));
+    if (!amt || amt < 110) return toast.error('Minimum custom recharge is ₹110 (100 messages)');
+    const msgs = Math.floor(amt / 1.1);
+    checkout({
+      key: 'pack_custom', amount: amt, name: `${msgs} messages`,
+      description: `Message recharge — ${msgs.toLocaleString('en-IN')} msgs`,
+      body: { kind: 'recharge', amount: amt, pack_id: 'custom' },
+      onSuccess: (v: any) => { setBalance(b => (b || 0) + (v?.credited || msgs)); setCustomAmt(''); },
+    });
+  };
 
   const paySetup = () => checkout({
     key: 'setup', amount: SETUP_FEE, name: 'Setup', description: 'One-time WhatsApp API & CRM setup',
@@ -435,7 +453,7 @@ const PricingContent = () => {
         </div>
 
         {/* Credit top-ups */}
-        <div className="mt-14">
+        <div className="mt-14" id="credits">
           <div className="mb-5">
             <h2 className="text-xl font-bold flex items-center gap-2"><Battery className="w-5 h-5" /> Credits</h2>
             <p className="text-sm text-muted-foreground mt-1">Top up message credits anytime — they never expire while your plan is active.</p>
@@ -466,6 +484,25 @@ const PricingContent = () => {
                   {busy === `pack_${PACKS[packIdx].id}` ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Buy credits'}
                 </Button>
               </div>
+              <div className="mt-4 border-t border-border pt-3">
+                <div className="text-[11px] text-muted-foreground mb-2">Or enter any amount — ₹1.10 per message, min ₹110</div>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₹</span>
+                    <input
+                      type="number" min={110} value={customAmt} onChange={e => setCustomAmt(e.target.value)}
+                      placeholder="e.g. 500"
+                      className="w-full h-9 rounded-md border border-border bg-transparent pl-6 pr-2 text-sm outline-none focus:ring-1 focus:ring-ring"
+                    />
+                  </div>
+                  <Button size="sm" variant="outline" onClick={buyCustom} disabled={busy === 'pack_custom'}>
+                    {busy === 'pack_custom' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Pay'}
+                  </Button>
+                </div>
+                {Number(customAmt) >= 110 && (
+                  <div className="text-[11px] text-muted-foreground mt-1.5">≈ {Math.floor(Number(customAmt) / 1.1).toLocaleString('en-IN')} messages</div>
+                )}
+              </div>
             </Card>
 
             {/* AI credits */}
@@ -491,7 +528,35 @@ const PricingContent = () => {
 
           <p className="text-[11px] text-muted-foreground mt-3">
             Meta charges ≈ ₹0.86 per marketing message. Prices include Reachably platform costs, safe-pacing infrastructure and delivery retries.
+            Marketing templates use 2 credits per message; utility, service and free-form messages use 1.
           </p>
+
+          {/* Recharge history */}
+          <Card className="mt-6 p-5">
+            <div className="text-sm font-semibold mb-3">Recharge history</div>
+            {history.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No recharges yet. Your trial credits and purchases will appear here.</p>
+            ) : (
+              <div className="divide-y divide-border">
+                {history.map((t) => (
+                  <div key={t.id} className="py-2.5 flex items-center justify-between gap-3 text-sm">
+                    <div className="min-w-0">
+                      <div className="font-medium capitalize truncate">
+                        {t.kind === 'topup' ? 'Credit recharge' : t.kind === 'grant' ? (t.notes || 'Plan credits') : t.kind}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {new Date(t.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="font-semibold text-emerald-600">+{(t.msgs || 0).toLocaleString('en-IN')} msgs</div>
+                      {t.amount_paise > 0 && <div className="text-[11px] text-muted-foreground">{formatINR(t.amount_paise / 100)}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
         </div>
 
 

@@ -2,6 +2,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { buildTemplatePayload } from '../_shared/templatePayload.ts';
+import { chargeCredits, refundCredits, categoryOf } from '../_shared/credits.ts';
 
 const json = (b: any, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -80,9 +81,21 @@ Deno.serve(async (req) => {
     }
 
     let sent = 0, failed = 0, skipped = 0;
+    const msgCategory = categoryOf(mode === 'template' ? template?.category : 'service');
+    let creditsExhausted = false;
 
     for (let i = 0; i < recipients.length; i++) {
       const r = recipients[i];
+
+      // Stop early once the wallet is exhausted — mark the rest failed so the
+      // campaign can be re-dispatched after a recharge.
+      if (creditsExhausted) {
+        await admin.from('campaign_recipients').update({
+          status: 'failed', error: 'Insufficient message credits — recharge and resend.',
+        }).eq('id', r.id);
+        failed++;
+        continue;
+      }
 
       // Free-form: enforce 24h customer service window
       if (mode === 'freeform') {
@@ -105,6 +118,23 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Charge the prepaid wallet before sending (marketing templates cost 2/msg).
+      const charge = await chargeCredits(admin, campaign.workspace_id, 1, msgCategory);
+      if (!charge.ok) {
+        creditsExhausted = true;
+        await admin.from('campaign_recipients').update({
+          status: 'failed', error: 'Insufficient message credits — recharge and resend.',
+        }).eq('id', r.id);
+        failed++;
+        await admin.from('campaigns').update({
+          sent_count: (campaign.sent_count || 0) + sent,
+          failed_count: (campaign.failed_count || 0) + failed,
+          skipped_count: (campaign.skipped_count || 0) + skipped,
+          progress: { done: i + 1, total: recipients.length, halted: 'insufficient_credits' },
+        }).eq('id', campaign_id);
+        continue;
+      }
+
       try {
         if (mode === 'template') {
           const payload = {
@@ -117,7 +147,7 @@ Deno.serve(async (req) => {
           if (ok) {
             sent++;
             await logToInbox(admin, creds, campaign.workspace_id, r.phone, r.name, template.name, template.name);
-          } else failed++;
+          } else { failed++; await refundCredits(admin, campaign.workspace_id, 1, msgCategory); }
         } else {
           // Free-form: optional images (sequence), then text.
           let anyFail: string | null = null;
@@ -139,6 +169,7 @@ Deno.serve(async (req) => {
           if (anyFail) {
             await admin.from('campaign_recipients').update({ status: 'failed', error: anyFail }).eq('id', r.id);
             failed++;
+            await refundCredits(admin, campaign.workspace_id, 1, msgCategory);
           } else {
             await admin.from('campaign_recipients').update({ status: 'sent', sent_at: new Date().toISOString(), error: null, reachable: true }).eq('id', r.id);
             sent++;
@@ -148,6 +179,7 @@ Deno.serve(async (req) => {
       } catch (e) {
         await admin.from('campaign_recipients').update({ status: 'failed', error: String(e) }).eq('id', r.id);
         failed++;
+        await refundCredits(admin, campaign.workspace_id, 1, msgCategory);
       }
 
       await admin.from('campaigns').update({

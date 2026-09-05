@@ -1,11 +1,22 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { chargeCredits, refundCredits } from '../_shared/credits.ts';
 
 const json = (b: any, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
 // Send a WhatsApp free-form text and log it as an outbound message + auto_reply_log entry
 async function sendAutoReply(admin: any, creds: any, workspace_id: string, convId: string, to: string, text: string, ruleKind: string, ruleRef: string | null) {
   try {
+    // Charge the prepaid wallet — auto-replies are billable service messages.
+    const charge = await chargeCredits(admin, workspace_id, 1, 'service');
+    if (!charge.ok) {
+      await admin.from('wa_webhook_events').insert({
+        workspace_id, phone_number_id: creds.phone_number_id, event_type: 'auto_reply',
+        status: 'error', summary: `auto-reply blocked: ${charge.reason}`, error: 'insufficient_credits',
+        payload: { rule_ref: ruleRef },
+      });
+      return;
+    }
     const resp = await fetch(`https://graph.facebook.com/v20.0/${creds.phone_number_id}/messages`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${creds.access_token}`, 'Content-Type': 'application/json' },
@@ -15,6 +26,7 @@ async function sendAutoReply(admin: any, creds: any, workspace_id: string, convI
     const ok = resp.ok;
     const wamid = rb?.messages?.[0]?.id || null;
     const err = ok ? null : (rb?.error?.message || `HTTP ${resp.status}`);
+    if (!ok) await refundCredits(admin, workspace_id, 1, 'service');
     await admin.from('wa_messages').insert({
       workspace_id, conversation_id: convId, direction: 'outbound', wa_message_id: wamid,
       from_phone: creds.business_phone, to_phone: to, body: text, message_type: 'text',

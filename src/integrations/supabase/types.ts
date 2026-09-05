@@ -667,6 +667,7 @@ export type Database = {
           auto_recharge_pack: string | null
           buffer_msgs: number
           created_at: string
+          last_low_balance_alert_at: string | null
           pause_on_exhausted: boolean
           updated_at: string
           workspace_id: string
@@ -676,6 +677,7 @@ export type Database = {
           auto_recharge_pack?: string | null
           buffer_msgs?: number
           created_at?: string
+          last_low_balance_alert_at?: string | null
           pause_on_exhausted?: boolean
           updated_at?: string
           workspace_id: string
@@ -685,6 +687,7 @@ export type Database = {
           auto_recharge_pack?: string | null
           buffer_msgs?: number
           created_at?: string
+          last_low_balance_alert_at?: string | null
           pause_on_exhausted?: boolean
           updated_at?: string
           workspace_id?: string

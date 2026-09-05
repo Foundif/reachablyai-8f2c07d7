@@ -1,6 +1,6 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { chargeCredits, refundCredits } from '../_shared/credits.ts';
+import { chargeCredits, refundCredits, categoryOf, CREDIT_COST, MessageCategory } from '../_shared/credits.ts';
 import { buildTemplatePayload } from '../_shared/templatePayload.ts';
 
 const json = (b: any, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -99,12 +99,14 @@ Deno.serve(async (req) => {
       waPayload = { messaging_product: 'whatsapp', to, type: kind, [kind]: payload };
     }
 
+    let category: MessageCategory = 'service';
     if (template_id) {
       const { data: tpl } = await admin.from('templates').select('*').eq('id', template_id).maybeSingle();
       if (!tpl) return json({ error: 'Template not found' }, 404);
       if (tpl.status !== 'approved') return json({ error: 'Template must be approved' }, 400);
       msgType = 'template';
       tplName = tpl.name;
+      category = categoryOf(tpl.category);
 
       const supplied: Record<string, string> = (variables && typeof variables === 'object') ? variables : {};
 
@@ -115,8 +117,9 @@ Deno.serve(async (req) => {
       console.log('[whatsapp-send] template payload', JSON.stringify(waPayload));
     }
 
-    // Charge the prepaid wallet (allows the credit buffer to go slightly negative)
-    const charge = await chargeCredits(admin, workspace_id, 1);
+    // Charge the prepaid wallet (allows the credit buffer to go slightly negative).
+    // Marketing templates cost more credits to cover Meta's conversation pricing.
+    const charge = await chargeCredits(admin, workspace_id, 1, category);
     if (!charge.ok) return json({ error: charge.reason, code: 'insufficient_credits', balance: charge.balance }, 402);
 
     console.log('[whatsapp-send] final payload to Meta', JSON.stringify(waPayload));
@@ -127,7 +130,7 @@ Deno.serve(async (req) => {
     });
     const rbody = await resp.json();
     if (!resp.ok) {
-      await refundCredits(admin, workspace_id, 1);
+      await refundCredits(admin, workspace_id, 1, category);
       const err = rbody?.error?.message || `HTTP ${resp.status}`;
       await admin.from('wa_messages').insert({
         workspace_id, conversation_id: convId, direction: 'outbound',
