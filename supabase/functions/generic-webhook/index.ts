@@ -107,13 +107,21 @@ Deno.serve(async (req) => {
 
     const templatePayload = buildTemplatePayload(template, { name: recipientName, phone, variables });
 
+    // Charge the prepaid wallet before sending
+    const category = categoryOf(template.category);
+    const charge = await chargeCredits(admin, workspace_id, 1, category);
+    if (!charge.ok) throw new Error(charge.reason || 'Insufficient message credits');
+
     const res = await fetch(`https://graph.facebook.com/v21.0/${creds.phone_number_id}/messages`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${creds.access_token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ messaging_product: 'whatsapp', to: phone, type: 'template', template: templatePayload }),
     });
     const out = await res.json();
-    if (!res.ok) throw new Error(out?.error?.message || 'WhatsApp send failed');
+    if (!res.ok) {
+      await refundCredits(admin, workspace_id, 1, category);
+      throw new Error(out?.error?.message || 'WhatsApp send failed');
+    }
 
     const waId = out?.messages?.[0]?.id ?? null;
     const preview = String(template.body || template.name || '').replace(/\{\{\s*1\s*\}\}/g, recipientName || 'Customer');
