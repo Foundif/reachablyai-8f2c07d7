@@ -26,6 +26,7 @@ const AppLayout = ({ children, fullBleed = false }: AppLayoutProps) => {
         <MobileHeader />
         {!fullBleed && <TopBar />}
         <PaymentAlertBanner />
+        <LowBalanceBanner />
         <div className={fullBleed ? 'relative flex-1 w-full min-h-0' : 'relative max-w-[1600px] mx-auto flex-1 w-full'}>
           {children}
         </div>
