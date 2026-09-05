@@ -97,24 +97,6 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Charge the prepaid wallet before sending (marketing templates cost 2/msg).
-      const charge = await chargeCredits(admin, campaign.workspace_id, 1, msgCategory);
-      if (!charge.ok) {
-        creditsExhausted = true;
-        await admin.from('campaign_recipients').update({
-          status: 'failed', error: 'Insufficient message credits — recharge and resend.',
-        }).eq('id', r.id);
-        failed++;
-        await admin.from('campaigns').update({
-          sent_count: (campaign.sent_count || 0) + sent,
-          failed_count: (campaign.failed_count || 0) + failed,
-          skipped_count: (campaign.skipped_count || 0) + skipped,
-          progress: { done: i + 1, total: recipients.length, halted: 'insufficient_credits' },
-        }).eq('id', campaign_id);
-        continue;
-      }
-
-
       // Free-form: enforce 24h customer service window
       if (mode === 'freeform') {
         const { data: conv } = await admin.from('wa_conversations')
@@ -134,6 +116,23 @@ Deno.serve(async (req) => {
           }).eq('id', campaign_id);
           continue;
         }
+      }
+
+      // Charge the prepaid wallet before sending (marketing templates cost 2/msg).
+      const charge = await chargeCredits(admin, campaign.workspace_id, 1, msgCategory);
+      if (!charge.ok) {
+        creditsExhausted = true;
+        await admin.from('campaign_recipients').update({
+          status: 'failed', error: 'Insufficient message credits — recharge and resend.',
+        }).eq('id', r.id);
+        failed++;
+        await admin.from('campaigns').update({
+          sent_count: (campaign.sent_count || 0) + sent,
+          failed_count: (campaign.failed_count || 0) + failed,
+          skipped_count: (campaign.skipped_count || 0) + skipped,
+          progress: { done: i + 1, total: recipients.length, halted: 'insufficient_credits' },
+        }).eq('id', campaign_id);
+        continue;
       }
 
       try {
