@@ -484,6 +484,25 @@ const PricingContent = () => {
                   {busy === `pack_${PACKS[packIdx].id}` ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Buy credits'}
                 </Button>
               </div>
+              <div className="mt-4 border-t border-border pt-3">
+                <div className="text-[11px] text-muted-foreground mb-2">Or enter any amount — ₹1.10 per message, min ₹110</div>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₹</span>
+                    <input
+                      type="number" min={110} value={customAmt} onChange={e => setCustomAmt(e.target.value)}
+                      placeholder="e.g. 500"
+                      className="w-full h-9 rounded-md border border-border bg-transparent pl-6 pr-2 text-sm outline-none focus:ring-1 focus:ring-ring"
+                    />
+                  </div>
+                  <Button size="sm" variant="outline" onClick={buyCustom} disabled={busy === 'pack_custom'}>
+                    {busy === 'pack_custom' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Pay'}
+                  </Button>
+                </div>
+                {Number(customAmt) >= 110 && (
+                  <div className="text-[11px] text-muted-foreground mt-1.5">≈ {Math.floor(Number(customAmt) / 1.1).toLocaleString('en-IN')} messages</div>
+                )}
+              </div>
             </Card>
 
             {/* AI credits */}
