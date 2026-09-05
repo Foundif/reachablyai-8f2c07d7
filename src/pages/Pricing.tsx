@@ -528,7 +528,35 @@ const PricingContent = () => {
 
           <p className="text-[11px] text-muted-foreground mt-3">
             Meta charges ≈ ₹0.86 per marketing message. Prices include Reachably platform costs, safe-pacing infrastructure and delivery retries.
+            Marketing templates use 2 credits per message; utility, service and free-form messages use 1.
           </p>
+
+          {/* Recharge history */}
+          <Card className="mt-6 p-5">
+            <div className="text-sm font-semibold mb-3">Recharge history</div>
+            {history.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No recharges yet. Your trial credits and purchases will appear here.</p>
+            ) : (
+              <div className="divide-y divide-border">
+                {history.map((t) => (
+                  <div key={t.id} className="py-2.5 flex items-center justify-between gap-3 text-sm">
+                    <div className="min-w-0">
+                      <div className="font-medium capitalize truncate">
+                        {t.kind === 'topup' ? 'Credit recharge' : t.kind === 'grant' ? (t.notes || 'Plan credits') : t.kind}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {new Date(t.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="font-semibold text-emerald-600">+{(t.msgs || 0).toLocaleString('en-IN')} msgs</div>
+                      {t.amount_paise > 0 && <div className="text-[11px] text-muted-foreground">{formatINR(t.amount_paise / 100)}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
         </div>
 
 
