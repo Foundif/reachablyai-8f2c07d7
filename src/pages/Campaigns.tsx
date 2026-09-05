@@ -549,6 +549,26 @@ export const CampaignDetail = () => {
   const dispatch = async () => {
     if (!campaign) return;
     setSending(true);
+    // Pre-flight: estimate credits needed vs wallet balance.
+    try {
+      const pending = recipients.filter(r => r.status === 'pending').length || campaign.total_count || 0;
+      let perMsg = 1;
+      if (campaign.mode !== 'freeform' && campaign.template_id) {
+        const { data: tpl } = await supabase.from('templates' as any).select('category').eq('id', campaign.template_id).maybeSingle();
+        if (String((tpl as any)?.category || '').toLowerCase() === 'marketing') perMsg = 2;
+      }
+      const { data: w } = await supabase.from('message_credits' as any).select('balance').eq('workspace_id', campaign.workspace_id).maybeSingle();
+      const bal = (w as any)?.balance ?? 0;
+      const needed = pending * perMsg;
+      if (bal < needed) {
+        setSending(false);
+        toast.error(
+          `This campaign needs ~${needed.toLocaleString('en-IN')} credits (${pending} recipients × ${perMsg}) but your wallet has ${Math.max(0, bal).toLocaleString('en-IN')}. Recharge to continue.`,
+          { action: { label: 'Recharge', onClick: () => navigate('/pricing#credits') }, duration: 8000 },
+        );
+        return;
+      }
+    } catch { /* pre-flight is best-effort; server enforces anyway */ }
     const { data, error } = await supabase.functions.invoke('campaign-dispatch', { body: { campaign_id: campaign.id } });
     setSending(false);
     if (error) return toast.error(error.message || 'Dispatch failed');
