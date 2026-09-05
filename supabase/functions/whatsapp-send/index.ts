@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
     });
     const rbody = await resp.json();
     if (!resp.ok) {
-      await refundCredits(admin, workspace_id, 1);
+      await refundCredits(admin, workspace_id, 1, category);
       const err = rbody?.error?.message || `HTTP ${resp.status}`;
       await admin.from('wa_messages').insert({
         workspace_id, conversation_id: convId, direction: 'outbound',
