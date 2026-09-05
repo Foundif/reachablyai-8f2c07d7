@@ -117,8 +117,9 @@ Deno.serve(async (req) => {
       console.log('[whatsapp-send] template payload', JSON.stringify(waPayload));
     }
 
-    // Charge the prepaid wallet (allows the credit buffer to go slightly negative)
-    const charge = await chargeCredits(admin, workspace_id, 1);
+    // Charge the prepaid wallet (allows the credit buffer to go slightly negative).
+    // Marketing templates cost more credits to cover Meta's conversation pricing.
+    const charge = await chargeCredits(admin, workspace_id, 1, category);
     if (!charge.ok) return json({ error: charge.reason, code: 'insufficient_credits', balance: charge.balance }, 402);
 
     console.log('[whatsapp-send] final payload to Meta', JSON.stringify(waPayload));
