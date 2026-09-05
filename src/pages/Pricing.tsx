@@ -143,6 +143,8 @@ const PricingContent = () => {
   const [balance, setBalance] = useState<number | null>(null);
   const [aiBalance, setAiBalance] = useState<number | null>(null);
   const [packIdx, setPackIdx] = useState(2);
+  const [customAmt, setCustomAmt] = useState('');
+  const [history, setHistory] = useState<any[]>([]);
 
   useEffect(() => {
     const a = new URLSearchParams(window.location.search).get('audience');
@@ -154,9 +156,13 @@ const PricingContent = () => {
     (async () => {
       const wsId = await resolveWorkspaceId(user.id, profile);
       if (!wsId) return;
-      const { data: cr } = await supabase.from('message_credits' as any).select('balance, ai_balance').eq('workspace_id', wsId).maybeSingle();
+      const [{ data: cr }, { data: tx }] = await Promise.all([
+        supabase.from('message_credits' as any).select('balance, ai_balance').eq('workspace_id', wsId).maybeSingle(),
+        supabase.from('credit_transactions' as any).select('*').eq('workspace_id', wsId).order('created_at', { ascending: false }).limit(20),
+      ]);
       setBalance((cr as any)?.balance ?? 0);
       setAiBalance((cr as any)?.ai_balance ?? 0);
+      setHistory((tx as any[]) || []);
     })();
   }, [user, profile]);
 
