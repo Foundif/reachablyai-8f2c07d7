@@ -1,5 +1,6 @@
 // Bulk-send dispatcher: template + free-form (text/images), 24h window aware.
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { signMediaUrl } from '../_shared/signedMedia.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { buildTemplatePayload } from '../_shared/templatePayload.ts';
 import { chargeCredits, refundCredits, categoryOf } from '../_shared/credits.ts';
@@ -71,13 +72,13 @@ Deno.serve(async (req) => {
 
     await admin.from('campaigns').update({ status: 'sending', started_at: new Date().toISOString() }).eq('id', campaign_id);
 
-    const mediaUrls: string[] = Array.isArray(campaign.media_urls) ? campaign.media_urls : [];
+    const mediaUrls: string[] = await Promise.all((Array.isArray(campaign.media_urls) ? campaign.media_urls : []).map((u: string) => signMediaUrl(admin, u)));
     const bodyText: string = campaign.body_text || '';
 
     // Meta's synced preview CDN URLs frequently reject server-side downloads
     // with 403. Upload the header once and reuse its durable media id.
     if (mode === 'template' && ['image', 'video', 'document'].includes(String(template.header_type || '').toLowerCase())) {
-      template = { ...template, header_media_id: await uploadToMeta(admin, creds, campaign.workspace_id, template.header_media_url, template.header_type) };
+      template = { ...template, header_media_id: await uploadToMeta(admin, creds, campaign.workspace_id, await signMediaUrl(admin, template.header_media_url), template.header_type) };
     }
 
     let sent = 0, failed = 0, skipped = 0;
