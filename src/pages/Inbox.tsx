@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { SecureImg, SecureVideo } from '@/lib/secureMedia';
+import { SecureImg, SecureVideo, resolveMediaUrl } from '@/lib/secureMedia';
 import { useSearchParams } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import { supabase } from '@/integrations/supabase/client';

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { SecureImg } from '@/lib/secureMedia';
 import { useNavigate } from 'react-router-dom';
 import { Search, Command } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
@@ -54,7 +55,7 @@ const TopBar = () => {
           {/* Workspace switcher */}
           <button className="flex items-center gap-2 px-3 py-1.5 rounded-xl hover:bg-foreground/[0.04] transition-all magnetic" onClick={() => navigate('/profile')}>
             {wsLogo ? (
-              <img src={wsLogo} alt={displayName} className="w-6 h-6 rounded-md object-contain bg-card border border-border/40" />
+              <SecureImg src={wsLogo} alt={displayName} className="w-6 h-6 rounded-md object-contain bg-card border border-border/40" />
             ) : (
               <div className="w-6 h-6 rounded-md bg-foreground text-background flex items-center justify-center text-[10px] font-bold">
                 {(displayName?.[0] || 'W').toUpperCase()}
