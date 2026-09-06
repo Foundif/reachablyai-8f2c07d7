@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
 
       waPayload = {
         messaging_product: 'whatsapp', to, type: 'template',
-        template: buildTemplatePayload(tpl, { name: contactName, phone: to, variables: supplied }),
+        template: buildTemplatePayload({ ...tpl, header_media_url: await signMediaUrl(admin, tpl.header_media_url) }, { name: contactName, phone: to, variables: supplied }),
       };
       console.log('[whatsapp-send] template payload', JSON.stringify(waPayload));
     }
