@@ -1,4 +1,5 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { signMediaUrl } from '../_shared/signedMedia.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const json = (b: any, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -115,7 +116,7 @@ Deno.serve(async (req) => {
         });
         const cComps: any[] = [];
         if (card.header_media_url) {
-          const handle = await toMetaHandle(card.header_media_url, card.header_type || 'image', creds.access_token);
+          const handle = await toMetaHandle(await signMediaUrl(admin, card.header_media_url), card.header_type || 'image', creds.access_token);
           cComps.push({ type: 'HEADER', format: (card.header_type || 'image').toUpperCase(),
             example: { header_handle: [handle] } });
         }
@@ -136,7 +137,7 @@ Deno.serve(async (req) => {
       } else if (header_type === 'location') {
         components.push({ type: 'HEADER', format: 'LOCATION' });
       } else if (['image', 'video', 'document'].includes(header_type) && header_media_url) {
-        const handle = await toMetaHandle(header_media_url, header_type, creds.access_token);
+        const handle = await toMetaHandle(await signMediaUrl(admin, header_media_url), header_type, creds.access_token);
         components.push({
           type: 'HEADER',
           format: header_type.toUpperCase(),

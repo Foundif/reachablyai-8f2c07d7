@@ -1,4 +1,5 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { signMediaUrl } from '../_shared/signedMedia.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { chargeCredits, refundCredits, categoryOf, CREDIT_COST, MessageCategory } from '../_shared/credits.ts';
 import { buildTemplatePayload } from '../_shared/templatePayload.ts';
@@ -85,14 +86,15 @@ Deno.serve(async (req) => {
         },
       };
     } else if (media_url && media_type) {
+      const signedMediaUrl = await signMediaUrl(admin, media_url);
       const kind = ['image', 'video', 'audio', 'document', 'sticker'].includes(media_type) ? media_type : 'document';
       msgType = kind;
       const payload: any = {};
       // Voice notes must be uploaded as bytes (ogg/opus); links are rejected by Meta.
       if (kind === 'audio') {
-        payload.id = await uploadToMeta(media_url, kind, filename);
+        payload.id = await uploadToMeta(signedMediaUrl, kind, filename);
       } else {
-        payload.link = media_url;
+        payload.link = signedMediaUrl;
       }
       if (kind === 'image' || kind === 'video' || kind === 'document') { if (body) payload.caption = body; }
       if (kind === 'document' && filename) payload.filename = filename;
@@ -112,7 +114,7 @@ Deno.serve(async (req) => {
 
       waPayload = {
         messaging_product: 'whatsapp', to, type: 'template',
-        template: buildTemplatePayload(tpl, { name: contactName, phone: to, variables: supplied }),
+        template: buildTemplatePayload({ ...tpl, header_media_url: await signMediaUrl(admin, tpl.header_media_url) }, { name: contactName, phone: to, variables: supplied }),
       };
       console.log('[whatsapp-send] template payload', JSON.stringify(waPayload));
     }

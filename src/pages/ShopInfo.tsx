@@ -1,4 +1,5 @@
 import AppLayout from '@/components/layout/AppLayout';
+import { SecureImg } from '@/lib/secureMedia';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -93,7 +94,7 @@ const ShopInfo = () => {
             <Label>Business Logo</Label>
             <div className="mt-2 flex items-center gap-4">
               <div className="w-20 h-20 rounded-xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-muted/40">
-                {logoUrl ? <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" /> : <ImageIcon className="w-8 h-8 text-muted-foreground" />}
+                {logoUrl ? <SecureImg src={logoUrl} alt="Logo" className="w-full h-full object-contain" /> : <ImageIcon className="w-8 h-8 text-muted-foreground" />}
               </div>
               <div>
                 <Button variant="outline" size="sm" onClick={() => logoRef.current?.click()} disabled={uploading === 'logo'}>
