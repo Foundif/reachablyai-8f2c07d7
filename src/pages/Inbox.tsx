@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { SecureImg, SecureVideo } from '@/lib/secureMedia';
 import { useSearchParams } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
@@ -934,8 +935,8 @@ const Inbox = () => {
                               group.length === 3 && idx === 0 && 'col-span-2',
                             )}>
                               {g.message_type === 'video'
-                                ? <video src={g.media_url!} controls className="h-32 w-full object-cover" />
-                                : <img src={g.media_url!} alt="" loading="lazy" className="h-32 w-full object-cover" />}
+                                ? <SecureVideo src={g.media_url!} controls className="h-32 w-full object-cover" />
+                                : <SecureImg src={g.media_url!} alt="" loading="lazy" className="h-32 w-full object-cover" />}
                               {idx === 3 && group.length > 4 && (
                                 <div className="absolute inset-0 bg-black/60 grid place-items-center text-white text-lg font-semibold">
                                   +{group.length - 4}
@@ -965,22 +966,22 @@ const Inbox = () => {
                     )}>
                       {m.template_name && <div className="text-[10px] opacity-70 uppercase mb-1">Template · {m.template_name}</div>}
                       {tpl?.header_media_url && tpl.header_type === 'image' && (
-                        <img src={tpl.header_media_url} alt="" loading="lazy" className="rounded-lg mb-1 max-h-52 w-full object-cover" />
+                        <SecureImg src={tpl.header_media_url} alt="" loading="lazy" className="rounded-lg mb-1 max-h-52 w-full object-cover" />
                       )}
                       {tpl?.header_media_url && tpl.header_type === 'video' && (
-                        <video src={tpl.header_media_url} controls className="rounded-lg mb-1 max-h-52 w-full" />
+                        <SecureVideo src={tpl.header_media_url} controls className="rounded-lg mb-1 max-h-52 w-full" />
                       )}
                       {tpl?.header_type === 'text' && tpl.header && (
                         <div className="font-semibold mb-0.5">{renderTemplateText(tpl.header, contactLabel)}</div>
                       )}
                       {m.media_url && m.message_type === 'image' && (
-                        <img src={m.media_url} alt="Attachment" loading="lazy" className="rounded-lg mb-1 max-h-60 object-cover" />
+                        <SecureImg src={m.media_url} alt="Attachment" loading="lazy" className="rounded-lg mb-1 max-h-60 object-cover" />
                       )}
                       {m.media_url && m.message_type === 'sticker' && (
-                        <img src={m.media_url} alt="Sticker" loading="lazy" className="mb-1 h-28 w-28 object-contain" />
+                        <SecureImg src={m.media_url} alt="Sticker" loading="lazy" className="mb-1 h-28 w-28 object-contain" />
                       )}
                       {m.media_url && m.message_type === 'video' && (
-                        <video src={m.media_url} controls className="rounded-lg mb-1 max-h-60 w-full" />
+                        <SecureVideo src={m.media_url} controls className="rounded-lg mb-1 max-h-60 w-full" />
                       )}
                       {m.media_url && m.message_type === 'audio' && (
                         <VoiceNote src={m.media_url} outbound={outbound} />

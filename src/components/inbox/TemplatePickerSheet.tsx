@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { SecureImg, SecureVideo } from '@/lib/secureMedia';
 import { Search, X, Send, Image as ImageIcon, Video, FileText } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -99,10 +100,10 @@ export default function TemplatePickerSheet({
             ) : (
               <div className="max-w-sm ml-auto rounded-2xl rounded-br-md bg-primary text-primary-foreground px-3 py-2 shadow-sm text-sm space-y-1.5">
                 {picked.header_media_url && picked.header_type === 'image' && (
-                  <img src={picked.header_media_url} alt="" className="rounded-lg max-h-48 w-full object-cover" />
+                  <SecureImg src={picked.header_media_url} alt="" className="rounded-lg max-h-48 w-full object-cover" />
                 )}
                 {picked.header_media_url && picked.header_type === 'video' && (
-                  <video src={picked.header_media_url} controls className="rounded-lg max-h-48 w-full" />
+                  <SecureVideo src={picked.header_media_url} controls className="rounded-lg max-h-48 w-full" />
                 )}
                 {picked.header_type === 'text' && picked.header && (
                   <div className="font-semibold">{renderTemplateText(picked.header, contactName)}</div>

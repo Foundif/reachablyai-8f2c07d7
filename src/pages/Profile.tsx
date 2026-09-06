@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SecureImg, SecureVideo } from '@/lib/secureMedia';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import { useAuth } from '@/hooks/useAuth';
@@ -88,7 +89,7 @@ const Profile = () => {
         <div className="flex flex-col items-center text-center pt-2">
           <div className="w-24 h-24 rounded-full bg-gradient-to-br from-emerald-200 to-emerald-300 dark:from-emerald-800 dark:to-emerald-900 flex items-center justify-center text-3xl font-semibold text-emerald-900 dark:text-emerald-100 shadow-sm">
             {(profile as any)?.logo_url ? (
-              <img src={(profile as any).logo_url} alt={storeName} className="w-full h-full rounded-full object-cover" />
+              <SecureImg src={(profile as any).logo_url} alt={storeName} className="w-full h-full rounded-full object-cover" />
             ) : initial}
           </div>
           <h1 className="mt-4 text-2xl font-bold text-foreground">{storeName}</h1>
