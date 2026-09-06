@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import CreditWallet from '@/components/billing/CreditWallet';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Check, X, Crown, Sparkles, Zap, Star, MessageSquare, ArrowLeft, Wrench, Battery, Loader2,
@@ -30,7 +29,7 @@ interface Plan {
 const PLANS: Plan[] = [
   {
     id: 'starter', name: 'Basic', tagline: 'Essential tools to get started with WhatsApp',
-    monthly: 999, yearly: 9990, credits: '~500 msgs / mo', badge: 'Basic', badgeIcon: Zap, icon: MessageSquare,
+    monthly: 999, yearly: 9990, credits: 'Pay-as-you-go message credits', badge: 'Basic', badgeIcon: Zap, icon: MessageSquare,
     cta: 'Start free trial',
     features: ['1 user', '1 WhatsApp account', 'Unlimited contacts', '3 automation flows', 'Bulk broadcast campaigns', 'Rich media messaging', 'Official Meta Cloud API', 'No markup on templates', 'WhatsApp chat support'],
     extra: {
@@ -40,7 +39,7 @@ const PLANS: Plan[] = [
   },
   {
     id: 'growth', name: 'Growth', tagline: 'Everything you need to scale outreach',
-    monthly: 1999, yearly: 19990, credits: '~1,200 msgs / mo', badge: 'Most popular', badgeIcon: Crown, icon: Star, popular: true,
+    monthly: 1999, yearly: 19990, credits: 'Pay-as-you-go message credits', badge: 'Most popular', badgeIcon: Crown, icon: Star, popular: true,
     cta: 'Start free trial',
     features: ['3 users', 'Everything in Basic, plus:', 'AI chatbots & AI agents', '25 automation flows', 'Shared team inbox', 'Advanced campaign analytics', 'API access', 'Priority support'],
     extra: {
@@ -50,7 +49,7 @@ const PLANS: Plan[] = [
   },
   {
     id: 'business', name: 'Pro', tagline: 'Advanced features for growing businesses',
-    monthly: 3999, yearly: 39990, credits: '~2,800 msgs / mo', badge: 'Advanced', badgeIcon: Sparkles, icon: Crown,
+    monthly: 3999, yearly: 39990, credits: 'Pay-as-you-go message credits', badge: 'Advanced', badgeIcon: Sparkles, icon: Crown,
     cta: 'Start free trial',
     features: ['Unlimited users', 'Everything in Growth, plus:', 'Unlimited automation flows', 'Unlimited webhooks', 'Dedicated account manager', 'Priority support · SLA'],
     extra: {
@@ -88,7 +87,6 @@ type CmpVal = string | boolean;
 const COMPARE: { label: string; values: [CmpVal, CmpVal, CmpVal, CmpVal] }[] = [
   { label: 'Monthly price', values: ['₹999', '₹1,999', '₹3,999', 'Custom'] },
   { label: 'Annual price (2 months free)', values: ['₹9,990', '₹19,990', '₹39,990', 'Custom'] },
-  { label: 'Included message credits*', values: ['~500', '~1,200', '~2,800', 'Custom'] },
   { label: 'Team members', values: ['1', '3', 'Unlimited', 'Custom'] },
   { label: 'WhatsApp accounts', values: ['1', '1', '2', 'Custom'] },
   { label: 'Contacts', values: ['Unlimited', 'Unlimited', 'Unlimited', 'Unlimited'] },
@@ -160,8 +158,8 @@ const PricingContent = () => {
         supabase.from('message_credits' as any).select('balance, ai_balance').eq('workspace_id', wsId).maybeSingle(),
         supabase.from('credit_transactions' as any).select('*').eq('workspace_id', wsId).order('created_at', { ascending: false }).limit(20),
       ]);
-      setBalance((cr as any)?.balance ?? 0);
-      setAiBalance((cr as any)?.ai_balance ?? 0);
+      setBalance(Math.max(0, (cr as any)?.balance ?? 0));
+      setAiBalance(Math.max(0, (cr as any)?.ai_balance ?? 0));
       setHistory((tx as any[]) || []);
     })();
   }, [user, profile]);
@@ -227,7 +225,7 @@ const PricingContent = () => {
     key: `pack_${pack.id}`, amount: pack.price, name: `${pack.msgs} messages`,
     description: `Message recharge — ${pack.msgs.toLocaleString('en-IN')} msgs`,
     body: { kind: 'recharge', amount: pack.price, pack_id: pack.id },
-    onSuccess: (v: any) => setBalance(b => (b || 0) + (v?.credited || pack.msgs)),
+    onSuccess: (v: any) => setBalance(b => Math.max(0, b || 0) + (v?.credited || pack.msgs)),
   });
 
   const buyCustom = () => {
@@ -238,7 +236,7 @@ const PricingContent = () => {
       key: 'pack_custom', amount: amt, name: `${msgs} messages`,
       description: `Message recharge — ${msgs.toLocaleString('en-IN')} msgs`,
       body: { kind: 'recharge', amount: amt, pack_id: 'custom' },
-      onSuccess: (v: any) => { setBalance(b => (b || 0) + (v?.credited || msgs)); setCustomAmt(''); },
+      onSuccess: (v: any) => { setBalance(b => Math.max(0, b || 0) + (v?.credited || msgs)); setCustomAmt(''); },
     });
   };
 
@@ -268,7 +266,7 @@ const PricingContent = () => {
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Message credits</div>
-                <div className="text-lg font-bold">{(balance ?? 0).toLocaleString('en-IN')}</div>
+                <div className="text-lg font-bold">{Math.max(0, balance ?? 0).toLocaleString('en-IN')}</div>
               </div>
               <Button size="sm" onClick={() => document.getElementById('plan-grid')?.scrollIntoView({ behavior: 'smooth' })}>
                 {activePlan ? 'Change plan' : 'Purchase plan'}
@@ -309,7 +307,7 @@ const PricingContent = () => {
             {balance !== null && (
               <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-xs">
                 <Battery className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="font-medium">{balance.toLocaleString('en-IN')} messages available</span>
+                <span className="font-medium">{Math.max(0, balance).toLocaleString('en-IN')} messages available</span>
               </div>
             )}
 
@@ -322,6 +320,115 @@ const PricingContent = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-16">
+        {/* Credit top-ups */}
+        <div className="mb-14" id="credits">
+          <div className="mb-5">
+            <h2 className="text-xl font-bold flex items-center gap-2"><Battery className="w-5 h-5" /> Credits</h2>
+            <p className="text-sm text-muted-foreground mt-1">Top up message credits anytime — they never expire while your plan is active.</p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Message credits */}
+            <Card className="p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm font-semibold"><MessageSquare className="w-4 h-4" /> Message credits</div>
+                <span className="text-xs text-muted-foreground">{Math.max(0, balance ?? 0).toLocaleString('en-IN')} available</span>
+              </div>
+              <div className="mt-4 flex items-center gap-2">
+                <button onClick={() => setPackIdx(i => Math.max(0, i - 1))}
+                  className="w-9 h-9 rounded-md border border-border text-lg leading-none disabled:opacity-40" disabled={packIdx === 0}>−</button>
+                <div className="flex-1 h-9 rounded-md border border-border flex items-center justify-center text-sm font-semibold">
+                  {PACKS[packIdx].msgs.toLocaleString('en-IN')} messages
+                </div>
+                <button onClick={() => setPackIdx(i => Math.min(PACKS.length - 1, i + 1))}
+                  className="w-9 h-9 rounded-md border border-border text-lg leading-none disabled:opacity-40" disabled={packIdx === PACKS.length - 1}>+</button>
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold">{formatINR(PACKS[packIdx].price)}</div>
+                  <div className="text-[11px] text-muted-foreground">{PACKS[packIdx].perMsg}{PACKS[packIdx].badge ? ` · ${PACKS[packIdx].badge}` : ''}</div>
+                </div>
+                <Button size="sm" onClick={() => buyPack(PACKS[packIdx])} disabled={busy === `pack_${PACKS[packIdx].id}`}>
+                  {busy === `pack_${PACKS[packIdx].id}` ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Buy credits'}
+                </Button>
+              </div>
+              <div className="mt-4 border-t border-border pt-3">
+                <div className="text-[11px] text-muted-foreground mb-2">Or enter any amount — ₹1.10 per message, min ₹110</div>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₹</span>
+                    <input
+                      type="number" min={110} value={customAmt} onChange={e => setCustomAmt(e.target.value)}
+                      placeholder="e.g. 500"
+                      className="w-full h-9 rounded-md border border-border bg-transparent pl-6 pr-2 text-sm outline-none focus:ring-1 focus:ring-ring"
+                    />
+                  </div>
+                  <Button size="sm" variant="outline" onClick={buyCustom} disabled={busy === 'pack_custom'}>
+                    {busy === 'pack_custom' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Pay'}
+                  </Button>
+                </div>
+                {Number(customAmt) >= 110 && (
+                  <div className="text-[11px] text-muted-foreground mt-1.5">≈ {Math.floor(Number(customAmt) / 1.1).toLocaleString('en-IN')} messages</div>
+                )}
+              </div>
+            </Card>
+
+            {/* AI credits */}
+            <Card className="p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm font-semibold"><Sparkles className="w-4 h-4" /> AI credits</div>
+                <span className="text-xs text-muted-foreground">{Math.max(0, aiBalance ?? 0).toLocaleString('en-IN')} available</span>
+              </div>
+              <p className="mt-4 text-xs text-muted-foreground">
+                AI credits power chatbot replies, template fixes and smart suggestions. They refresh with your plan each month.
+              </p>
+              <div className="mt-6 flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold">Included</div>
+                  <div className="text-[11px] text-muted-foreground">with every paid plan</div>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => document.getElementById('plan-grid')?.scrollIntoView({ behavior: 'smooth' })}>
+                  View plans
+                </Button>
+              </div>
+            </Card>
+          </div>
+
+          <p className="text-[11px] text-muted-foreground mt-3">
+            Meta charges ≈ ₹0.86 per marketing message. Prices include Reachably platform costs, safe-pacing infrastructure and delivery retries.
+            Marketing templates use 2 credits per message; utility, service and free-form messages use 1.
+          </p>
+
+          {/* Recharge history */}
+          <Card className="mt-6 p-5">
+            <div className="text-sm font-semibold mb-3">Recharge history</div>
+            {history.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No recharges yet. Your trial credits and purchases will appear here.</p>
+            ) : (
+              <div className="divide-y divide-border">
+                {history.map((t) => (
+                  <div key={t.id} className="py-2.5 flex items-center justify-between gap-3 text-sm">
+                    <div className="min-w-0">
+                      <div className="font-medium capitalize truncate">
+                        {t.kind === 'topup' ? 'Credit recharge' : t.kind === 'grant' ? (t.notes || 'Plan credits') : t.kind}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {new Date(t.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="font-semibold text-emerald-600">+{(t.msgs || 0).toLocaleString('en-IN')} msgs</div>
+                      {t.amount_paise > 0 && <div className="text-[11px] text-muted-foreground">{formatINR(t.amount_paise / 100)}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
+
+
+
         {/* Plans */}
         <div id="plan-grid" className="grid gap-6 md:grid-cols-2 xl:grid-cols-4 items-stretch">
           {PLANS.map((plan, i) => {
@@ -447,119 +554,6 @@ const PricingContent = () => {
           </div>
         </div>
 
-        {/* Prepaid wallet + credit buffer */}
-        <div className="mt-14 max-w-3xl mx-auto">
-          <CreditWallet />
-        </div>
-
-        {/* Credit top-ups */}
-        <div className="mt-14" id="credits">
-          <div className="mb-5">
-            <h2 className="text-xl font-bold flex items-center gap-2"><Battery className="w-5 h-5" /> Credits</h2>
-            <p className="text-sm text-muted-foreground mt-1">Top up message credits anytime — they never expire while your plan is active.</p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            {/* Message credits */}
-            <Card className="p-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm font-semibold"><MessageSquare className="w-4 h-4" /> Message credits</div>
-                <span className="text-xs text-muted-foreground">{(balance ?? 0).toLocaleString('en-IN')} available</span>
-              </div>
-              <div className="mt-4 flex items-center gap-2">
-                <button onClick={() => setPackIdx(i => Math.max(0, i - 1))}
-                  className="w-9 h-9 rounded-md border border-border text-lg leading-none disabled:opacity-40" disabled={packIdx === 0}>−</button>
-                <div className="flex-1 h-9 rounded-md border border-border flex items-center justify-center text-sm font-semibold">
-                  {PACKS[packIdx].msgs.toLocaleString('en-IN')} messages
-                </div>
-                <button onClick={() => setPackIdx(i => Math.min(PACKS.length - 1, i + 1))}
-                  className="w-9 h-9 rounded-md border border-border text-lg leading-none disabled:opacity-40" disabled={packIdx === PACKS.length - 1}>+</button>
-              </div>
-              <div className="mt-3 flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold">{formatINR(PACKS[packIdx].price)}</div>
-                  <div className="text-[11px] text-muted-foreground">{PACKS[packIdx].perMsg}{PACKS[packIdx].badge ? ` · ${PACKS[packIdx].badge}` : ''}</div>
-                </div>
-                <Button size="sm" onClick={() => buyPack(PACKS[packIdx])} disabled={busy === `pack_${PACKS[packIdx].id}`}>
-                  {busy === `pack_${PACKS[packIdx].id}` ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Buy credits'}
-                </Button>
-              </div>
-              <div className="mt-4 border-t border-border pt-3">
-                <div className="text-[11px] text-muted-foreground mb-2">Or enter any amount — ₹1.10 per message, min ₹110</div>
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₹</span>
-                    <input
-                      type="number" min={110} value={customAmt} onChange={e => setCustomAmt(e.target.value)}
-                      placeholder="e.g. 500"
-                      className="w-full h-9 rounded-md border border-border bg-transparent pl-6 pr-2 text-sm outline-none focus:ring-1 focus:ring-ring"
-                    />
-                  </div>
-                  <Button size="sm" variant="outline" onClick={buyCustom} disabled={busy === 'pack_custom'}>
-                    {busy === 'pack_custom' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Pay'}
-                  </Button>
-                </div>
-                {Number(customAmt) >= 110 && (
-                  <div className="text-[11px] text-muted-foreground mt-1.5">≈ {Math.floor(Number(customAmt) / 1.1).toLocaleString('en-IN')} messages</div>
-                )}
-              </div>
-            </Card>
-
-            {/* AI credits */}
-            <Card className="p-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm font-semibold"><Sparkles className="w-4 h-4" /> AI credits</div>
-                <span className="text-xs text-muted-foreground">{(aiBalance ?? 0).toLocaleString('en-IN')} available</span>
-              </div>
-              <p className="mt-4 text-xs text-muted-foreground">
-                AI credits power chatbot replies, template fixes and smart suggestions. They refresh with your plan each month.
-              </p>
-              <div className="mt-6 flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold">Included</div>
-                  <div className="text-[11px] text-muted-foreground">with every paid plan</div>
-                </div>
-                <Button size="sm" variant="outline" onClick={() => document.getElementById('plan-grid')?.scrollIntoView({ behavior: 'smooth' })}>
-                  View plans
-                </Button>
-              </div>
-            </Card>
-          </div>
-
-          <p className="text-[11px] text-muted-foreground mt-3">
-            Meta charges ≈ ₹0.86 per marketing message. Prices include Reachably platform costs, safe-pacing infrastructure and delivery retries.
-            Marketing templates use 2 credits per message; utility, service and free-form messages use 1.
-          </p>
-
-          {/* Recharge history */}
-          <Card className="mt-6 p-5">
-            <div className="text-sm font-semibold mb-3">Recharge history</div>
-            {history.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No recharges yet. Your trial credits and purchases will appear here.</p>
-            ) : (
-              <div className="divide-y divide-border">
-                {history.map((t) => (
-                  <div key={t.id} className="py-2.5 flex items-center justify-between gap-3 text-sm">
-                    <div className="min-w-0">
-                      <div className="font-medium capitalize truncate">
-                        {t.kind === 'topup' ? 'Credit recharge' : t.kind === 'grant' ? (t.notes || 'Plan credits') : t.kind}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground">
-                        {new Date(t.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <div className="font-semibold text-emerald-600">+{(t.msgs || 0).toLocaleString('en-IN')} msgs</div>
-                      {t.amount_paise > 0 && <div className="text-[11px] text-muted-foreground">{formatINR(t.amount_paise / 100)}</div>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
-        </div>
-
-
         {/* Compare */}
         <div className="mt-14">
           <h2 className="text-2xl font-bold text-center mb-2">Compare features</h2>
@@ -588,7 +582,7 @@ const PricingContent = () => {
             </table>
           </Card>
           <p className="text-[11px] text-muted-foreground mt-3 text-center">
-            *Plan credits reset monthly. Additional messages can be topped up anytime with recharge packs above.
+            Message credits are bought separately as top-ups and never expire while your plan is active.
           </p>
         </div>
 
