@@ -19,7 +19,7 @@ const parseStoragePath = (url?: string | null): { bucket: string; path: string }
 export const resolveMediaUrl = async (url?: string | null): Promise<string | undefined> => {
   if (!url) return undefined;
   const parsed = parseStoragePath(url);
-  if (!parsed) return url;
+  if (!parsed) return /^(https?:|blob:|data:)/i.test(url) ? url : undefined;
   const key = `${parsed.bucket}/${parsed.path}`;
   const hit = cache.get(key);
   if (hit && hit.exp > Date.now()) return hit.url;
