@@ -538,7 +538,7 @@ const TemplateEditor = () => {
                 <div className="rounded-lg bg-white shadow-sm p-2.5 text-sm text-slate-800 space-y-1.5 max-w-[290px]">
                   {form.header_type === 'text' && form.header && <div className="font-semibold">{form.header}</div>}
                   {form.header_type === 'image' && (form.header_media_url
-                    ? <SecureImg src={form.header_media_url} alt="" className="rounded w-full max-h-40 object-cover" />
+                    ? <SecureImg src={form.header_media_url} alt="" className="rounded w-full max-h-56 object-contain bg-slate-100" />
                     : <div className="rounded w-full h-28 bg-slate-200" />)}
                   {form.header_type === 'video' && (
                     <div className="rounded w-full h-28 bg-slate-900 flex items-center justify-center text-white/70"><Play className="w-6 h-6" /></div>
