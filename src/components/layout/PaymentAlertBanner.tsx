@@ -41,7 +41,7 @@ const PaymentAlertBanner = () => {
         <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
         <div className="flex-1 min-w-0">
           {unpaid ? (
-            <span><span className="font-semibold">Payment required.</span> Add a plan to keep sending messages and receiving webhooks.</span>
+            <span><span className="font-semibold">Choose a plan to keep everything running.</span> Your messages, inbox and automations stay active once a plan is active.</span>
           ) : (
             <span><span className="font-semibold">Meta balance due: ₹{metaDue?.toFixed(2)}.</span> Settle in your Meta Business Manager to avoid delivery pauses.</span>
           )}
@@ -51,7 +51,7 @@ const PaymentAlertBanner = () => {
           className="inline-flex items-center gap-1 px-3 py-1 rounded-md bg-foreground text-background text-xs font-semibold hover:opacity-90"
         >
           <CreditCard className="w-3 h-3" />
-          {unpaid ? 'Pay now' : 'View bill'}
+          {unpaid ? 'See plans' : 'View bill'}
         </button>
         <button onClick={() => setDismissed(true)} className="p-1 rounded hover:bg-black/10 text-muted-foreground">
           <X className="w-3.5 h-3.5" />
