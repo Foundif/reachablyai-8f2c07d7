@@ -60,7 +60,7 @@ const Dashboard = () => {
     leadsNew: 0, leadsTotal: 0, campaignsMonth: 0, messagesSent: 0,
     templatesApproved: 0, automationsActive: 0, waConnected: false,
     inboxUnread: 0, inboxConversations: 0, messagesToday: 0,
-    msgCredits: 0, aiRepliesMonth: 0, botsActive: 0,
+    msgCredits: 0, msgCreditsPack: 25, aiRepliesMonth: 0, botsActive: 0,
   });
   const [recentLeads, setRecentLeads] = useState<any[]>([]);
   const [recentCampaigns, setRecentCampaigns] = useState<any[]>([]);
@@ -95,7 +95,7 @@ const Dashboard = () => {
       supabase.from('leads').select('id,name,phone,status,created_at').eq('workspace_id', id).order('created_at', { ascending: false }).limit(5),
       supabase.from('wa_conversations' as any).select('id,unread_count').eq('workspace_id', id),
       supabase.from('wa_messages' as any).select('id', { count: 'exact', head: true }).eq('workspace_id', id).gte('created_at', todayStart.toISOString()),
-      supabase.from('message_credits' as any).select('balance').eq('workspace_id', id).maybeSingle(),
+      supabase.from('message_credits' as any).select('balance,lifetime_purchased').eq('workspace_id', id).maybeSingle(),
       supabase.from('chatbots' as any).select('id', { count: 'exact', head: true }).eq('workspace_id', id).eq('enabled', true),
       supabase.from('chatbot_messages' as any).select('id', { count: 'exact', head: true }).eq('role', 'assistant').gte('created_at', monthStart),
     ]);
@@ -117,7 +117,8 @@ const Dashboard = () => {
       inboxUnread,
       inboxConversations: convs.length,
       messagesToday: messagesToday || 0,
-      msgCredits: Number((wallet as any)?.balance ?? 0),
+      msgCredits: Math.max(0, Number((wallet as any)?.balance ?? 0)),
+      msgCreditsPack: Math.max(1, Number((wallet as any)?.lifetime_purchased ?? 25)),
       aiRepliesMonth: aiRepliesMonth || 0,
       botsActive: botsActive || 0,
     });
