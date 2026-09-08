@@ -189,8 +189,20 @@ const Dashboard = () => {
           <Card className="p-4 flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-muted"><Wallet className="w-4 h-4" /></div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs text-muted-foreground">Message credits</p>
-              <p className="text-2xl font-bold leading-tight">{stats.msgCredits.toLocaleString('en-IN')}</p>
+              <p className="text-xs text-muted-foreground">Message balance</p>
+              {(() => {
+                const pct = Math.max(0, Math.min(100, Math.round((stats.msgCredits / stats.msgCreditsPack) * 100)));
+                return (
+                  <>
+                    <p className="text-2xl font-bold leading-tight">
+                      {stats.msgCredits < 5 ? `${stats.msgCredits} left` : `${pct}%`}
+                    </p>
+                    <div className="mt-1.5 h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div className={`h-full rounded-full ${pct < 20 ? 'bg-destructive' : 'bg-foreground'}`} style={{ width: `${pct}%` }} />
+                    </div>
+                  </>
+                );
+              })()}
             </div>
             <Button size="sm" onClick={() => navigate('/pricing')}>Top up</Button>
           </Card>
