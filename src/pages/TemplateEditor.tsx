@@ -268,10 +268,10 @@ const TemplateEditor = () => {
   const MediaPicker = ({ value, kind, onChange }: { value: string; kind: 'image' | 'video' | 'document'; onChange: (u: string) => void }) => (
     <div className="space-y-2">
       {value && kind !== 'document' && (
-        <div className="rounded-lg overflow-hidden bg-muted h-28">
+        <div className="rounded-lg overflow-hidden bg-muted flex items-center justify-center">
           {kind === 'video'
-            ? <SecureVideo src={value} muted controls className="h-28 w-full object-cover" />
-            : <SecureImg src={value} alt="Selected media preview" className="h-28 w-full object-cover" />}
+            ? <SecureVideo src={value} muted controls className="w-full max-h-56 object-contain" />
+            : <SecureImg src={value} alt="Selected media preview" className="w-full max-h-56 object-contain" />}
         </div>
       )}
       <div className="flex gap-2">
@@ -526,7 +526,9 @@ const TemplateEditor = () => {
                     {form.carousel_cards.map((c, i) => (
                       <div key={i} className="rounded-lg bg-white shadow-sm p-2 w-52 shrink-0 space-y-1.5">
                         {c.header_media_url && c.header_type === 'image'
-                          ? <SecureImg src={c.header_media_url} alt="" className="rounded w-full h-24 object-cover" />
+                          ? <div className="rounded bg-slate-100 flex items-center justify-center overflow-hidden">
+                              <SecureImg src={c.header_media_url} alt="" className="w-full max-h-40 object-contain" />
+                            </div>
                           : <div className="rounded w-full h-24 bg-slate-200 flex items-center justify-center text-slate-400"><Play className="w-5 h-5" /></div>}
                         <div className="text-[12px] text-slate-800 whitespace-pre-wrap break-words">{c.body || 'Card text…'}</div>
                       </div>
@@ -536,7 +538,7 @@ const TemplateEditor = () => {
                 <div className="rounded-lg bg-white shadow-sm p-2.5 text-sm text-slate-800 space-y-1.5 max-w-[290px]">
                   {form.header_type === 'text' && form.header && <div className="font-semibold">{form.header}</div>}
                   {form.header_type === 'image' && (form.header_media_url
-                    ? <SecureImg src={form.header_media_url} alt="" className="rounded w-full max-h-40 object-cover" />
+                    ? <SecureImg src={form.header_media_url} alt="" className="rounded w-full max-h-56 object-contain bg-slate-100" />
                     : <div className="rounded w-full h-28 bg-slate-200" />)}
                   {form.header_type === 'video' && (
                     <div className="rounded w-full h-28 bg-slate-900 flex items-center justify-center text-white/70"><Play className="w-6 h-6" /></div>
