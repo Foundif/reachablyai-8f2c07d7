@@ -8,6 +8,7 @@ type TemplateRecord = {
   header_media_id?: string | null;
   parameter_format?: string | null;
   variables?: unknown;
+  carousel_cards?: any;
 };
 
 type RecipientValues = {
