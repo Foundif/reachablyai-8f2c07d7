@@ -449,6 +449,21 @@ const TemplateEditor = () => {
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">{form.carousel_cards.length}/10 cards added. Each card needs a photo (or video) and a short description.</p>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Button shown on every card</Label>
+                    <Input
+                      value={form.carousel_cards[0]?.buttons?.[0]?.text || ''}
+                      placeholder="More info"
+                      onChange={e => {
+                        const text = e.target.value;
+                        setForm(f => ({
+                          ...f,
+                          carousel_cards: f.carousel_cards.map(c => ({ ...c, buttons: [{ type: 'QUICK_REPLY', text: text || 'More info' }] })),
+                        }));
+                      }}
+                    />
+                    <p className="text-[11px] text-muted-foreground">WhatsApp requires the same button on all cards. Leave blank to use “More info”.</p>
+                  </div>
                   {form.carousel_cards.map((c, i) => (
                     <div key={i} className="p-3 border rounded-lg space-y-2 relative">
                       <button className="absolute top-2 right-2 text-muted-foreground hover:text-destructive" onClick={() => rmCard(i)}><X className="w-4 h-4" /></button>
