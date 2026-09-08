@@ -67,6 +67,9 @@ Deno.serve(async (req) => {
           const ex = headerComp.example;
           if (ex?.header_handle?.length) header_media_url = ex.header_handle[0];
           else if (ex?.header_url?.length) header_media_url = ex.header_url[0];
+          // Meta returns opaque upload handles for media headers. Those are not
+          // displayable URLs, so keep whatever we already stored locally.
+          if (header_media_url && !/^https?:\/\//i.test(header_media_url)) header_media_url = null;
         }
         if (carouselComp) header_type = 'carousel';
 
@@ -78,10 +81,10 @@ Deno.serve(async (req) => {
           body: rawBody,
           header: headerComp?.text || null,
           header_type,
-          header_media_url,
+          ...(header_media_url ? { header_media_url } : {}),
           footer: footerComp?.text || null,
           buttons: btns?.buttons || null,
-          carousel_cards: carouselComp?.cards || null,
+          ...(carouselComp ? { carousel_cards: normalizeCards(carouselComp.cards) } : {}),
           variables,
           parameter_format: (t.parameter_format || (variables.some((v: string) => !/^\d+$/.test(v)) ? 'NAMED' : 'POSITIONAL')).toUpperCase(),
           status: mapStatus(t.status),
@@ -124,6 +127,9 @@ Deno.serve(async (req) => {
           const ex = headerComp.example;
           if (ex?.header_handle?.length) header_media_url = ex.header_handle[0];
           else if (ex?.header_url?.length) header_media_url = ex.header_url[0];
+          // Meta returns opaque upload handles for media headers. Those are not
+          // displayable URLs, so keep whatever we already stored locally.
+          if (header_media_url && !/^https?:\/\//i.test(header_media_url)) header_media_url = null;
         }
         if (carouselComp) header_type = 'carousel';
         const { error: updateErr } = await admin.from('templates').update({
@@ -133,10 +139,10 @@ Deno.serve(async (req) => {
           body: rawBody,
           header: headerComp?.text || null,
           header_type,
-          header_media_url,
+          ...(header_media_url ? { header_media_url } : {}),
           footer: footerComp?.text || null,
           buttons: btns?.buttons || null,
-          carousel_cards: carouselComp?.cards || null,
+          ...(carouselComp ? { carousel_cards: normalizeCards(carouselComp.cards) } : {}),
           variables,
           parameter_format: (t.parameter_format || (variables.some((v: string) => !/^\d+$/.test(v)) ? 'NAMED' : 'POSITIONAL')).toUpperCase(),
           status: mapStatus(t.status),
@@ -157,3 +163,20 @@ Deno.serve(async (req) => {
     return json({ error: String(e) }, 500);
   }
 });
+
+/** Keeps Meta's synced carousel cards in the shape the app renders and sends. */
+function normalizeCards(cards: any[]): any[] {
+  return (cards || []).map((card: any) => {
+    const comps = card?.components || [];
+    const header = comps.find((c: any) => c.type === 'HEADER');
+    const body = comps.find((c: any) => c.type === 'BODY');
+    const buttons = comps.find((c: any) => c.type === 'BUTTONS');
+    const raw = header?.example?.header_url?.[0] || null;
+    return {
+      header_type: String(header?.format || 'IMAGE').toLowerCase(),
+      header_media_url: raw && /^https?:\/\//i.test(raw) ? raw : null,
+      body: body?.text || '',
+      buttons: buttons?.buttons || [],
+    };
+  });
+}

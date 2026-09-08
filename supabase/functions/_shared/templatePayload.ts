@@ -8,6 +8,7 @@ type TemplateRecord = {
   header_media_id?: string | null;
   parameter_format?: string | null;
   variables?: unknown;
+  carousel_cards?: any;
 };
 
 type RecipientValues = {
@@ -89,6 +90,39 @@ export function buildTemplatePayload(template: TemplateRecord, recipient: Recipi
       return parameter;
     });
     components.push({ type: 'body', parameters });
+  }
+
+  // Carousel templates must be sent as ONE message with a `carousel` component —
+  // never as a series of individual image messages.
+  const cards = Array.isArray(template.carousel_cards) ? template.carousel_cards : [];
+  if (cards.length) {
+    components.push({
+      type: 'carousel',
+      cards: cards.slice(0, 10).map((card: any, cardIndex: number) => {
+        const cardComponents: Array<Record<string, unknown>> = [];
+        const kind = String(card.header_type || 'image').toLowerCase() === 'video' ? 'video' : 'image';
+        const mediaId = card.header_media_id;
+        const mediaLink = cleanValue(card.header_media_url, '');
+        if (mediaId || mediaLink) {
+          cardComponents.push({
+            type: 'header',
+            parameters: [{ type: kind, [kind]: mediaId ? { id: mediaId } : { link: mediaLink } }],
+          });
+        }
+        const cardVars = placeholders(String(card.body || ''));
+        if (cardVars.length) {
+          cardComponents.push({
+            type: 'body',
+            parameters: cardVars.map((key, index) => {
+              const parameter: Record<string, string> = { type: 'text', text: resolveValue(key, index, recipient) };
+              if (named) parameter.parameter_name = key;
+              return parameter;
+            }),
+          });
+        }
+        return { card_index: cardIndex, components: cardComponents };
+      }),
+    });
   }
 
   return {

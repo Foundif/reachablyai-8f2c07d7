@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { SecureImg } from '@/lib/secureMedia';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
@@ -315,7 +316,7 @@ function BulkWizard({
                   <div className="flex gap-2 flex-wrap mt-2">
                     {mediaUrls.map((u, i) => (
                       <div key={i} className="relative w-20 h-20 rounded border overflow-hidden group">
-                        <img src={u} alt="" className="w-full h-full object-cover" />
+                        <SecureImg src={u} alt="" className="w-full h-full object-cover" />
                         <button onClick={() => setMediaUrls(prev => prev.filter((_, idx) => idx !== i))}
                           className="absolute top-0 right-0 bg-red-500 text-white p-0.5 opacity-0 group-hover:opacity-100">
                           <X className="w-3 h-3" />

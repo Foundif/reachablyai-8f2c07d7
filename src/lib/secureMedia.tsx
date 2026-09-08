@@ -7,6 +7,7 @@ const cache = new Map<string, { url: string; exp: number }>();
 /** Extracts `bucket/path` from a Supabase storage URL, if it points at a private bucket. */
 const parseStoragePath = (url?: string | null): { bucket: string; path: string } | null => {
   if (!url || typeof url !== 'string') return null;
+  if (!/^https?:\/\//i.test(url)) return null;
   const m = url.match(/\/storage\/v1\/object\/(?:public\/|authenticated\/|sign\/)?([^/]+)\/(.+?)(?:\?|$)/);
   if (!m) return null;
   const [, bucket, path] = m;
@@ -18,7 +19,7 @@ const parseStoragePath = (url?: string | null): { bucket: string; path: string }
 export const resolveMediaUrl = async (url?: string | null): Promise<string | undefined> => {
   if (!url) return undefined;
   const parsed = parseStoragePath(url);
-  if (!parsed) return url;
+  if (!parsed) return /^(https?:|blob:|data:)/i.test(url) ? url : undefined;
   const key = `${parsed.bucket}/${parsed.path}`;
   const hit = cache.get(key);
   if (hit && hit.exp > Date.now()) return hit.url;
@@ -28,9 +29,11 @@ export const resolveMediaUrl = async (url?: string | null): Promise<string | und
   return data.signedUrl;
 };
 
+const isDisplayable = (u?: string | null) => !!u && /^(https?:|blob:|data:)/i.test(u);
+
 export const useSignedUrl = (url?: string | null) => {
   const [resolved, setResolved] = useState<string | undefined>(() =>
-    parseStoragePath(url) ? undefined : url || undefined,
+    parseStoragePath(url) ? undefined : (isDisplayable(url) ? url! : undefined),
   );
   useEffect(() => {
     let active = true;
