@@ -526,7 +526,9 @@ const TemplateEditor = () => {
                     {form.carousel_cards.map((c, i) => (
                       <div key={i} className="rounded-lg bg-white shadow-sm p-2 w-52 shrink-0 space-y-1.5">
                         {c.header_media_url && c.header_type === 'image'
-                          ? <SecureImg src={c.header_media_url} alt="" className="rounded w-full h-24 object-cover" />
+                          ? <div className="rounded bg-slate-100 flex items-center justify-center overflow-hidden">
+                              <SecureImg src={c.header_media_url} alt="" className="w-full max-h-40 object-contain" />
+                            </div>
                           : <div className="rounded w-full h-24 bg-slate-200 flex items-center justify-center text-slate-400"><Play className="w-5 h-5" /></div>}
                         <div className="text-[12px] text-slate-800 whitespace-pre-wrap break-words">{c.body || 'Card text…'}</div>
                       </div>
