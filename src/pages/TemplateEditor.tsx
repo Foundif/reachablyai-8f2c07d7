@@ -268,10 +268,10 @@ const TemplateEditor = () => {
   const MediaPicker = ({ value, kind, onChange }: { value: string; kind: 'image' | 'video' | 'document'; onChange: (u: string) => void }) => (
     <div className="space-y-2">
       {value && kind !== 'document' && (
-        <div className="rounded-lg overflow-hidden bg-muted h-28">
+        <div className="rounded-lg overflow-hidden bg-muted flex items-center justify-center">
           {kind === 'video'
-            ? <SecureVideo src={value} muted controls className="h-28 w-full object-cover" />
-            : <SecureImg src={value} alt="Selected media preview" className="h-28 w-full object-cover" />}
+            ? <SecureVideo src={value} muted controls className="w-full max-h-56 object-contain" />
+            : <SecureImg src={value} alt="Selected media preview" className="w-full max-h-56 object-contain" />}
         </div>
       )}
       <div className="flex gap-2">
