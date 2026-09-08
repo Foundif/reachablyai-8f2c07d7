@@ -39,7 +39,14 @@ const guessMime = (url: string, kind: string) => {
 async function toMetaHandle(url: string, kind: string, token: string): Promise<string> {
   if (!url) return url;
   if (!/^https?:\/\//i.test(url)) return url; // already a handle
-  const fileRes = await fetch(url);
+  let fileRes = await fetch(url);
+  // WhatsApp CDN links (scontent.whatsapp.net) expire and cannot be re-fetched.
+  if (!fileRes.ok && /(whatsapp\.net|fbcdn\.net)/i.test(url)) {
+    fileRes = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!fileRes.ok) {
+      throw new Error('This template\'s image comes from WhatsApp and can no longer be re-used. Please re-upload the header image, then save again.');
+    }
+  }
   if (!fileRes.ok) throw new Error(`Could not download media (${fileRes.status}). Make sure the URL is public.`);
   const bytes = new Uint8Array(await fileRes.arrayBuffer());
   const type = fileRes.headers.get('content-type')?.split(';')[0] || guessMime(url, kind);
