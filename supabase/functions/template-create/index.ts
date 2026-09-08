@@ -115,6 +115,19 @@ Deno.serve(async (req) => {
         if (vars.length) bc.example = { body_text: [vars.map(v => `sample_${v}`)] };
         components.push(bc);
       }
+      // Meta rule: every carousel card must have 1–2 buttons and ALL cards must
+      // share the identical button configuration. Derive one shared set.
+      const cleanBtn = (b: any) => {
+        if (b?.type === 'URL') return { type: 'URL', text: String(b.text || 'View'), url: b.url };
+        if (b?.type === 'PHONE_NUMBER') return { type: 'PHONE_NUMBER', text: String(b.text || 'Call'), phone_number: b.phone_number };
+        return { type: 'QUICK_REPLY', text: String(b?.text || 'More info') };
+      };
+      const sourceButtons =
+        (carousel_cards || []).map((c: any) => c?.buttons).find((b: any) => Array.isArray(b) && b.length) ||
+        (Array.isArray(buttons) && buttons.length ? buttons : null) ||
+        [{ type: 'QUICK_REPLY', text: 'More info' }];
+      const sharedButtons = sourceButtons.slice(0, 2).map(cleanBtn);
+
       const cards = await Promise.all((carousel_cards || []).slice(0, 10).map(async (card: any) => {
         const cardVars: string[] = [];
         const cardBody = String(card.body || '').replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_: string, v: string) => {
@@ -130,12 +143,11 @@ Deno.serve(async (req) => {
         const bc: any = { type: 'BODY', text: cardBody };
         if (cardVars.length) bc.example = { body_text: [cardVars.map(v => `sample_${v}`)] };
         cComps.push(bc);
-        if (Array.isArray(card.buttons) && card.buttons.length) {
-          cComps.push({ type: 'BUTTONS', buttons: card.buttons });
-        }
+        cComps.push({ type: 'BUTTONS', buttons: sharedButtons });
         return { components: cComps };
       }));
       components.push({ type: 'CAROUSEL', cards });
+
 
     } else {
       // HEADER
