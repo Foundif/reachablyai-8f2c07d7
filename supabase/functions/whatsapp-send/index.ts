@@ -112,10 +112,22 @@ Deno.serve(async (req) => {
 
       const supplied: Record<string, string> = (variables && typeof variables === 'object') ? variables : {};
 
+      // Carousel cards live in private storage — sign each card's media and block
+      // malformed carousels before Meta rejects the whole message.
+      let tplForSend: any = { ...tpl, header_media_url: await signMediaUrl(admin, tpl.header_media_url) };
+      if (Array.isArray(tpl.carousel_cards) && tpl.carousel_cards.length) {
+        const problems = validateCarouselTemplate(tpl as any);
+        if (problems.length) return json({ error: problems.join(' ') }, 400);
+        tplForSend.carousel_cards = await Promise.all((tpl.carousel_cards as any[]).map(async (c: any) => ({
+          ...c, header_media_url: await signMediaUrl(admin, c.header_media_url),
+        })));
+      }
+
       waPayload = {
         messaging_product: 'whatsapp', to, type: 'template',
-        template: buildTemplatePayload({ ...tpl, header_media_url: await signMediaUrl(admin, tpl.header_media_url) }, { name: contactName, phone: to, variables: supplied }),
+        template: buildTemplatePayload(tplForSend, { name: contactName, phone: to, variables: supplied }),
       };
+
       console.log('[whatsapp-send] template payload', JSON.stringify(waPayload));
     }
 
