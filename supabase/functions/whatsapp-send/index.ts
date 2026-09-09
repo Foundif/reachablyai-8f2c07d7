@@ -2,7 +2,7 @@ import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { signMediaUrl } from '../_shared/signedMedia.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { chargeCredits, refundCredits, categoryOf, CREDIT_COST, MessageCategory } from '../_shared/credits.ts';
-import { buildTemplatePayload } from '../_shared/templatePayload.ts';
+import { buildTemplatePayload, validateCarouselTemplate } from '../_shared/templatePayload.ts';
 
 const json = (b: any, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
