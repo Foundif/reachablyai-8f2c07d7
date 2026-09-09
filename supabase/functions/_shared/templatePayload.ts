@@ -148,3 +148,29 @@ export function buildTemplatePayload(template: TemplateRecord, recipient: Recipi
     ...(components.length ? { components } : {}),
   };
 }
+/**
+ * Pre-send guard for carousel templates. Returns a list of human-readable
+ * problems naming the exact card and field, so a malformed template is blocked
+ * before Meta answers with `template.components.cards.components is required.`
+ */
+export function validateCarouselTemplate(template: TemplateRecord): string[] {
+  const cards = Array.isArray(template.carousel_cards) ? template.carousel_cards : [];
+  if (!cards.length) return [];
+  const problems: string[] = [];
+  if (cards.length < 2) problems.push('A carousel needs at least 2 cards.');
+  cards.slice(0, 10).forEach((card: any, i: number) => {
+    const n = i + 1;
+    const hasMedia = Boolean(card?.header_media_id) || Boolean(cleanValue(card?.header_media_url, ''));
+    if (!hasMedia) problems.push(`Card ${n} is missing its image or video — re-upload it in the template editor.`);
+    if (!String(card?.body || '').trim()) problems.push(`Card ${n} is missing its description text.`);
+    const buttons = Array.isArray(card?.buttons) ? card.buttons : [];
+    if (!buttons.length || buttons.length > 2) problems.push(`Card ${n} must have 1 or 2 buttons.`);
+    buttons.forEach((b: any, bi: number) => {
+      if (!String(b?.text || '').trim()) problems.push(`Card ${n} button ${bi + 1} is missing its text.`);
+      if (String(b?.type || '').toUpperCase() === 'URL' && !String(b?.url || '').trim()) {
+        problems.push(`Card ${n} button ${bi + 1} is a link button but has no URL.`);
+      }
+    });
+  });
+  return problems;
+}
