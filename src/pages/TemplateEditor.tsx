@@ -72,6 +72,10 @@ const validateTemplateForm = (form: Form) => {
     form.carousel_cards.forEach((c, i) => {
       if (!c.header_media_url) errors.push(`Card ${i + 1} needs an image or video.`);
       if (!c.body.trim()) errors.push(`Card ${i + 1} needs body text.`);
+      const cb = c.buttons?.[0];
+      if (!cb?.text?.trim()) errors.push(`Card ${i + 1} needs button text.`);
+      if (cb?.type === 'URL' && !cb.url?.trim()) errors.push(`Card ${i + 1} button needs a link (https://…).`);
+      if (cb?.type === 'URL' && cb.url && !/^https?:\/\//i.test(cb.url.trim())) errors.push(`Card ${i + 1} button link must start with https://`);
     });
   }
   let urlBtns = 0, phoneBtns = 0;
@@ -172,7 +176,7 @@ const TemplateEditor = () => {
         const isVideo = (file.type || '').startsWith('video');
         setForm(f => f.carousel_cards.length >= 10 ? f : ({
           ...f,
-          carousel_cards: [...f.carousel_cards, { header_media_url: pub.publicUrl, header_type: isVideo ? 'video' : 'image', body: '', buttons: [] }],
+          carousel_cards: [...f.carousel_cards, { header_media_url: pub.publicUrl, header_type: isVideo ? 'video' : 'image', body: '', buttons: [f.carousel_cards[0]?.buttons?.[0] || { type: 'QUICK_REPLY', text: 'More info' }] }],
         }));
         added++;
       }
@@ -261,7 +265,16 @@ const TemplateEditor = () => {
   const upBtn = (i: number, patch: Partial<Btn>) => setForm(f => ({ ...f, buttons: f.buttons.map((b, ix) => ix === i ? { ...b, ...patch } : b) }));
   const rmBtn = (i: number) => setForm(f => ({ ...f, buttons: f.buttons.filter((_, ix) => ix !== i) }));
 
-  const addCard = () => setForm(f => ({ ...f, carousel_cards: [...f.carousel_cards, { header_media_url: '', header_type: 'image', body: '', buttons: [] }] }));
+  // Meta requires an identical button set on every carousel card.
+  const setSharedCardButton = (patch: Partial<Btn>) => setForm(f => {
+    const current: Btn = f.carousel_cards[0]?.buttons?.[0] || { type: 'QUICK_REPLY', text: 'More info' };
+    const next: Btn = { ...current, ...patch };
+    if (!next.text?.trim()) next.text = 'More info';
+    if (next.type !== 'URL') delete next.url;
+    return { ...f, carousel_cards: f.carousel_cards.map(c => ({ ...c, buttons: [next] })) };
+  });
+
+  const addCard = () => setForm(f => ({ ...f, carousel_cards: [...f.carousel_cards, { header_media_url: '', header_type: 'image', body: '', buttons: [f.carousel_cards[0]?.buttons?.[0] || { type: 'QUICK_REPLY', text: 'More info' }] }] }));
   const upCard = (i: number, patch: Partial<CarouselCard>) => setForm(f => ({ ...f, carousel_cards: f.carousel_cards.map((c, ix) => ix === i ? { ...c, ...patch } : c) }));
   const rmCard = (i: number) => setForm(f => ({ ...f, carousel_cards: f.carousel_cards.filter((_, ix) => ix !== i) }));
 
@@ -451,17 +464,30 @@ const TemplateEditor = () => {
                   <p className="text-xs text-muted-foreground">{form.carousel_cards.length}/10 cards added. Each card needs a photo (or video) and a short description.</p>
                   <div className="space-y-1">
                     <Label className="text-xs">Button shown on every card</Label>
-                    <Input
-                      value={form.carousel_cards[0]?.buttons?.[0]?.text || ''}
-                      placeholder="More info"
-                      onChange={e => {
-                        const text = e.target.value;
-                        setForm(f => ({
-                          ...f,
-                          carousel_cards: f.carousel_cards.map(c => ({ ...c, buttons: [{ type: 'QUICK_REPLY', text: text || 'More info' }] })),
-                        }));
-                      }}
-                    />
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Select
+                        value={form.carousel_cards[0]?.buttons?.[0]?.type === 'URL' ? 'URL' : 'QUICK_REPLY'}
+                        onValueChange={(v: BtnType) => setSharedCardButton({ type: v })}
+                      >
+                        <SelectTrigger className="w-full sm:w-40"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="QUICK_REPLY">Quick reply</SelectItem>
+                          <SelectItem value="URL">Open link</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        value={form.carousel_cards[0]?.buttons?.[0]?.text || ''}
+                        placeholder="More info"
+                        onChange={e => setSharedCardButton({ text: e.target.value })}
+                      />
+                    </div>
+                    {form.carousel_cards[0]?.buttons?.[0]?.type === 'URL' && (
+                      <Input
+                        value={form.carousel_cards[0]?.buttons?.[0]?.url || ''}
+                        placeholder="https://example.com/offer"
+                        onChange={e => setSharedCardButton({ url: e.target.value })}
+                      />
+                    )}
                     <p className="text-[11px] text-muted-foreground">WhatsApp requires the same button on all cards. Leave blank to use “More info”.</p>
                   </div>
                   {form.carousel_cards.map((c, i) => (
@@ -534,18 +560,19 @@ const TemplateEditor = () => {
               </div>
               <div className="wa-doodle-bg p-3 min-h-[380px] space-y-2">
                 {isCarousel ? (
-                  <div className="flex gap-2 overflow-x-auto pb-2">
+                  <div className="flex gap-2 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth [-webkit-overflow-scrolling:touch]">
                     {form.carousel_cards.length === 0 && (
                       <div className="rounded-lg bg-white shadow-sm p-3 text-xs text-slate-400 w-52">Add cards to preview the carousel…</div>
                     )}
                     {form.carousel_cards.map((c, i) => (
-                      <div key={i} className="rounded-lg bg-white shadow-sm p-2 w-52 shrink-0 space-y-1.5">
+                      <div key={i} className="rounded-lg bg-white shadow-sm p-2 w-56 shrink-0 snap-start space-y-1.5 flex flex-col">
                         {c.header_media_url && c.header_type === 'image'
-                          ? <div className="rounded bg-slate-100 flex items-center justify-center overflow-hidden">
-                              <SecureImg src={c.header_media_url} alt="" className="w-full max-h-40 object-contain" />
-                            </div>
+                          ? <SecureImg src={c.header_media_url} alt="" className="rounded w-full h-auto object-contain bg-slate-100" />
                           : <div className="rounded w-full h-24 bg-slate-200 flex items-center justify-center text-slate-400"><Play className="w-5 h-5" /></div>}
-                        <div className="text-[12px] text-slate-800 whitespace-pre-wrap break-words">{c.body || 'Card text…'}</div>
+                        <div className="text-[12px] text-slate-800 whitespace-pre-wrap break-words flex-1">{c.body || 'Card text…'}</div>
+                        <div className="border-t pt-1 text-center text-[12px] text-[#00a5f4] font-medium">
+                          {c.buttons?.[0]?.text || 'More info'}
+                        </div>
                       </div>
                     ))}
                   </div>
