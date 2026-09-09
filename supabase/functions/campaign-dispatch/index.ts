@@ -2,7 +2,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { signMediaUrl } from '../_shared/signedMedia.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { buildTemplatePayload } from '../_shared/templatePayload.ts';
+import { buildTemplatePayload, validateCarouselTemplate } from '../_shared/templatePayload.ts';
 import { chargeCredits, refundCredits, categoryOf } from '../_shared/credits.ts';
 
 const json = (b: any, s = 200) =>
@@ -84,6 +84,11 @@ Deno.serve(async (req) => {
     // Carousel cards: upload every card image/video once and reuse the media ids
     // so the whole set goes out as a single swipeable carousel message.
     if (mode === 'template' && Array.isArray(template?.carousel_cards) && template.carousel_cards.length) {
+      const problems = validateCarouselTemplate(template);
+      if (problems.length) {
+        await admin.from('campaigns').update({ status: 'draft' }).eq('id', campaign_id);
+        return json({ error: problems.join(' ') }, 400);
+      }
       const cards = await Promise.all(template.carousel_cards.slice(0, 10).map(async (card: any) => {
         if (!card?.header_media_url) return card;
         const kind = String(card.header_type || 'image').toLowerCase() === 'video' ? 'video' : 'image';
@@ -91,11 +96,12 @@ Deno.serve(async (req) => {
           const id = await uploadToMeta(admin, creds, campaign.workspace_id, await signMediaUrl(admin, card.header_media_url), kind);
           return { ...card, header_media_id: id };
         } catch (_) {
-          return card;
+          return { ...card, header_media_url: await signMediaUrl(admin, card.header_media_url) };
         }
       }));
       template = { ...template, carousel_cards: cards };
     }
+
 
     let sent = 0, failed = 0, skipped = 0;
     const msgCategory = categoryOf(mode === 'template' ? template?.category : 'service');

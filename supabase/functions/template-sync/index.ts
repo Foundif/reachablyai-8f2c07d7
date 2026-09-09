@@ -73,6 +73,13 @@ Deno.serve(async (req) => {
         }
         if (carouselComp) header_type = 'carousel';
 
+        let localCards: any[] = [];
+        if (carouselComp) {
+          const { data: existing } = await admin.from('templates').select('carousel_cards')
+            .eq('workspace_id', workspace_id).eq('name', t.name).eq('language', t.language || 'en').maybeSingle();
+          localCards = Array.isArray(existing?.carousel_cards) ? existing!.carousel_cards as any[] : [];
+        }
+
         const { error: upsertErr } = await admin.from('templates').upsert({
           workspace_id,
           name: t.name,
@@ -84,7 +91,7 @@ Deno.serve(async (req) => {
           ...(header_media_url ? { header_media_url } : {}),
           footer: footerComp?.text || null,
           buttons: btns?.buttons || null,
-          ...(carouselComp ? { carousel_cards: normalizeCards(carouselComp.cards) } : {}),
+          ...(carouselComp ? { carousel_cards: normalizeCards(carouselComp.cards, localCards) } : {}),
           variables,
           parameter_format: (t.parameter_format || (variables.some((v: string) => !/^\d+$/.test(v)) ? 'NAMED' : 'POSITIONAL')).toUpperCase(),
           status: mapStatus(t.status),
@@ -101,7 +108,7 @@ Deno.serve(async (req) => {
 
     if (listError) {
       const { data: localTemplates } = await admin.from('templates')
-        .select('id, meta_template_id')
+        .select('id, meta_template_id, carousel_cards')
         .eq('workspace_id', workspace_id)
         .not('meta_template_id', 'is', null);
 
@@ -142,7 +149,7 @@ Deno.serve(async (req) => {
           ...(header_media_url ? { header_media_url } : {}),
           footer: footerComp?.text || null,
           buttons: btns?.buttons || null,
-          ...(carouselComp ? { carousel_cards: normalizeCards(carouselComp.cards) } : {}),
+          ...(carouselComp ? { carousel_cards: normalizeCards(carouselComp.cards, Array.isArray(local.carousel_cards) ? local.carousel_cards as any[] : []) } : {}),
           variables,
           parameter_format: (t.parameter_format || (variables.some((v: string) => !/^\d+$/.test(v)) ? 'NAMED' : 'POSITIONAL')).toUpperCase(),
           status: mapStatus(t.status),
@@ -165,18 +172,23 @@ Deno.serve(async (req) => {
 });
 
 /** Keeps Meta's synced carousel cards in the shape the app renders and sends. */
-function normalizeCards(cards: any[]): any[] {
-  return (cards || []).map((card: any) => {
+function normalizeCards(cards: any[], localCards: any[] = []): any[] {
+  return (cards || []).map((card: any, i: number) => {
     const comps = card?.components || [];
     const header = comps.find((c: any) => c.type === 'HEADER');
     const body = comps.find((c: any) => c.type === 'BODY');
     const buttons = comps.find((c: any) => c.type === 'BUTTONS');
     const raw = header?.example?.header_url?.[0] || null;
+    // Meta returns opaque upload handles (not displayable/downloadable URLs) for
+    // card media, so never let a sync wipe the media we already store locally.
+    const local = localCards?.[i] || {};
+    const remoteUrl = raw && /^https?:\/\//i.test(raw) ? raw : null;
     return {
-      header_type: String(header?.format || 'IMAGE').toLowerCase(),
-      header_media_url: raw && /^https?:\/\//i.test(raw) ? raw : null,
-      body: body?.text || '',
-      buttons: buttons?.buttons || [],
+      ...local,
+      header_type: String(header?.format || local.header_type || 'IMAGE').toLowerCase(),
+      header_media_url: remoteUrl || local.header_media_url || null,
+      body: body?.text || local.body || '',
+      buttons: (buttons?.buttons?.length ? buttons.buttons : local.buttons) || [],
     };
   });
 }

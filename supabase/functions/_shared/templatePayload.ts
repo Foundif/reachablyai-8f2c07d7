@@ -93,9 +93,12 @@ export function buildTemplatePayload(template: TemplateRecord, recipient: Recipi
   }
 
   // Carousel templates must be sent as ONE message with a `carousel` component —
-  // never as a series of individual image messages.
+  // never as a series of individual image messages. Meta requires every card to
+  // carry a non-empty `components` array (`template.components.cards.components`).
   const cards = Array.isArray(template.carousel_cards) ? template.carousel_cards : [];
   if (cards.length) {
+    const problems = validateCarouselTemplate(template);
+    if (problems.length) throw new Error(problems.join(' '));
     components.push({
       type: 'carousel',
       cards: cards.slice(0, 10).map((card: any, cardIndex: number) => {
@@ -103,12 +106,10 @@ export function buildTemplatePayload(template: TemplateRecord, recipient: Recipi
         const kind = String(card.header_type || 'image').toLowerCase() === 'video' ? 'video' : 'image';
         const mediaId = card.header_media_id;
         const mediaLink = cleanValue(card.header_media_url, '');
-        if (mediaId || mediaLink) {
-          cardComponents.push({
-            type: 'header',
-            parameters: [{ type: kind, [kind]: mediaId ? { id: mediaId } : { link: mediaLink } }],
-          });
-        }
+        cardComponents.push({
+          type: 'header',
+          parameters: [{ type: kind, [kind]: mediaId ? { id: mediaId } : { link: mediaLink } }],
+        });
         const cardVars = placeholders(String(card.body || ''));
         if (cardVars.length) {
           cardComponents.push({
@@ -120,10 +121,25 @@ export function buildTemplatePayload(template: TemplateRecord, recipient: Recipi
             }),
           });
         }
+        // Dynamic URL buttons need their suffix supplied at send time; static
+        // quick replies / full URLs are already part of the approved card.
+        (Array.isArray(card.buttons) ? card.buttons : []).forEach((btn: any, btnIndex: number) => {
+          const url = String(btn?.url || '');
+          const match = url.match(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/);
+          if (String(btn?.type || '').toUpperCase() === 'URL' && match) {
+            cardComponents.push({
+              type: 'button',
+              sub_type: 'url',
+              index: String(btnIndex),
+              parameters: [{ type: 'text', text: resolveValue(match[1], btnIndex, recipient) }],
+            });
+          }
+        });
         return { card_index: cardIndex, components: cardComponents };
       }),
     });
   }
+
 
   return {
     name: template.name,
@@ -131,4 +147,30 @@ export function buildTemplatePayload(template: TemplateRecord, recipient: Recipi
     ...(named ? { parameter_format: 'NAMED' } : {}),
     ...(components.length ? { components } : {}),
   };
+}
+/**
+ * Pre-send guard for carousel templates. Returns a list of human-readable
+ * problems naming the exact card and field, so a malformed template is blocked
+ * before Meta answers with `template.components.cards.components is required.`
+ */
+export function validateCarouselTemplate(template: TemplateRecord): string[] {
+  const cards = Array.isArray(template.carousel_cards) ? template.carousel_cards : [];
+  if (!cards.length) return [];
+  const problems: string[] = [];
+  if (cards.length < 2) problems.push('A carousel needs at least 2 cards.');
+  cards.slice(0, 10).forEach((card: any, i: number) => {
+    const n = i + 1;
+    const hasMedia = Boolean(card?.header_media_id) || Boolean(cleanValue(card?.header_media_url, ''));
+    if (!hasMedia) problems.push(`Card ${n} is missing its image or video — re-upload it in the template editor.`);
+    if (!String(card?.body || '').trim()) problems.push(`Card ${n} is missing its description text.`);
+    const buttons = Array.isArray(card?.buttons) ? card.buttons : [];
+    if (!buttons.length || buttons.length > 2) problems.push(`Card ${n} must have 1 or 2 buttons.`);
+    buttons.forEach((b: any, bi: number) => {
+      if (!String(b?.text || '').trim()) problems.push(`Card ${n} button ${bi + 1} is missing its text.`);
+      if (String(b?.type || '').toUpperCase() === 'URL' && !String(b?.url || '').trim()) {
+        problems.push(`Card ${n} button ${bi + 1} is a link button but has no URL.`);
+      }
+    });
+  });
+  return problems;
 }
