@@ -100,6 +100,11 @@ const Dashboard = () => {
       supabase.from('chatbot_messages' as any).select('id', { count: 'exact', head: true }).eq('role', 'assistant').gte('created_at', monthStart),
     ]);
 
+    const { data: wsRow } = await supabase.from('workspaces' as any).select('plan_id').eq('id', id).maybeSingle();
+    const { data: limRow } = await supabase.from('plan_limits' as any).select('max_messages')
+      .eq('plan_id', (wsRow as any)?.plan_id || 'trial').maybeSingle();
+    const planMsgLimit = Number((limRow as any)?.max_messages ?? 1000);
+
     const cs = (campaigns as any[]) || [];
     const messagesSent = cs.reduce((s, c) => s + (c.sent_count || 0), 0);
     const cred = (creds as any[])?.[0];
