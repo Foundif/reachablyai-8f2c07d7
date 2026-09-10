@@ -1,7 +1,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { signMediaUrl } from '../_shared/signedMedia.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { chargeCredits, refundCredits, categoryOf, CREDIT_COST, MessageCategory } from '../_shared/credits.ts';
+import { checkMessageQuota } from '../_shared/plans.ts';
 import { buildTemplatePayload, validateCarouselTemplate } from '../_shared/templatePayload.ts';
 
 const json = (b: any, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -131,10 +131,9 @@ Deno.serve(async (req) => {
       console.log('[whatsapp-send] template payload', JSON.stringify(waPayload));
     }
 
-    // Charge the prepaid wallet (allows the credit buffer to go slightly negative).
-    // Marketing templates cost more credits to cover Meta's conversation pricing.
-    const charge = await chargeCredits(admin, workspace_id, 1, category);
-    if (!charge.ok) return json({ error: charge.reason, code: 'insufficient_credits', balance: charge.balance }, 402);
+    // Enforce this month's plan message allowance.
+    const quota = await checkMessageQuota(admin, workspace_id, 1);
+    if (!quota.ok) return json({ error: quota.reason, code: 'quota_exceeded', used: quota.used, limit: quota.limit }, 402);
 
     console.log('[whatsapp-send] final payload to Meta', JSON.stringify(waPayload));
     const resp = await fetch(`https://graph.facebook.com/v20.0/${creds.phone_number_id}/messages`, {
@@ -144,7 +143,6 @@ Deno.serve(async (req) => {
     });
     const rbody = await resp.json();
     if (!resp.ok) {
-      await refundCredits(admin, workspace_id, 1, category);
       const err = rbody?.error?.message || `HTTP ${resp.status}`;
       await admin.from('wa_messages').insert({
         workspace_id, conversation_id: convId, direction: 'outbound',
