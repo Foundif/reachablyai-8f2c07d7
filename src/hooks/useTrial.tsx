@@ -1,7 +1,8 @@
 import { useAuth } from '@/hooks/useAuth';
 
 const PAID_STATUSES = new Set([
-  'active', 'starter', 'growth', 'business', 'pro', 'professional', 'enterprise',
+  'active', 'plus', 'scale', 'supreme',
+  'starter', 'growth', 'business', 'pro', 'professional', 'enterprise',
 ]);
 
 export interface TrialState {
