@@ -952,6 +952,36 @@ export type Database = {
           },
         ]
       }
+      plan_limits: {
+        Row: {
+          max_clients: number
+          max_contacts: number
+          max_messages: number
+          max_numbers: number
+          max_users: number
+          name: string
+          plan_id: string
+        }
+        Insert: {
+          max_clients: number
+          max_contacts: number
+          max_messages: number
+          max_numbers: number
+          max_users: number
+          name: string
+          plan_id: string
+        }
+        Update: {
+          max_clients?: number
+          max_contacts?: number
+          max_messages?: number
+          max_numbers?: number
+          max_users?: number
+          name?: string
+          plan_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           active_workspace_id: string | null
@@ -1616,6 +1646,9 @@ export type Database = {
           connected_at: string | null
           connection_type: string
           created_at: string
+          id: string
+          is_primary: boolean
+          label: string | null
           last_analytics_sync: string | null
           last_error: string | null
           messaging_limit: string | null
@@ -1645,6 +1678,9 @@ export type Database = {
           connected_at?: string | null
           connection_type?: string
           created_at?: string
+          id?: string
+          is_primary?: boolean
+          label?: string | null
           last_analytics_sync?: string | null
           last_error?: string | null
           messaging_limit?: string | null
@@ -1674,6 +1710,9 @@ export type Database = {
           connected_at?: string | null
           connection_type?: string
           created_at?: string
+          id?: string
+          is_primary?: boolean
+          label?: string | null
           last_analytics_sync?: string | null
           last_error?: string | null
           messaging_limit?: string | null
@@ -1700,7 +1739,7 @@ export type Database = {
           {
             foreignKeyName: "whatsapp_credentials_workspace_id_fkey"
             columns: ["workspace_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
@@ -1781,28 +1820,49 @@ export type Database = {
       }
       workspaces: {
         Row: {
+          billing_period: string | null
           created_at: string
+          extra_contacts: number
+          extra_numbers: number
+          first_month_discount_used: boolean
           id: string
           name: string
           owner_id: string
+          plan_id: string | null
+          plan_renews_at: string | null
+          plan_started_at: string | null
           plan_tier: string
           updated_at: string
           whatsapp_mode: string
         }
         Insert: {
+          billing_period?: string | null
           created_at?: string
+          extra_contacts?: number
+          extra_numbers?: number
+          first_month_discount_used?: boolean
           id?: string
           name?: string
           owner_id: string
+          plan_id?: string | null
+          plan_renews_at?: string | null
+          plan_started_at?: string | null
           plan_tier?: string
           updated_at?: string
           whatsapp_mode?: string
         }
         Update: {
+          billing_period?: string | null
           created_at?: string
+          extra_contacts?: number
+          extra_numbers?: number
+          first_month_discount_used?: boolean
           id?: string
           name?: string
           owner_id?: string
+          plan_id?: string | null
+          plan_renews_at?: string | null
+          plan_started_at?: string | null
           plan_tier?: string
           updated_at?: string
           whatsapp_mode?: string
@@ -1834,6 +1894,24 @@ export type Database = {
           id: string
           similarity: number
         }[]
+      }
+      workspace_plan_limits: {
+        Args: { _ws: string }
+        Returns: {
+          max_clients: number
+          max_contacts: number
+          max_messages: number
+          max_numbers: number
+          max_users: number
+          name: string
+          plan_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "plan_limits"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
     }
     Enums: {
