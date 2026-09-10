@@ -60,7 +60,7 @@ const Dashboard = () => {
     leadsNew: 0, leadsTotal: 0, campaignsMonth: 0, messagesSent: 0,
     templatesApproved: 0, automationsActive: 0, waConnected: false,
     inboxUnread: 0, inboxConversations: 0, messagesToday: 0,
-    msgCredits: 0, msgCreditsPack: 25, aiRepliesMonth: 0, botsActive: 0,
+    msgCredits: 0, msgCreditsPack: 1000, aiRepliesMonth: 0, botsActive: 0,
   });
   const [recentLeads, setRecentLeads] = useState<any[]>([]);
   const [recentCampaigns, setRecentCampaigns] = useState<any[]>([]);
@@ -82,7 +82,7 @@ const Dashboard = () => {
       { data: recLeads },
       { data: conversations },
       { count: messagesToday },
-      { data: wallet },
+      { count: msgsMonth },
       { count: botsActive },
       { count: aiRepliesMonth },
     ] = await Promise.all([
@@ -95,10 +95,15 @@ const Dashboard = () => {
       supabase.from('leads').select('id,name,phone,status,created_at').eq('workspace_id', id).order('created_at', { ascending: false }).limit(5),
       supabase.from('wa_conversations' as any).select('id,unread_count').eq('workspace_id', id),
       supabase.from('wa_messages' as any).select('id', { count: 'exact', head: true }).eq('workspace_id', id).gte('created_at', todayStart.toISOString()),
-      supabase.from('message_credits' as any).select('balance,lifetime_purchased').eq('workspace_id', id).maybeSingle(),
+      supabase.from('wa_messages' as any).select('id', { count: 'exact', head: true }).eq('workspace_id', id).eq('direction', 'outbound').gte('created_at', monthStart),
       supabase.from('chatbots' as any).select('id', { count: 'exact', head: true }).eq('workspace_id', id).eq('enabled', true),
       supabase.from('chatbot_messages' as any).select('id', { count: 'exact', head: true }).eq('role', 'assistant').gte('created_at', monthStart),
     ]);
+
+    const { data: wsRow } = await supabase.from('workspaces' as any).select('plan_id').eq('id', id).maybeSingle();
+    const { data: limRow } = await supabase.from('plan_limits' as any).select('max_messages')
+      .eq('plan_id', (wsRow as any)?.plan_id || 'trial').maybeSingle();
+    const planMsgLimit = Number((limRow as any)?.max_messages ?? 1000);
 
     const cs = (campaigns as any[]) || [];
     const messagesSent = cs.reduce((s, c) => s + (c.sent_count || 0), 0);
@@ -117,8 +122,8 @@ const Dashboard = () => {
       inboxUnread,
       inboxConversations: convs.length,
       messagesToday: messagesToday || 0,
-      msgCredits: Math.max(0, Number((wallet as any)?.balance ?? 0)),
-      msgCreditsPack: Math.max(1, Number((wallet as any)?.lifetime_purchased ?? 25)),
+      msgCredits: msgsMonth || 0,
+      msgCreditsPack: planMsgLimit,
       aiRepliesMonth: aiRepliesMonth || 0,
       botsActive: botsActive || 0,
     });
@@ -189,22 +194,22 @@ const Dashboard = () => {
           <Card className="p-4 flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-muted"><Wallet className="w-4 h-4" /></div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs text-muted-foreground">Message balance</p>
+              <p className="text-xs text-muted-foreground">Messages this month</p>
               {(() => {
                 const pct = Math.max(0, Math.min(100, Math.round((stats.msgCredits / stats.msgCreditsPack) * 100)));
                 return (
                   <>
                     <p className="text-2xl font-bold leading-tight">
-                      {stats.msgCredits < 5 ? `${stats.msgCredits} left` : `${pct}%`}
+                      {stats.msgCredits.toLocaleString('en-IN')} / {stats.msgCreditsPack.toLocaleString('en-IN')}
                     </p>
                     <div className="mt-1.5 h-1.5 rounded-full bg-muted overflow-hidden">
-                      <div className={`h-full rounded-full ${pct < 20 ? 'bg-destructive' : 'bg-foreground'}`} style={{ width: `${pct}%` }} />
+                      <div className={`h-full rounded-full ${pct > 90 ? 'bg-destructive' : 'bg-foreground'}`} style={{ width: `${pct}%` }} />
                     </div>
                   </>
                 );
               })()}
             </div>
-            <Button size="sm" onClick={() => navigate('/pricing')}>Top up</Button>
+            <Button size="sm" onClick={() => navigate('/pricing')}>Plan</Button>
           </Card>
           <Card className="p-4 flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-muted"><Sparkles className="w-4 h-4" /></div>

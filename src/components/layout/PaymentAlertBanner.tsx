@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { resolveWorkspaceId } from '@/lib/workspace';
 
-const ACTIVE = ['active', 'starter', 'growth', 'business', 'pro', 'professional', 'enterprise'];
+const ACTIVE = ['active', 'plus', 'scale', 'supreme', 'starter', 'growth', 'business', 'pro', 'professional', 'enterprise'];
 
 /**
  * Shows a persistent alert bar when the workspace has no active subscription

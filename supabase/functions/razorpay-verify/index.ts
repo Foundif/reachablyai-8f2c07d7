@@ -2,216 +2,105 @@ import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { createHmac } from 'node:crypto';
 
-// Message pack catalogue (server is source of truth — never trust client on msgs credited)
-const PACKS: Record<string, { msgs: number; amount: number }> = {
-  starter_500:  { msgs: 500,   amount: 599 },
-  pack_1k:      { msgs: 1000,  amount: 1099 },
-  pack_3k:      { msgs: 3000,  amount: 2999 },
-  pack_6k:      { msgs: 6000,  amount: 5999 },
-  pack_10k:     { msgs: 10000, amount: 8999 },
-};
+const PLAN_IDS = ['plus', 'scale', 'supreme'];
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
+  const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), {
+    status, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+
   try {
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    if (!authHeader?.startsWith('Bearer ')) return json({ error: 'Unauthorized' }, 401);
+
     const userClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_ANON_KEY')!,
       { global: { headers: { Authorization: authHeader } } },
     );
     const { data: claims, error: authErr } = await userClient.auth.getClaims(authHeader.replace('Bearer ', ''));
-    if (authErr || !claims?.claims) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    if (authErr || !claims?.claims) return json({ error: 'Unauthorized' }, 401);
     const user_id = claims.claims.sub as string;
 
     const {
       razorpay_order_id, razorpay_payment_id, razorpay_signature,
-      kind = 'subscription', plan_id, billing_period, pack_id,
+      kind = 'subscription', plan_id, billing_period,
     } = await req.json();
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      return new Response(JSON.stringify({ error: 'Missing payment fields' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return json({ error: 'Missing payment fields' }, 400);
     }
 
     const key_secret = Deno.env.get('RAZORPAY_KEY_SECRET');
-    if (!key_secret) {
-      return new Response(JSON.stringify({ error: 'Razorpay not configured' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    if (!key_secret) return json({ error: 'Razorpay not configured' }, 500);
+
     const expected = createHmac('sha256', key_secret)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest('hex');
-    if (expected !== razorpay_signature) {
-      return new Response(JSON.stringify({ error: 'Signature verification failed' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    if (expected !== razorpay_signature) return json({ error: 'Signature verification failed' }, 400);
 
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
-    if (kind === 'recharge') {
-      // Custom amount: server reads the real paid amount from Razorpay and
-      // credits floor(amount / ₹1.10) messages — never trust the client.
-      let pack = PACKS[pack_id];
-      if (!pack && pack_id === 'custom') {
-        const key_id = Deno.env.get('RAZORPAY_KEY_ID')!;
-        const orderRes = await fetch(`https://api.razorpay.com/v1/orders/${razorpay_order_id}`, {
-          headers: { Authorization: `Basic ${btoa(`${key_id}:${key_secret}`)}` },
-        });
-        const orderJson = await orderRes.json();
-        if (!orderRes.ok) {
-          return new Response(JSON.stringify({ error: 'Could not verify order amount', details: orderJson }), {
-            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-        const amountPaise = Number(orderJson.amount || 0);
-        const msgs = Math.floor(amountPaise / 110); // ₹1.10 per message
-        if (msgs < 100) {
-          return new Response(JSON.stringify({ error: 'Minimum custom recharge is ₹110 (100 messages)' }), {
-            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-        pack = { msgs, amount: amountPaise / 100 };
-      }
-      if (!pack) {
-        return new Response(JSON.stringify({ error: 'Unknown pack' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      // Resolve the user's primary workspace
-      const { data: ws } = await admin.from('workspaces').select('id')
-        .eq('owner_id', user_id).order('created_at').limit(1).maybeSingle();
-      if (!ws?.id) {
-        return new Response(JSON.stringify({ error: 'No workspace' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      // Upsert wallet balance atomically-ish
-      const { data: cur } = await admin.from('message_credits').select('*').eq('workspace_id', ws.id).maybeSingle();
-      if (cur) {
-        await admin.from('message_credits').update({
-          balance: (cur.balance || 0) + pack.msgs,
-          lifetime_purchased: (cur.lifetime_purchased || 0) + pack.msgs,
-          updated_at: new Date().toISOString(),
-        }).eq('workspace_id', ws.id);
-      } else {
-        await admin.from('message_credits').insert({
-          workspace_id: ws.id, balance: pack.msgs, lifetime_purchased: pack.msgs,
-        });
-      }
-      await admin.from('credit_transactions').insert({
-        workspace_id: ws.id, user_id, kind: 'topup', pack_id,
-        msgs: pack.msgs, amount_paise: pack.amount * 100,
-        razorpay_payment_id, razorpay_order_id,
-      });
-      return new Response(JSON.stringify({ success: true, credited: pack.msgs }), {
-        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    const { data: ws } = await admin.from('workspaces').select('id')
+      .eq('owner_id', user_id).order('created_at').limit(1).maybeSingle();
 
     if (kind === 'scrape_topup') {
-      const { data: ws } = await admin.from('workspaces').select('id')
-        .eq('owner_id', user_id).order('created_at').limit(1).maybeSingle();
-      if (!ws?.id) {
-        return new Response(JSON.stringify({ error: 'No workspace' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      // Server is source of truth: read the paid amount from Razorpay (₹1 = 1 lead).
+      if (!ws?.id) return json({ error: 'No workspace' }, 400);
       const key_id = Deno.env.get('RAZORPAY_KEY_ID')!;
       const orderRes = await fetch(`https://api.razorpay.com/v1/orders/${razorpay_order_id}`, {
         headers: { Authorization: `Basic ${btoa(`${key_id}:${key_secret}`)}` },
       });
       const orderJson = await orderRes.json();
-      if (!orderRes.ok) {
-        console.error('Razorpay order fetch failed', orderRes.status, orderJson);
-        return new Response(JSON.stringify({ error: 'Could not verify order amount', details: orderJson }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      const amountPaise = Number(orderJson.amount || 0);
-      const leadsGranted = Math.floor(amountPaise / 100); // ₹1 per lead
-      if (leadsGranted < 1) {
-        return new Response(JSON.stringify({ error: 'Invalid top-up amount' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
+      if (!orderRes.ok) return json({ error: 'Could not verify order amount', details: orderJson }, 400);
+      const leadsGranted = Math.floor(Number(orderJson.amount || 0) / 100); // ₹1 per lead
+      if (leadsGranted < 1) return json({ error: 'Invalid top-up amount' }, 400);
       const now = new Date();
       const monthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
       await admin.from('scrape_topups').insert({
         workspace_id: ws.id, user_id, leads_granted: leadsGranted, month_key: monthKey,
-        amount_paise: amountPaise, razorpay_order_id, razorpay_payment_id,
+        amount_paise: Number(orderJson.amount || 0), razorpay_order_id, razorpay_payment_id,
       });
-      return new Response(JSON.stringify({ success: true, credited: leadsGranted, month_key: monthKey }), {
-        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return json({ success: true, credited: leadsGranted, month_key: monthKey });
     }
 
-    if (kind === 'setup') {
-      await admin.from('profiles').update({ services_concept: 'setup_paid' } as any).eq('user_id', user_id);
-      return new Response(JSON.stringify({ success: true, kind }), {
-        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    // Subscription
+    if (!PLAN_IDS.includes(plan_id)) return json({ error: 'Unknown plan' }, 400);
+    const period = billing_period === 'yearly' ? 'yearly' : 'monthly';
 
-    // Default: subscription
     const now = new Date();
-    const end = new Date(now);
-    if (billing_period === 'yearly') end.setFullYear(end.getFullYear() + 1);
-    else end.setMonth(end.getMonth() + 1);
+    const renews = new Date(now);
+    if (period === 'yearly') renews.setFullYear(renews.getFullYear() + 1);
+    else renews.setMonth(renews.getMonth() + 1);
 
-    const statusFor = plan_id && ['starter', 'growth', 'business'].includes(plan_id) ? plan_id : 'active';
     await admin.from('profiles').update({
-      subscription_status: statusFor,
-      trial_end_date: end.toISOString(),
+      subscription_status: plan_id,
+      trial_end_date: renews.toISOString(),
     } as any).eq('user_id', user_id);
 
-    // Seed monthly quota credits for this plan
-    const monthlyCredits: Record<string, number> = { starter: 500, growth: 1200, business: 2800 };
-    const grant = monthlyCredits[statusFor] || 0;
-    if (grant > 0) {
-      const { data: ws } = await admin.from('workspaces').select('id')
-        .eq('owner_id', user_id).order('created_at').limit(1).maybeSingle();
-      if (ws?.id) {
-        const { data: cur } = await admin.from('message_credits').select('*').eq('workspace_id', ws.id).maybeSingle();
-        if (cur) {
-          await admin.from('message_credits').update({
-            balance: (cur.balance || 0) + grant,
-            lifetime_purchased: (cur.lifetime_purchased || 0) + grant,
-            updated_at: new Date().toISOString(),
-          }).eq('workspace_id', ws.id);
-        } else {
-          await admin.from('message_credits').insert({
-            workspace_id: ws.id, balance: grant, lifetime_purchased: grant,
-          });
-        }
-        await admin.from('credit_transactions').insert({
-          workspace_id: ws.id, user_id, kind: 'grant', pack_id: `plan_${statusFor}`,
-          msgs: grant, amount_paise: 0, razorpay_payment_id, razorpay_order_id,
-          notes: `${statusFor} plan ${billing_period} activation`,
-        });
+    if (ws?.id) {
+      await admin.from('workspaces').update({
+        plan_id,
+        plan_tier: plan_id,
+        billing_period: period,
+        plan_started_at: now.toISOString(),
+        plan_renews_at: renews.toISOString(),
+        first_month_discount_used: true,
+      } as any).eq('id', ws.id);
+
+      // Staff in this workspace inherit the owner's plan.
+      const { data: members } = await admin.from('workspace_members').select('user_id').eq('workspace_id', ws.id);
+      const ids = (members || []).map((m: any) => m.user_id).filter((id: string) => id !== user_id);
+      if (ids.length) {
+        await admin.from('profiles').update({
+          subscription_status: plan_id, trial_end_date: renews.toISOString(),
+        } as any).in('user_id', ids);
       }
     }
 
-    return new Response(JSON.stringify({ success: true, plan_id, billing_period }), {
-      status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return json({ success: true, plan_id, billing_period: period, renews_at: renews.toISOString() });
   } catch (e) {
     console.error(e);
-    return new Response(JSON.stringify({ error: (e as Error).message }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return json({ error: (e as Error).message }, 500);
   }
 });

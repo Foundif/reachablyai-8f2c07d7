@@ -550,22 +550,24 @@ export const CampaignDetail = () => {
   const dispatch = async () => {
     if (!campaign) return;
     setSending(true);
-    // Pre-flight: estimate credits needed vs wallet balance.
+    // Pre-flight: check this month's plan message allowance.
     try {
       const pending = recipients.filter(r => r.status === 'pending').length || campaign.total_count || 0;
-      let perMsg = 1;
-      if (campaign.mode !== 'freeform' && campaign.template_id) {
-        const { data: tpl } = await supabase.from('templates' as any).select('category').eq('id', campaign.template_id).maybeSingle();
-        if (String((tpl as any)?.category || '').toLowerCase() === 'marketing') perMsg = 2;
-      }
-      const { data: w } = await supabase.from('message_credits' as any).select('balance').eq('workspace_id', (campaign as any).workspace_id).maybeSingle();
-      const bal = (w as any)?.balance ?? 0;
-      const needed = pending * perMsg;
-      if (bal < needed) {
+      const wsId = (campaign as any).workspace_id;
+      const monthStart = new Date(); monthStart.setUTCDate(1); monthStart.setUTCHours(0, 0, 0, 0);
+      const [{ data: ws }, { count: used }] = await Promise.all([
+        supabase.from('workspaces' as any).select('plan_id').eq('id', wsId).maybeSingle(),
+        supabase.from('wa_messages' as any).select('id', { count: 'exact', head: true })
+          .eq('workspace_id', wsId).eq('direction', 'outbound').gte('created_at', monthStart.toISOString()),
+      ]);
+      const { data: lim } = await supabase.from('plan_limits' as any).select('max_messages')
+        .eq('plan_id', (ws as any)?.plan_id || 'trial').maybeSingle();
+      const max = Number((lim as any)?.max_messages ?? 1000);
+      if ((used || 0) + pending > max) {
         setSending(false);
         toast.error(
-          `This campaign needs ~${needed.toLocaleString('en-IN')} credits (${pending} recipients × ${perMsg}) but your wallet has ${Math.max(0, bal).toLocaleString('en-IN')}. Recharge to continue.`,
-          { action: { label: 'Recharge', onClick: () => navigate('/pricing#credits') }, duration: 8000 },
+          `This campaign needs ${pending.toLocaleString('en-IN')} messages but only ${Math.max(0, max - (used || 0)).toLocaleString('en-IN')} are left in this month's plan allowance.`,
+          { action: { label: 'Upgrade', onClick: () => navigate('/pricing') }, duration: 8000 },
         );
         return;
       }

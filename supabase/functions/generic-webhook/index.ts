@@ -3,7 +3,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { buildTemplatePayload } from '../_shared/templatePayload.ts';
-import { chargeCredits, refundCredits, categoryOf } from '../_shared/credits.ts';
+import { checkMessageQuota } from '../_shared/plans.ts';
 
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
@@ -107,10 +107,9 @@ Deno.serve(async (req) => {
 
     const templatePayload = buildTemplatePayload(template, { name: recipientName, phone, variables });
 
-    // Charge the prepaid wallet before sending
-    const category = categoryOf(template.category);
-    const charge = await chargeCredits(admin, workspace_id, 1, category);
-    if (!charge.ok) throw new Error(charge.reason || 'Insufficient message credits');
+    // Enforce this month's plan message allowance
+    const quota = await checkMessageQuota(admin, workspace_id, 1);
+    if (!quota.ok) throw new Error(quota.reason || 'Monthly message limit reached');
 
     const res = await fetch(`https://graph.facebook.com/v21.0/${creds.phone_number_id}/messages`, {
       method: 'POST',
@@ -119,7 +118,6 @@ Deno.serve(async (req) => {
     });
     const out = await res.json();
     if (!res.ok) {
-      await refundCredits(admin, workspace_id, 1, category);
       throw new Error(out?.error?.message || 'WhatsApp send failed');
     }
 

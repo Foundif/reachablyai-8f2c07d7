@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import AppLayout from '@/components/layout/AppLayout';
@@ -7,121 +7,29 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { supabase } from '@/integrations/supabase/client';
+import PlanUsageCard from '@/components/pricing/PlanUsageCard';
+import { useTrial } from '@/hooks/useTrial';
+import { PLANS, Plan, formatINR } from '@/lib/plans';
 import {
-  Check, X, Crown, Sparkles, Zap, Star, MessageSquare, ArrowLeft, Wrench, Battery, Loader2,
-  ShoppingBag, Building2, Users, Phone, Headset, Building,
+  Check, Crown, ArrowLeft, Loader2, Sparkles, Phone, Users, Contact, Building,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { resolveWorkspaceId } from '@/lib/workspace';
 
-type PlanId = 'starter' | 'growth' | 'business';
-type Audience = 'shopify' | 'business';
-
-interface Plan {
-  id: PlanId; name: string; tagline: string;
-  monthly: number; yearly: number; credits: string;
-  badge?: string; badgeIcon?: any; icon: any; popular?: boolean;
-  cta: string; features: string[]; extra?: Record<Audience, string[]>;
-}
-
-const PLANS: Plan[] = [
-  {
-    id: 'starter', name: 'Basic', tagline: 'Essential tools to get started with WhatsApp',
-    monthly: 999, yearly: 9990, credits: 'Pay-as-you-go message credits', badge: 'Basic', badgeIcon: Zap, icon: MessageSquare,
-    cta: 'Start free trial',
-    features: ['1 user', '1 WhatsApp account', 'Unlimited contacts', '3 automation flows', 'Bulk broadcast campaigns', 'Rich media messaging', 'Official Meta Cloud API', 'No markup on templates', 'WhatsApp chat support'],
-    extra: {
-      shopify: ['Store order sync', 'Abandoned cart reminders'],
-      business: ['CRM contact tags', 'Website chat widget'],
-    },
-  },
-  {
-    id: 'growth', name: 'Growth', tagline: 'Everything you need to scale outreach',
-    monthly: 1999, yearly: 19990, credits: 'Pay-as-you-go message credits', badge: 'Most popular', badgeIcon: Crown, icon: Star, popular: true,
-    cta: 'Start free trial',
-    features: ['3 users', 'Everything in Basic, plus:', 'AI chatbots & AI agents', '25 automation flows', 'Shared team inbox', 'Advanced campaign analytics', 'API access', 'Priority support'],
-    extra: {
-      shopify: ['Order status & COD confirm flows', 'Cart recovery automation', 'Product catalog messaging'],
-      business: ['Lead scraper (1,000 / mo)', 'Accounting & sales ledger'],
-    },
-  },
-  {
-    id: 'business', name: 'Pro', tagline: 'Advanced features for growing businesses',
-    monthly: 3999, yearly: 39990, credits: 'Pay-as-you-go message credits', badge: 'Advanced', badgeIcon: Sparkles, icon: Crown,
-    cta: 'Start free trial',
-    features: ['Unlimited users', 'Everything in Growth, plus:', 'Unlimited automation flows', 'Unlimited webhooks', 'Dedicated account manager', 'Priority support · SLA'],
-    extra: {
-      shopify: ['Multi-store sync', 'Post-purchase upsell journeys'],
-      business: ['Lead scraper (5,000 / mo)', 'Custom integrations'],
-    },
-  },
-];
-
-const ENTERPRISE_FEATURES = [
-  'Custom users & WhatsApp numbers', 'Unlimited contacts & tags', 'Custom automation flows',
-  'Custom feature integration', 'Enterprise grade security', 'SLA-backed support',
-];
-
-interface AddOn { id: string; name: string; desc: string; price: string; unit: string; icon: any }
-const ADDONS: AddOn[] = [
-  { id: 'user', name: 'Extra user', desc: 'Scale your team as you grow', price: '₹499', unit: 'per user / month', icon: Users },
-  { id: 'rm', name: 'Dedicated relationship manager', desc: 'A dedicated expert for your account', price: '₹9,999', unit: 'per month', icon: Headset },
-  { id: 'wa', name: 'Additional WhatsApp number', desc: 'Add one more WhatsApp Business number', price: '₹2,499', unit: 'per month', icon: Phone },
-];
-
-// Message recharge packs — priced above Meta's ~₹0.86/msg marketing rate
-interface Pack { id: string; msgs: number; price: number; badge?: string; perMsg: string }
-const PACKS: Pack[] = [
-  { id: 'starter_500', msgs: 500,   price: 599,  perMsg: '₹1.20/msg' },
-  { id: 'pack_1k',    msgs: 1000,   price: 1099, perMsg: '₹1.10/msg' },
-  { id: 'pack_3k',    msgs: 3000,   price: 2999, badge: 'Popular', perMsg: '₹1.00/msg' },
-  { id: 'pack_6k',    msgs: 6000,   price: 5999, perMsg: '₹1.00/msg' },
-  { id: 'pack_10k',   msgs: 10000,  price: 8999, badge: 'Best value', perMsg: '₹0.90/msg' },
-];
-
-const SETUP_FEE = 2999;
-
-type CmpVal = string | boolean;
-const COMPARE: { label: string; values: [CmpVal, CmpVal, CmpVal, CmpVal] }[] = [
-  { label: 'Monthly price', values: ['₹999', '₹1,999', '₹3,999', 'Custom'] },
-  { label: 'Annual price (2 months free)', values: ['₹9,990', '₹19,990', '₹39,990', 'Custom'] },
-  { label: 'Team members', values: ['1', '3', 'Unlimited', 'Custom'] },
-  { label: 'WhatsApp accounts', values: ['1', '1', '2', 'Custom'] },
-  { label: 'Contacts', values: ['Unlimited', 'Unlimited', 'Unlimited', 'Unlimited'] },
-  { label: 'Automation flows', values: ['3', '25', 'Unlimited', 'Custom'] },
-  { label: 'Template cost – Marketing', values: ['₹0.86', '₹0.86', '₹0.86', '₹0.86'] },
-  { label: 'Template cost – Utility', values: ['₹0.12', '₹0.12', '₹0.12', '₹0.12'] },
-  { label: '0% markup on templates', values: [true, true, true, true] },
-  { label: 'Broadcast messaging', values: [true, true, true, true] },
-  { label: 'Shared team inbox', values: [true, true, true, true] },
-  { label: 'Built-in CRM', values: [true, true, true, true] },
-  { label: 'Contact tags', values: ['5', '20', 'Unlimited', 'Unlimited'] },
-  { label: 'Rich media & carousels', values: [true, true, true, true] },
-  { label: 'AI chatbots', values: [false, true, true, true] },
-  { label: 'Webhooks', values: [false, false, true, true] },
-  { label: 'API access', values: [false, true, true, true] },
-  { label: 'Priority support', values: [false, true, true, true] },
-  { label: 'Dedicated relationship manager', values: [false, false, true, true] },
+const ADDONS = [
+  { id: 'wa', name: 'Additional WhatsApp number', desc: 'Connect one more WhatsApp Business number to your CRM', icon: Phone },
+  { id: 'contacts', name: 'Extra contacts', desc: 'Increase your contact limit beyond your plan', icon: Contact },
+  { id: 'clients', name: 'Extra clients', desc: 'Increase your client limit beyond your plan', icon: Users },
 ];
 
 const FAQS = [
-  { q: 'Do I need my own Meta WhatsApp Business account?', a: 'Yes. Reachably connects to the official Meta Cloud API using your own WhatsApp Business number, so you fully own your number, templates and quality rating.' },
-  { q: 'What are message credits?', a: 'Each plan includes a monthly pool of message credits. Meta charges per conversation (approx ₹0.86 for marketing, ₹0.12 for utility). If you need more, buy a top-up pack anytime — credits never expire while your plan is active.' },
+  { q: 'Can I connect more than one WhatsApp number?', a: 'Yes. Plus includes 1 WhatsApp Business number, Scale includes 3 and Supreme includes 10 — all managed from the same Reachably CRM. WhatsApp numbers are a separate limit from users, and extra numbers are available as an add-on.' },
+  { q: 'How does the 50% first-month offer work?', a: 'Subscribe to a monthly plan before your trial ends and your first month is half price. From the second month onwards you pay the normal monthly price.' },
+  { q: 'Are WhatsApp/Meta charges included?', a: 'No. WhatsApp/Meta conversation charges are separate and billed directly with Meta. Reachably only charges the platform subscription and optional add-ons.' },
   { q: 'Is there a free trial?', a: 'Every account gets a 7-day free trial with all features unlocked. No credit or debit card required to start.' },
-  { q: 'Why is there a one-time setup fee?', a: 'The ₹2,999 setup covers Meta Cloud API configuration, WhatsApp Business onboarding, webhook setup, CRM setup, contact import and team training. It is billed once, separately from your plan.' },
-  { q: 'Can I change plans later?', a: 'Yes — upgrade or downgrade at any time. Upgrades apply immediately and your remaining message credits carry over.' },
-  { q: 'Do you mark up WhatsApp template costs?', a: 'No. You pay Meta’s conversation rates at 0% markup. Reachably only charges the platform subscription and optional add-ons.' },
+  { q: 'Can I change plans later?', a: 'Yes — upgrade or downgrade at any time. Your data, WhatsApp connections, contacts and campaigns stay exactly as they are.' },
 ];
-
-const formatINR = (n: number) => `₹${n.toLocaleString('en-IN')}`;
-
-const Cell = ({ v }: { v: CmpVal }) => {
-  if (v === true) return <Check className="w-4 h-4 text-emerald-600 mx-auto" />;
-  if (v === false) return <X className="w-4 h-4 text-muted-foreground/60 mx-auto" />;
-  return <span className="text-sm">{v}</span>;
-};
 
 declare global { interface Window { Razorpay?: any } }
 const loadRazorpay = () => new Promise<boolean>((resolve) => {
@@ -135,73 +43,44 @@ const loadRazorpay = () => new Promise<boolean>((resolve) => {
 const PricingContent = () => {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
-  const [billing, setBilling] = useState<'monthly' | 'yearly'>('yearly');
-  const [audience, setAudience] = useState<Audience>('business');
+  const { isTrialing, daysLeft } = useTrial();
+  const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
   const [busy, setBusy] = useState<string | null>(null);
-  const [balance, setBalance] = useState<number | null>(null);
-  const [aiBalance, setAiBalance] = useState<number | null>(null);
-  const [packIdx, setPackIdx] = useState(2);
-  const [customAmt, setCustomAmt] = useState('');
-  const [history, setHistory] = useState<any[]>([]);
 
-  useEffect(() => {
-    const a = new URLSearchParams(window.location.search).get('audience');
-    if (a === 'shopify' || a === 'business') setAudience(a);
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
-    (async () => {
-      const wsId = await resolveWorkspaceId(user.id, profile);
-      if (!wsId) return;
-      const [{ data: cr }, { data: tx }] = await Promise.all([
-        supabase.from('message_credits' as any).select('balance, ai_balance').eq('workspace_id', wsId).maybeSingle(),
-        supabase.from('credit_transactions' as any).select('*').eq('workspace_id', wsId).order('created_at', { ascending: false }).limit(20),
-      ]);
-      setBalance(Math.max(0, (cr as any)?.balance ?? 0));
-      setAiBalance(Math.max(0, (cr as any)?.ai_balance ?? 0));
-      setHistory((tx as any[]) || []);
-    })();
-  }, [user, profile]);
-
+  const currentStatus = (profile as any)?.subscription_status;
+  const activePlan = PLANS.find(p => p.id === currentStatus)?.id || null;
 
   const priceFor = (p: Plan) => billing === 'yearly' ? p.yearly : p.monthly;
-  const perMonth = (p: Plan) => billing === 'yearly' ? Math.round(p.yearly / 12) : p.monthly;
-  const savingsFor = (p: Plan) => p.monthly * 12 - p.yearly;
-  const currentStatus = (profile as any)?.subscription_status;
-  const activePlan = ['starter', 'growth', 'business'].includes(currentStatus) ? currentStatus : null;
-  const trialEnd = (profile as any)?.trial_end_date ? new Date((profile as any).trial_end_date) : null;
-  const trialEndLabel = trialEnd ? trialEnd.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
+  const payableFor = (p: Plan) => billing === 'yearly' ? p.yearly : p.promoMonthly;
 
-  const checkout = async (opts: {
-    key: string; amount: number; name: string; description: string;
-    body: any; onSuccess?: (v: any) => void;
-  }) => {
+  const checkout = async (plan: Plan) => {
     if (!user) { navigate('/auth'); return; }
-    setBusy(opts.key);
+    const key = `plan_${plan.id}`;
+    setBusy(key);
     try {
       const ok = await loadRazorpay();
-      if (!ok) throw new Error('Failed to load Razorpay');
-      const { data, error } = await supabase.functions.invoke('razorpay-create-order', { body: opts.body });
+      if (!ok) throw new Error('Could not load the payment window');
+      const { data, error } = await supabase.functions.invoke('razorpay-create-order', {
+        body: { kind: 'subscription', amount: payableFor(plan), plan_id: plan.id, billing_period: billing },
+      });
       if (error || (data as any)?.error) throw new Error((data as any)?.error || error?.message || 'Order failed');
-      const { order, key_id } = data;
+      const { order, key_id } = data as any;
       const rzp = new window.Razorpay({
         key: key_id, amount: order.amount, currency: order.currency, order_id: order.id,
-        name: 'Reachably', description: opts.description,
+        name: 'Reachably', description: `${plan.name} — ${billing}`,
         prefill: { email: user.email || '', name: (profile as any)?.full_name || '' },
-        theme: { color: '#000000' },
         handler: async (resp: any) => {
           const { data: v, error: vErr } = await supabase.functions.invoke('razorpay-verify', {
             body: {
+              kind: 'subscription', plan_id: plan.id, billing_period: billing,
               razorpay_order_id: resp.razorpay_order_id,
               razorpay_payment_id: resp.razorpay_payment_id,
               razorpay_signature: resp.razorpay_signature,
-              ...opts.body,
             },
           });
-          if (vErr || (v as any)?.error) return toast.error((v as any)?.error || vErr?.message || 'Verify failed');
-          toast.success('Payment successful!');
-          opts.onSuccess?.(v);
+          if (vErr || (v as any)?.error) return toast.error((v as any)?.error || vErr?.message || 'Verification failed');
+          toast.success(`You're on ${plan.name}!`);
+          setTimeout(() => window.location.reload(), 1200);
         },
         modal: { ondismiss: () => setBusy(null) },
       });
@@ -214,394 +93,163 @@ const PricingContent = () => {
     }
   };
 
-  const buyPlan = (plan: Plan) => checkout({
-    key: `plan_${plan.id}`, amount: priceFor(plan), name: plan.name,
-    description: `${plan.name} — ${billing}`,
-    body: { kind: 'subscription', amount: priceFor(plan), plan_id: plan.id, billing_period: billing },
-    onSuccess: () => setTimeout(() => window.location.reload(), 1200),
-  });
-
-  const buyPack = (pack: Pack) => checkout({
-    key: `pack_${pack.id}`, amount: pack.price, name: `${pack.msgs} messages`,
-    description: `Message recharge — ${pack.msgs.toLocaleString('en-IN')} msgs`,
-    body: { kind: 'recharge', amount: pack.price, pack_id: pack.id },
-    onSuccess: (v: any) => setBalance(b => Math.max(0, b || 0) + (v?.credited || pack.msgs)),
-  });
-
-  const buyCustom = () => {
-    const amt = Math.round(Number(customAmt));
-    if (!amt || amt < 110) return toast.error('Minimum custom recharge is ₹110 (100 messages)');
-    const msgs = Math.floor(amt / 1.1);
-    checkout({
-      key: 'pack_custom', amount: amt, name: `${msgs} messages`,
-      description: `Message recharge — ${msgs.toLocaleString('en-IN')} msgs`,
-      body: { kind: 'recharge', amount: amt, pack_id: 'custom' },
-      onSuccess: (v: any) => { setBalance(b => Math.max(0, b || 0) + (v?.credited || msgs)); setCustomAmt(''); },
-    });
-  };
-
-  const paySetup = () => checkout({
-    key: 'setup', amount: SETUP_FEE, name: 'Setup', description: 'One-time WhatsApp API & CRM setup',
-    body: { kind: 'setup', amount: SETUP_FEE },
-  });
-
   return (
     <div className="relative overflow-hidden">
       {user && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
-          <h1 className="text-xl sm:text-2xl font-bold">Plans &amp; Subscription</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage your plan, credits and add-ons.</p>
-          <Card className="mt-4 p-5 flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
-            <div>
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Current plan</div>
-              <div className="text-lg font-bold mt-0.5 capitalize">
-                {activePlan ? PLANS.find(p => p.id === activePlan)?.name : 'Free trial'}
-              </div>
-              <div className="text-xs text-muted-foreground mt-0.5">
-                {activePlan
-                  ? 'Active subscription · renews automatically'
-                  : trialEndLabel ? `Trial ends on ${trialEndLabel}` : 'No active subscription'}
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Message credits</div>
-                <div className="text-lg font-bold">{Math.max(0, balance ?? 0).toLocaleString('en-IN')}</div>
-              </div>
-              <Button size="sm" onClick={() => document.getElementById('plan-grid')?.scrollIntoView({ behavior: 'smooth' })}>
-                {activePlan ? 'Change plan' : 'Purchase plan'}
-              </Button>
-            </div>
-          </Card>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 space-y-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold">Plans &amp; Subscription</h1>
+            <p className="text-sm text-muted-foreground mt-1">Manage your plan, usage, WhatsApp numbers and add-ons.</p>
+          </div>
+          <PlanUsageCard />
         </div>
       )}
-      <div className="relative">
 
+      <div className="relative">
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/5 via-background to-background" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-14 pb-8 text-center">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-12 pb-6 text-center">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-            {/* Audience switch */}
-            <div className="inline-flex items-center gap-1 p-1 rounded-full bg-muted border border-border mb-6">
-              {([
-                { id: 'shopify' as Audience, label: 'For Shopify', icon: ShoppingBag },
-                { id: 'business' as Audience, label: 'For Businesses', icon: Building2 },
-              ]).map(a => (
-                <button key={a.id} onClick={() => setAudience(a.id)}
-                  className={cn('px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5',
-                    audience === a.id ? 'bg-background shadow-sm' : 'text-muted-foreground')}>
-                  <a.icon className="w-3.5 h-3.5" /> {a.label}
-                </button>
-              ))}
-            </div>
+            {!activePlan && (
+              <div className="inline-flex flex-col items-center gap-1 px-5 py-3 rounded-2xl border border-primary/30 bg-primary/5 mb-6">
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-primary">
+                  <Sparkles className="w-3.5 h-3.5" /> Limited time Offer!
+                </span>
+                <span className="text-sm font-medium">Subscribe before your trial ends and enjoy 50% off your first month.</span>
+                {isTrialing && <span className="text-xs text-muted-foreground">Your trial ends in {daysLeft} {daysLeft === 1 ? 'day' : 'days'}</span>}
+                <button onClick={() => document.getElementById('plan-grid')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="text-xs font-semibold underline underline-offset-2">Upgrade Now!</button>
+              </div>
+            )}
 
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight">
               Pricing that <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">scales</span>
             </h1>
             <p className="mt-4 text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto">
-              {audience === 'shopify'
-                ? 'Recover abandoned carts, confirm COD orders and drive repeat purchases on WhatsApp — synced with your store.'
-                : 'Automate your sales funnel and double your business growth with WhatsApp automation.'}
+              One subscription. Multiple WhatsApp Business numbers, your whole team and every conversation in one place.
             </p>
-            <p className="mt-2 text-xs text-muted-foreground">7-day free trial. No credit or debit card required.</p>
-
-            {balance !== null && (
-              <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-xs">
-                <Battery className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="font-medium">{Math.max(0, balance).toLocaleString('en-IN')} messages available</span>
-              </div>
-            )}
 
             <div className="mt-7 inline-flex items-center gap-1 p-1 rounded-full bg-muted border border-border">
-              <button onClick={() => setBilling('monthly')} className={cn('px-4 py-1.5 rounded-full text-xs font-semibold transition-all', billing === 'monthly' ? 'bg-background shadow-sm' : 'text-muted-foreground')}>Monthly</button>
-              <button onClick={() => setBilling('yearly')} className={cn('px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5', billing === 'yearly' ? 'bg-background shadow-sm' : 'text-muted-foreground')}>Yearly <Badge variant="secondary" className="text-[10px] py-0 px-1.5">Save 2 months</Badge></button>
+              <button onClick={() => setBilling('monthly')}
+                className={cn('px-5 py-1.5 rounded-full text-xs font-semibold transition-all', billing === 'monthly' ? 'bg-background shadow-sm' : 'text-muted-foreground')}>Monthly</button>
+              <button onClick={() => setBilling('yearly')}
+                className={cn('px-5 py-1.5 rounded-full text-xs font-semibold transition-all', billing === 'yearly' ? 'bg-background shadow-sm' : 'text-muted-foreground')}>Yearly</button>
             </div>
           </motion.div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-16">
-        {/* Credit top-ups */}
-        <div className="mb-14" id="credits">
-          <div className="mb-5">
-            <h2 className="text-xl font-bold flex items-center gap-2"><Battery className="w-5 h-5" /> Credits</h2>
-            <p className="text-sm text-muted-foreground mt-1">Top up message credits anytime — they never expire while your plan is active.</p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            {/* Message credits */}
-            <Card className="p-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm font-semibold"><MessageSquare className="w-4 h-4" /> Message credits</div>
-                <span className="text-xs text-muted-foreground">{Math.max(0, balance ?? 0).toLocaleString('en-IN')} available</span>
-              </div>
-              <div className="mt-4 flex items-center gap-2">
-                <button onClick={() => setPackIdx(i => Math.max(0, i - 1))}
-                  className="w-9 h-9 rounded-md border border-border text-lg leading-none disabled:opacity-40" disabled={packIdx === 0}>−</button>
-                <div className="flex-1 h-9 rounded-md border border-border flex items-center justify-center text-sm font-semibold">
-                  {PACKS[packIdx].msgs.toLocaleString('en-IN')} messages
-                </div>
-                <button onClick={() => setPackIdx(i => Math.min(PACKS.length - 1, i + 1))}
-                  className="w-9 h-9 rounded-md border border-border text-lg leading-none disabled:opacity-40" disabled={packIdx === PACKS.length - 1}>+</button>
-              </div>
-              <div className="mt-3 flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold">{formatINR(PACKS[packIdx].price)}</div>
-                  <div className="text-[11px] text-muted-foreground">{PACKS[packIdx].perMsg}{PACKS[packIdx].badge ? ` · ${PACKS[packIdx].badge}` : ''}</div>
-                </div>
-                <Button size="sm" onClick={() => buyPack(PACKS[packIdx])} disabled={busy === `pack_${PACKS[packIdx].id}`}>
-                  {busy === `pack_${PACKS[packIdx].id}` ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Buy credits'}
-                </Button>
-              </div>
-              <div className="mt-4 border-t border-border pt-3">
-                <div className="text-[11px] text-muted-foreground mb-2">Or enter any amount — ₹1.10 per message, min ₹110</div>
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₹</span>
-                    <input
-                      type="number" min={110} value={customAmt} onChange={e => setCustomAmt(e.target.value)}
-                      placeholder="e.g. 500"
-                      className="w-full h-9 rounded-md border border-border bg-transparent pl-6 pr-2 text-sm outline-none focus:ring-1 focus:ring-ring"
-                    />
-                  </div>
-                  <Button size="sm" variant="outline" onClick={buyCustom} disabled={busy === 'pack_custom'}>
-                    {busy === 'pack_custom' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Pay'}
-                  </Button>
-                </div>
-                {Number(customAmt) >= 110 && (
-                  <div className="text-[11px] text-muted-foreground mt-1.5">≈ {Math.floor(Number(customAmt) / 1.1).toLocaleString('en-IN')} messages</div>
+        <div id="plan-grid" className="grid gap-5 lg:grid-cols-3 scroll-mt-20">
+          {PLANS.map((p, i) => (
+            <motion.div key={p.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
+              <Card className={cn('relative p-6 h-full flex flex-col', p.popular && 'border-primary shadow-lg')}>
+                {p.popular && (
+                  <Badge className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[10px] uppercase tracking-wider">Most popular</Badge>
                 )}
-              </div>
-            </Card>
-
-            {/* AI credits */}
-            <Card className="p-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm font-semibold"><Sparkles className="w-4 h-4" /> AI credits</div>
-                <span className="text-xs text-muted-foreground">{Math.max(0, aiBalance ?? 0).toLocaleString('en-IN')} available</span>
-              </div>
-              <p className="mt-4 text-xs text-muted-foreground">
-                AI credits power chatbot replies, template fixes and smart suggestions. They refresh with your plan each month.
-              </p>
-              <div className="mt-6 flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold">Included</div>
-                  <div className="text-[11px] text-muted-foreground">with every paid plan</div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold">{p.name}</h3>
+                  {activePlan === p.id && <Badge variant="secondary" className="text-[10px]">Current</Badge>}
                 </div>
-                <Button size="sm" variant="outline" onClick={() => document.getElementById('plan-grid')?.scrollIntoView({ behavior: 'smooth' })}>
-                  View plans
+                <p className="text-xs text-muted-foreground mt-1 min-h-[32px]">{p.tagline}</p>
+
+                <div className="mt-4">
+                  {billing === 'monthly' ? (
+                    <>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-lg text-muted-foreground line-through">{formatINR(p.monthly)}</span>
+                        <span className="text-3xl font-bold">{formatINR(p.promoMonthly)}</span>
+                        <span className="text-xs text-muted-foreground">/month</span>
+                      </div>
+                      <div className="text-[11px] font-semibold text-primary mt-1">50% off your first month!</div>
+                      <div className="text-[11px] text-muted-foreground">Then {formatINR(p.monthly)}/month</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-3xl font-bold">{formatINR(p.yearly)}</span>
+                        <span className="text-xs text-muted-foreground">/year</span>
+                      </div>
+                      <div className="text-[11px] text-muted-foreground mt-1">Billed once a year</div>
+                    </>
+                  )}
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-2 text-center">
+                  <div className="rounded-lg border border-border p-2">
+                    <div className="text-base font-bold">{p.numbers}</div>
+                    <div className="text-[10px] text-muted-foreground leading-tight">WhatsApp {p.numbers === 1 ? 'number' : 'numbers'} included</div>
+                  </div>
+                  <div className="rounded-lg border border-border p-2">
+                    <div className="text-base font-bold">{p.usersLabel.replace('Up to ', '').replace(' users', '')}</div>
+                    <div className="text-[10px] text-muted-foreground leading-tight">Users</div>
+                  </div>
+                </div>
+
+                <ul className="mt-5 space-y-2 flex-1">
+                  {p.features.map(f => (
+                    <li key={f} className="flex items-start gap-2 text-xs">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Button className="w-full mt-6" variant={p.popular ? 'default' : 'outline'}
+                  disabled={busy === `plan_${p.id}` || activePlan === p.id}
+                  onClick={() => checkout(p)}>
+                  {busy === `plan_${p.id}`
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : activePlan === p.id ? 'Current plan'
+                    : billing === 'monthly' ? `Get ${p.name} at ${formatINR(p.promoMonthly)}` : `Get ${p.name}`}
                 </Button>
-              </div>
-            </Card>
-          </div>
-
-          <p className="text-[11px] text-muted-foreground mt-3">
-            Meta charges ≈ ₹0.86 per marketing message. Prices include Reachably platform costs, safe-pacing infrastructure and delivery retries.
-            Marketing templates use 2 credits per message; utility, service and free-form messages use 1.
-          </p>
-
-          {/* Recharge history */}
-          <Card className="mt-6 p-5">
-            <div className="text-sm font-semibold mb-3">Recharge history</div>
-            {history.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No recharges yet. Your trial credits and purchases will appear here.</p>
-            ) : (
-              <div className="divide-y divide-border">
-                {history.map((t) => (
-                  <div key={t.id} className="py-2.5 flex items-center justify-between gap-3 text-sm">
-                    <div className="min-w-0">
-                      <div className="font-medium capitalize truncate">
-                        {t.kind === 'topup' ? 'Credit recharge' : t.kind === 'grant' ? (t.notes || 'Plan credits') : t.kind}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground">
-                        {new Date(t.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <div className="font-semibold text-emerald-600">+{(t.msgs || 0).toLocaleString('en-IN')} msgs</div>
-                      {t.amount_paise > 0 && <div className="text-[11px] text-muted-foreground">{formatINR(t.amount_paise / 100)}</div>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
+              </Card>
+            </motion.div>
+          ))}
         </div>
 
-
-
-        {/* Plans */}
-        <div id="plan-grid" className="grid gap-6 md:grid-cols-2 xl:grid-cols-4 items-stretch">
-          {PLANS.map((plan, i) => {
-            const Icon = plan.icon;
-            const BadgeIcon = plan.badgeIcon;
-            const isActive = activePlan === plan.id;
-            return (
-              <motion.div key={plan.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: i * 0.06 }}>
-                <Card className={cn('relative p-6 h-full flex flex-col border-2 transition-all',
-                  plan.popular ? 'border-primary shadow-2xl shadow-primary/20' : 'border-border hover:border-primary/30',
-                  isActive && 'ring-2 ring-emerald-500')}>
-                  {plan.badge && (
-                    <div className={cn('absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 whitespace-nowrap',
-                      plan.popular ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground border')}>
-                      {BadgeIcon && <BadgeIcon className="w-3 h-3" />} {plan.badge}
-                    </div>
-                  )}
-                  {isActive && (
-                    <div className="absolute -top-3 right-4 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-white flex items-center gap-1">
-                      <Check className="w-3 h-3" /> ACTIVE
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 mb-3 mt-1">
-                    <div className="p-2 rounded-lg bg-primary/10"><Icon className="w-5 h-5 text-primary" /></div>
-                    <h3 className="text-xl font-bold">{plan.name}</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4 min-h-[40px]">{plan.tagline}</p>
-                  <div className="mb-1">
-                    <span className="text-4xl font-bold">{formatINR(perMonth(plan))}</span>
-                    <span className="text-muted-foreground text-sm">/month</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    {billing === 'yearly'
-                      ? `${formatINR(priceFor(plan))} billed yearly · save ${formatINR(savingsFor(plan))}`
-                      : 'billed monthly'}
-                  </p>
-                  <div className="text-xs text-muted-foreground mb-5 flex items-center gap-1.5"><Zap className="w-3.5 h-3.5" /> {plan.credits}</div>
-                  <ul className="space-y-2 mb-6 flex-1">
-                    {[...plan.features, ...(plan.extra?.[audience] || [])].map((f, idx) => (
-                      <li key={idx} className="flex gap-2 text-sm">
-                        <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /><span>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Button onClick={() => buyPlan(plan)} disabled={busy === `plan_${plan.id}` || isActive} className="w-full" variant={plan.popular ? 'default' : 'outline'}>
-                    {busy === `plan_${plan.id}` ? <Loader2 className="w-4 h-4 animate-spin" /> : isActive ? 'Current plan' : plan.cta}
-                  </Button>
-                  <p className="text-[11px] text-muted-foreground text-center mt-2">+ one-time {formatINR(SETUP_FEE)} setup</p>
-                </Card>
-              </motion.div>
-            );
-          })}
-
-          {/* Enterprise */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.24 }}>
-            <Card className="relative p-6 h-full flex flex-col border-2 border-border bg-muted/30">
-              <div className="flex items-center gap-2 mb-3 mt-1">
-                <div className="p-2 rounded-lg bg-primary/10"><Building className="w-5 h-5 text-primary" /></div>
-                <h3 className="text-xl font-bold">Enterprise</h3>
-              </div>
-              <p className="text-sm text-muted-foreground mb-4 min-h-[40px]">For organisations operating at scale</p>
-              <div className="mb-1"><span className="text-4xl font-bold">Custom</span></div>
-              <p className="text-xs text-muted-foreground mb-3">Talk to us for volume pricing</p>
-              <div className="text-xs text-muted-foreground mb-5 flex items-center gap-1.5"><Zap className="w-3.5 h-3.5" /> Custom message credits</div>
-              <ul className="space-y-2 mb-6 flex-1">
-                {ENTERPRISE_FEATURES.map((f, i) => (
-                  <li key={i} className="flex gap-2 text-sm"><Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /><span>{f}</span></li>
-                ))}
-              </ul>
-              <Button variant="outline" className="w-full" asChild>
-                <a href="mailto:foundifinnovations@gmail.com?subject=Reachably%20Enterprise%20enquiry">Book a demo</a>
-              </Button>
-            </Card>
-          </motion.div>
-        </div>
-
-        {/* Setup fee */}
-        <Card className="mt-8 p-5 border-primary/30 bg-gradient-to-r from-primary/10 to-secondary/10">
-          <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between">
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-primary/20"><Wrench className="w-5 h-5 text-primary" /></div>
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-semibold">One-time WhatsApp API &amp; CRM setup</h3>
-                  <Badge variant="secondary" className="text-[10px]">Paid separately</Badge>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1 max-w-2xl">
-                  Meta Cloud API config · WhatsApp Business onboarding · Webhook setup · CRM setup · Team onboarding · Contact import · Basic training.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 md:shrink-0">
-              <div className="text-right">
-                <div className="text-2xl font-bold">{formatINR(SETUP_FEE)}</div>
-                <div className="text-[11px] text-muted-foreground">one-time</div>
-              </div>
-              <Button onClick={paySetup} disabled={busy === 'setup'}>
-                {busy === 'setup' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Pay setup fee'}
-              </Button>
-            </div>
-          </div>
-        </Card>
+        <p className="mt-4 text-center text-[11px] text-muted-foreground">
+          WhatsApp/Meta conversation charges are separate and billed directly with Meta.
+        </p>
 
         {/* Add-ons */}
         <div className="mt-14">
-          <div className="text-center mb-6">
-            <div className="text-xs font-semibold uppercase tracking-wider text-primary">Flexible pricing</div>
-            <h2 className="text-2xl font-bold mt-1">Add-ons</h2>
-            <p className="text-sm text-muted-foreground mt-1">Extend your plan with exactly what you need, nothing more.</p>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <h2 className="text-xl font-bold flex items-center gap-2"><Crown className="w-5 h-5" /> Add-ons</h2>
+          <p className="text-sm text-muted-foreground mt-1">Need more than your plan includes? Add-ons are available on every plan.</p>
+          <div className="mt-5 grid gap-4 md:grid-cols-3">
             {ADDONS.map(a => (
-              <Card key={a.id} className="p-5 flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-primary/10 shrink-0"><a.icon className="w-5 h-5 text-primary" /></div>
-                <div className="min-w-0">
-                  <div className="font-semibold">{a.name}</div>
-                  <p className="text-xs text-muted-foreground mt-0.5">{a.desc}</p>
-                  <div className="mt-3 text-xl font-bold">{a.price}</div>
-                  <div className="text-[11px] text-muted-foreground">{a.unit}</div>
-                </div>
+              <Card key={a.id} className="p-5">
+                <a.icon className="w-5 h-5 text-primary" />
+                <div className="mt-3 font-semibold text-sm">{a.name}</div>
+                <p className="text-xs text-muted-foreground mt-1">{a.desc}</p>
+                <Button variant="outline" size="sm" className="mt-4 w-full"
+                  onClick={() => window.location.href = 'mailto:foundifinnovations@gmail.com?subject=Reachably%20add-on%20request'}>
+                  Request add-on
+                </Button>
               </Card>
             ))}
           </div>
         </div>
 
-        {/* Compare */}
-        <div className="mt-14">
-          <h2 className="text-2xl font-bold text-center mb-2">Compare features</h2>
-          <p className="text-center text-sm text-muted-foreground mb-6">Everything you get across all Reachably plans.</p>
-          <Card className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/40">
-                  <th className="text-left px-4 py-3 font-semibold min-w-[200px]">Features</th>
-                  {PLANS.map(p => (
-                    <th key={p.id} className="px-4 py-3 font-semibold text-center min-w-[110px]">
-                      {p.name}{p.popular && <Badge className="ml-2 text-[10px]" variant="default">Popular</Badge>}
-                    </th>
-                  ))}
-                  <th className="px-4 py-3 font-semibold text-center min-w-[110px]">Enterprise</th>
-                </tr>
-              </thead>
-              <tbody>
-                {COMPARE.map((row, i) => (
-                  <tr key={i} className={cn('border-b last:border-0', i % 2 && 'bg-muted/20')}>
-                    <td className="px-4 py-3 text-muted-foreground">{row.label}</td>
-                    {row.values.map((v, j) => (<td key={j} className="px-4 py-3 text-center"><Cell v={v} /></td>))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Card>
-          <p className="text-[11px] text-muted-foreground mt-3 text-center">
-            Message credits are bought separately as top-ups and never expire while your plan is active.
-          </p>
-        </div>
+        {/* Enterprise */}
+        <Card className="mt-8 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="font-semibold flex items-center gap-2"><Building className="w-4 h-4" /> Enterprise</div>
+            <p className="text-xs text-muted-foreground mt-1">More than 25 users or 10 WhatsApp numbers? We'll build a plan around you.</p>
+          </div>
+          <Button variant="outline" onClick={() => window.location.href = 'mailto:foundifinnovations@gmail.com?subject=Reachably%20Enterprise'}>Talk to sales</Button>
+        </Card>
 
         {/* FAQ */}
         <div className="mt-14 max-w-3xl mx-auto">
-          <div className="text-center mb-6">
-            <div className="text-xs font-semibold uppercase tracking-wider text-primary">FAQ</div>
-            <h2 className="text-2xl font-bold mt-1">FAQs about pricing</h2>
-          </div>
-          <Card className="px-4 sm:px-6">
-            <Accordion type="single" collapsible className="w-full">
-              {FAQS.map((f, i) => (
-                <AccordionItem key={i} value={`faq-${i}`}>
-                  <AccordionTrigger className="text-left text-sm font-medium">{f.q}</AccordionTrigger>
-                  <AccordionContent className="text-sm text-muted-foreground">{f.a}</AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </Card>
+          <h2 className="text-xl font-bold text-center mb-5">Frequently asked questions</h2>
+          <Accordion type="single" collapsible>
+            {FAQS.map((f, i) => (
+              <AccordionItem key={i} value={`faq-${i}`}>
+                <AccordionTrigger className="text-sm text-left">{f.q}</AccordionTrigger>
+                <AccordionContent className="text-sm text-muted-foreground">{f.a}</AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         </div>
       </div>
     </div>
@@ -609,19 +257,20 @@ const PricingContent = () => {
 };
 
 const Pricing = () => {
-  const navigate = useNavigate();
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  if (user) return <AppLayout><PricingContent /></AppLayout>;
+
   return (
-    <AppLayout>
-      <div className="min-h-screen">
-        <div className="max-w-7xl mx-auto px-4 pt-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate(user ? '/' : '/auth')} className="gap-1">
-            <ArrowLeft className="w-4 h-4" /> Back
-          </Button>
-        </div>
-        <PricingContent />
+    <div className="min-h-screen bg-background">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+          <ArrowLeft className="w-4 h-4 mr-1" /> Back
+        </Button>
       </div>
-    </AppLayout>
+      <PricingContent />
+    </div>
   );
 };
 
