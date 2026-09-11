@@ -120,8 +120,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!ws?.id) return json({ error: 'Workspace not found' }, 400);
 
-    const { error: upsertErr } = await admin.from('whatsapp_credentials').upsert(
-      {
+    const credential = {
         workspace_id: ws.id,
         phone_number_id: phoneNumberId,
         waba_id: wabaId,
@@ -133,9 +132,14 @@ Deno.serve(async (req) => {
         verified: true,
         verified_at: new Date().toISOString(),
         last_error: null,
-      },
-      { onConflict: 'workspace_id' },
-    );
+      };
+    const { data: existing } = await admin.from('whatsapp_credentials')
+      .select('id').eq('workspace_id', ws.id).eq('phone_number_id', phoneNumberId).maybeSingle();
+    const { count } = await admin.from('whatsapp_credentials')
+      .select('id', { count: 'exact', head: true }).eq('workspace_id', ws.id);
+    const { error: upsertErr } = existing?.id
+      ? await admin.from('whatsapp_credentials').update(credential).eq('id', existing.id)
+      : await admin.from('whatsapp_credentials').insert({ ...credential, label: displayPhone || `WhatsApp ${(count || 0) + 1}`, is_primary: (count || 0) === 0 });
     if (upsertErr) return json({ error: upsertErr.message }, 500);
 
     return json({

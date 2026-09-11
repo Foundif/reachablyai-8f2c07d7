@@ -23,6 +23,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const workspaceId = typeof body?.workspace_id === 'string' ? body.workspace_id : '';
+    const credentialId = typeof body?.credential_id === 'string' ? body.credential_id : '';
     const action = typeof body?.action === 'string' ? body.action : 'get';
     if (!workspaceId) return json({ error: 'workspace_id required' }, 400);
 
@@ -40,11 +41,12 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!membership && !owned) return json({ error: 'Workspace access denied' }, 403);
 
-    const { data: creds } = await admin
+    let credsQuery = admin
       .from('whatsapp_credentials')
       .select('*')
-      .eq('workspace_id', workspaceId)
-      .maybeSingle();
+      .eq('workspace_id', workspaceId);
+    if (credentialId) credsQuery = credsQuery.eq('id', credentialId);
+    const { data: creds } = await credsQuery.order('is_primary', { ascending: false }).limit(1).maybeSingle();
     if (!creds?.access_token || !creds?.phone_number_id) {
       return json({ error: 'Connect WhatsApp before editing the business profile' }, 400);
     }
@@ -57,7 +59,7 @@ Deno.serve(async (req) => {
       const result = await response.json();
       if (!response.ok) return json({ error: result?.error?.message || 'Could not load WhatsApp profile' }, response.status);
       const profile = result?.data?.[0] || {};
-      await cacheProfile(admin, workspaceId, profile);
+      await cacheProfile(admin, creds.id, profile);
       return json({ profile });
     }
 
@@ -82,7 +84,7 @@ Deno.serve(async (req) => {
       });
       const result = await response.json();
       if (!response.ok || result?.success === false) return json({ error: result?.error?.message || 'Could not update WhatsApp profile' }, response.status || 400);
-      await cacheProfile(admin, workspaceId, profile);
+      await cacheProfile(admin, creds.id, profile);
       return json({ success: true, profile });
     }
 
@@ -122,7 +124,7 @@ Deno.serve(async (req) => {
       const refreshed = await fetch(`${endpoint}?fields=${PROFILE_FIELDS}`, { headers: graphHeaders });
       const refreshedBody = await refreshed.json();
       const profile = refreshedBody?.data?.[0] || {};
-      await cacheProfile(admin, workspaceId, profile);
+      await cacheProfile(admin, creds.id, profile);
       return json({ success: true, profile });
     }
 
@@ -134,7 +136,7 @@ Deno.serve(async (req) => {
 
 const clean = (value: unknown, max: number) => typeof value === 'string' ? value.trim().slice(0, max) : '';
 
-async function cacheProfile(admin: ReturnType<typeof createClient>, workspaceId: string, profile: Record<string, unknown>) {
+async function cacheProfile(admin: ReturnType<typeof createClient>, credentialId: string, profile: Record<string, unknown>) {
   await admin.from('whatsapp_credentials').update({
     profile_picture_url: profile.profile_picture_url || null,
     profile_address: profile.address || null,
@@ -144,7 +146,7 @@ async function cacheProfile(admin: ReturnType<typeof createClient>, workspaceId:
     profile_websites: Array.isArray(profile.websites) ? profile.websites : [],
     profile_about: profile.about || null,
     profile_synced_at: new Date().toISOString(),
-  }).eq('workspace_id', workspaceId);
+  }).eq('id', credentialId);
 }
 
 function json(body: unknown, status = 200) {
