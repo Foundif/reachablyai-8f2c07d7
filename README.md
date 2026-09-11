@@ -1,73 +1,167 @@
-# Welcome to your Lovable project
+# Reachably
 
-## Project info
+Act as a world-class SaaS product team (Product Manager + UX Lead + Senior Full-Stack Architect).
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+Build a **production-ready, premium SaaS web + mobile application** called:
+“Client Risk Intelligence Network”
 
-## How can I edit this code?
+PURPOSE:
+Help freelancers, agencies, and consultants globally avoid late payments by tracking client behavior, calculating trust scores, and sharing anonymized risk intelligence across the community.
 
-There are several ways of editing your application.
+This is NOT a basic invoicing app.
+This is a **financial risk & trust intelligence platform**.
 
-**Use Lovable**
+--------------------------------
+CORE PRODUCT PHILOSOPHY
+--------------------------------
+• Design must feel premium, modern, and addictive
+• Avoid boring card-only layouts
+• Use advanced layouts, visual hierarchy, timelines, heatmaps, score meters, and smart surfaces
+• The app should feel like Stripe + Notion + Linear + Bloomberg combined
+• Trust Score is the hero concept — everything revolves around it
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+--------------------------------
+PLATFORMS & UX
+--------------------------------
+DESKTOP:
+• Expandable / collapsible left sidebar with icons + labels
+• Sidebar collapses to icons-only mode
+• Context-aware secondary panels (slide-in insights)
+• Large data-dense views (tables, timelines, risk graphs)
 
-Changes made via Lovable will be committed automatically to this repo.
+MOBILE:
+• Bottom navigation (Dashboard, Clients, Alerts, Network, Profile)
+• Expandable slide-over sidebar for filters and advanced actions
+• Mobile-first layouts, swipe actions, stacked insights
 
-**Use your preferred IDE**
+--------------------------------
+KEY SCREENS & ADVANCED UI BEHAVIOR
+--------------------------------
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+1️⃣ ONBOARDING
+• Smart onboarding (role, country, currency, language)
+• Explain Trust Score with animated visual
+• First CTA: “Add Your First Client”
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+2️⃣ DASHBOARD (NOT BORING)
+• Financial health summary
+• Risk heatmap of clients
+• Upcoming payment timeline (horizontal scroll)
+• High-risk alerts panel
+• Community risk trends by country/industry
+• Dynamic widgets (customizable)
 
-Follow these steps:
+3️⃣ CLIENT PROFILE (CORE SCREEN)
+This page must feel POWERFUL.
+
+• Large Trust Score dial (animated, color-coded)
+• Payment behavior timeline
+• Delay pattern graph
+• Industry & region comparison
+• Risk explanation in plain language
+• Smart recommendations:
+  - Suggested advance %
+  - Suggested payment terms
+• Tabs or smart sections instead of cards
+
+4️⃣ INVOICE CREATION (SMART)
+• Context-aware invoice builder
+• Trust-based suggestions appear live
+• Warning banners for risky clients
+• Advance payment logic
+• Payment links + reminders automation
+
+5️⃣ PUBLIC / COMMUNITY CLIENT INTELLIGENCE
+• Searchable global client database
+• Filters: Country, Industry, Risk Level
+• Risk trend indicators
+• Aggregated insights without exposing private data
+• Premium lock for high-risk details
+• Clear “this insight saved money” messaging
+
+6️⃣ HIGH-RISK CLIENTS (PREMIUM CORE)
+• Red-flag focused layout
+• Risk explanation + patterns
+• Recommended actions
+• Alert subscriptions
+• Export / report options (Enterprise)
+
+--------------------------------
+TRUST SCORE ENGINE (LOGIC)
+--------------------------------
+• Score range: 0–100
+• Factors:
+  - Payment delay frequency
+  - Delay duration
+  - Invoice value
+  - Repeated behavior across users
+• Recalculates after every invoice
+• Explains score transparently
+
+--------------------------------
+MONETIZATION (BUILT INTO UX)
+--------------------------------
+FREE:
+• Basic client tracking
+• Limited insights
+• Safe + medium risk only
+
+PRO:
+• Full client profiles
+• High-risk alerts
+• Community intelligence
+• Unlimited invoices
+
+ENTERPRISE:
+• Multi-user teams
+• Advanced analytics
+• Exportable reports
+• API access
+
+Upgrade prompts must be contextual and value-driven, not pushy.
+
+--------------------------------
+DESIGN STYLE
+--------------------------------
+• Modern premium SaaS
+• Deep neutral backgrounds with accent highlights
+• Soft gradients, glassmorphism where appropriate
+• Subtle animations & micro-interactions
+• Clear typography hierarchy
+• High information density but clean
+
+--------------------------------
+OUTPUT REQUIRED
+--------------------------------
+• Complete app architecture
+• Screen-by-screen UX breakdown
+• Advanced UI layout descriptions
+• Core user journeys
+• Monetization triggers
+• Mobile & desktop behavior
+• Ready-to-build specification
+
+Build this as a REAL product a funded startup would ship.
+
+This project was built with [Lovable](https://lovable.dev).
+
+**Live app**: https://reachablyai.lovable.app
+
+## Build with Lovable
+
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/e86f96bf-d477-43da-9301-ac05f38db69a).
+
+- **Ship faster**: describe what you want to build and Lovable handles the code.
+- **Stay in sync**: every change made in Lovable is committed straight to this repository.
+- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+
+## Development
+
+Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
+git clone <this-repository-url>
+cd <repository-name>
 npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
