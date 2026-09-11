@@ -9,14 +9,18 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { Settings, ShieldCheck, ShieldAlert, Copy, Bug, RefreshCw, CheckCircle2, XCircle, MinusCircle, Inbox as InboxIcon, Facebook, Zap, Unplug } from 'lucide-react';
+import { Settings, ShieldCheck, ShieldAlert, Copy, Bug, RefreshCw, CheckCircle2, XCircle, MinusCircle, Inbox as InboxIcon, Facebook, Zap, Unplug, Plus, Smartphone, Crown } from 'lucide-react';
 import { META_APP_ID, META_CONFIG_ID } from '@/lib/metaConfig';
 import { loadFacebookSdk } from '@/lib/facebookSdk';
 import WhatsAppBusinessProfile from '@/components/settings/WhatsAppBusinessProfile';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useNavigate } from 'react-router-dom';
+import { limitsFor, planById } from '@/lib/plans';
 
 import { resolveWorkspaceId } from '@/lib/workspace';
 
 interface Creds {
+  id: string;
   workspace_id: string;
   phone_number_id: string | null;
   waba_id: string | null;
@@ -40,6 +44,8 @@ interface Creds {
   verified_name?: string | null;
   quality_rating?: string | null;
   messaging_limit?: string | null;
+  label?: string | null;
+  is_primary?: boolean;
 }
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -48,8 +54,14 @@ const mask = (s: string | null) => s && s.length > 6 ? `••••${s.slice(-4
 
 const WhatsAppSettings = () => {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [wsId, setWsId] = useState<string | null>(null);
+  const [connections, setConnections] = useState<Creds[]>([]);
   const [creds, setCreds] = useState<Creds | null>(null);
+  const [numberLimit, setNumberLimit] = useState(1);
+  const [planName, setPlanName] = useState('Free trial');
+  const [addOpen, setAddOpen] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -138,9 +150,10 @@ const WhatsAppSettings = () => {
     if (!wsId) return;
     if (!confirm('Disconnect WhatsApp? Incoming messages will stop until you reconnect.')) return;
     setDisconnecting(true);
+    if (!creds?.id) return;
     const { error } = await supabase.from('whatsapp_credentials' as any)
       .update({ status: 'disconnected', verified: false, access_token: null })
-      .eq('workspace_id', wsId);
+      .eq('id', creds.id);
     setDisconnecting(false);
     if (error) return toast.error(error.message);
     toast.success('Disconnected');
@@ -153,10 +166,18 @@ const WhatsAppSettings = () => {
     const id = await resolveWorkspaceId(user.id, profile);
     setWsId(id);
     if (!id) { setLoading(false); return; }
-    const { data } = await supabase.from('whatsapp_credentials' as any)
-      .select('*').eq('workspace_id', id).maybeSingle();
-    const c = data as any as Creds | null;
+    const [{ data }, { data: workspace }] = await Promise.all([
+      supabase.from('whatsapp_credentials' as any).select('*').eq('workspace_id', id).order('is_primary', { ascending: false }).order('created_at'),
+      supabase.from('workspaces' as any).select('plan_id, extra_numbers').eq('id', id).maybeSingle(),
+    ]);
+    const rows = (data as any as Creds[]) || [];
+    setConnections(rows);
+    const current = rows.find((row) => row.id === creds?.id) || rows[0] || null;
+    const c = current;
     setCreds(c);
+    const selectedPlan = planById((workspace as any)?.plan_id);
+    setPlanName(selectedPlan?.name || 'Free trial');
+    setNumberLimit(limitsFor((workspace as any)?.plan_id).numbers + Number((workspace as any)?.extra_numbers || 0));
     if (c) {
       setForm({
         phone_number_id: c.phone_number_id || '',
@@ -170,6 +191,22 @@ const WhatsAppSettings = () => {
     setLoading(false);
   };
   useEffect(() => { load(); }, [user, profile]);
+
+  const selectConnection = (connection: Creds) => {
+    setCreds(connection);
+    setForm({
+      phone_number_id: connection.phone_number_id || '', waba_id: connection.waba_id || '',
+      business_phone: connection.business_phone || '', access_token: '', app_secret: '',
+      webhook_verify_token: connection.webhook_verify_token || '',
+    });
+  };
+
+  const beginAddNumber = () => {
+    if (connections.length >= numberLimit) return setUpgradeOpen(true);
+    setCreds(null);
+    setForm({ phone_number_id: '', waba_id: '', business_phone: '', access_token: '', app_secret: '', webhook_verify_token: '' });
+    setAddOpen(true);
+  };
 
   const save = async () => {
     if (!wsId) return;
@@ -187,16 +224,20 @@ const WhatsAppSettings = () => {
     if (form.access_token.trim()) payload.access_token = form.access_token.trim();
     if (form.app_secret.trim()) payload.app_secret = form.app_secret.trim();
 
-    const { error } = await supabase.from('whatsapp_credentials' as any).upsert(payload, { onConflict: 'workspace_id' });
+    const query = creds?.id
+      ? supabase.from('whatsapp_credentials' as any).update(payload).eq('id', creds.id)
+      : supabase.from('whatsapp_credentials' as any).insert({ ...payload, label: form.business_phone.trim() || `WhatsApp ${connections.length + 1}`, is_primary: connections.length === 0 });
+    const { error } = await query;
     setSaving(false);
     if (error) return toast.error(error.message);
     toast.success('Saved. Test the connection to verify.');
+    setAddOpen(false);
     load();
   };
 
   const test = async () => {
     setTesting(true);
-    const { data, error } = await supabase.functions.invoke('whatsapp-verify', { body: { workspace_id: wsId } });
+    const { data, error } = await supabase.functions.invoke('whatsapp-verify', { body: { workspace_id: wsId, credential_id: creds?.id } });
     setTesting(false);
     if (error) return toast.error(error.message);
     if ((data as any)?.verified) toast.success('Connection verified with Meta Cloud API');
@@ -207,7 +248,7 @@ const WhatsAppSettings = () => {
   const [repairing, setRepairing] = useState(false);
   const repairWebhook = async () => {
     setRepairing(true);
-    const { data, error } = await supabase.functions.invoke('meta-webhook-check', { body: { workspace_id: wsId, repair: true } });
+    const { data, error } = await supabase.functions.invoke('meta-webhook-check', { body: { workspace_id: wsId, credential_id: creds?.id, repair: true } });
     setRepairing(false);
     if (error) return toast.error(error.message);
     const d = data as any;
@@ -229,6 +270,20 @@ const WhatsAppSettings = () => {
           <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2"><Settings className="w-6 h-6" /> WhatsApp Cloud API</h1>
           <p className="text-muted-foreground text-sm">Connect your Meta WhatsApp Business Cloud account.</p>
         </div>
+
+        <Card className="p-5 space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <div><h2 className="font-semibold">WhatsApp numbers</h2><p className="text-xs text-muted-foreground">{connections.length} of {numberLimit} numbers used on {planName}</p></div>
+            <Button size="sm" onClick={beginAddNumber} className="gap-2"><Plus className="h-4 w-4" /> Add number</Button>
+          </div>
+          {connections.length ? <div className="grid gap-2 sm:grid-cols-2">
+            {connections.map((connection) => <button key={connection.id} type="button" onClick={() => selectConnection(connection)} className={`flex min-w-0 items-center gap-3 rounded-md border p-3 text-left transition-colors ${creds?.id === connection.id ? 'border-primary bg-primary/5' : 'hover:bg-muted/40'}`}>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted"><Smartphone className="h-4 w-4" /></span>
+              <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{connection.label || connection.business_phone || 'WhatsApp number'}</span><span className="block truncate text-xs text-muted-foreground">{connection.business_phone || connection.phone_number_id}</span></span>
+              {(connection.status === 'connected' || connection.verified) && <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />}
+            </button>)}
+          </div> : <p className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">No WhatsApp number connected yet.</p>}
+        </Card>
 
         {loading ? <Card className="p-8 text-center">Loading…</Card> : (
         <>
@@ -268,6 +323,7 @@ const WhatsAppSettings = () => {
         {wsId && (
           <WhatsAppBusinessProfile
             workspaceId={wsId}
+            credentialId={creds?.id}
             connected={creds?.status === 'connected' || Boolean(creds?.verified)}
             fallbackName={creds?.verified_name || profile?.store_name || 'Business'}
             cachedProfile={{
@@ -283,7 +339,7 @@ const WhatsAppSettings = () => {
         )}
 
         {/* Two connection methods */}
-        <Card className="p-6 space-y-4">
+        {(creds || connections.length === 0) && <Card className="p-6 space-y-4">
           <div>
             <div className="font-semibold">Connect WhatsApp</div>
             <p className="text-xs text-muted-foreground">Choose how you want to link your WhatsApp Business account.</p>
@@ -339,7 +395,7 @@ const WhatsAppSettings = () => {
               </div>
             </TabsContent>
           </Tabs>
-        </Card>
+        </Card>}
 
         <Card className="p-6 space-y-3">
           <div className="font-semibold">Webhook configuration (paste into Meta)</div>
@@ -361,9 +417,24 @@ const WhatsAppSettings = () => {
           <WebhookTestButton phoneNumberId={form.phone_number_id} webhookUrl={webhookUrl} />
         </Card>
 
-        {wsId && <DebugPanel workspaceId={wsId} phoneNumberId={form.phone_number_id} />}
+        {wsId && creds && <DebugPanel workspaceId={wsId} phoneNumberId={form.phone_number_id} />}
         </>)}
       </div>
+
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="w-[calc(100%-1.5rem)] sm:max-w-md">
+          <DialogHeader><DialogTitle>Add another WhatsApp number</DialogTitle><DialogDescription>Choose Quick Connect or Manual Setup in the connection section after closing this window.</DialogDescription></DialogHeader>
+          <div className="rounded-md border bg-muted/30 p-4 text-sm">Your {planName} plan includes {numberLimit} WhatsApp {numberLimit === 1 ? 'number' : 'numbers'}. The new connection will be managed separately in this list.</div>
+          <Button onClick={() => setAddOpen(false)}>Continue to connection setup</Button>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={upgradeOpen} onOpenChange={setUpgradeOpen}>
+        <DialogContent className="w-[calc(100%-1.5rem)] sm:max-w-md">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Crown className="h-5 w-5" /> Add more WhatsApp numbers</DialogTitle><DialogDescription>You have used all {numberLimit} number slots included in {planName}.</DialogDescription></DialogHeader>
+          <div className="rounded-md border bg-muted/30 p-4 text-sm">Upgrade your plan to connect and manage more WhatsApp numbers in one Reachably workspace.</div>
+          <Button onClick={() => navigate('/pricing')}>View upgrade plans</Button>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 };
