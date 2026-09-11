@@ -5,7 +5,7 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    const { workspace_id } = await req.json();
+    const { workspace_id, credential_id } = await req.json();
     if (!workspace_id) return json({ error: 'workspace_id required' }, 400);
 
     const supabase = createClient(
@@ -13,7 +13,9 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    const { data: creds } = await supabase.from('whatsapp_credentials').select('*').eq('workspace_id', workspace_id).maybeSingle();
+    let credsQuery = supabase.from('whatsapp_credentials').select('*').eq('workspace_id', workspace_id);
+    if (credential_id) credsQuery = credsQuery.eq('id', credential_id);
+    const { data: creds } = await credsQuery.order('is_primary', { ascending: false }).limit(1).maybeSingle();
     if (!creds?.access_token || !creds?.phone_number_id) {
       return json({ verified: false, error: 'Missing access token or phone number ID' });
     }
@@ -24,7 +26,7 @@ Deno.serve(async (req) => {
     const body = await resp.json();
     if (!resp.ok) {
       const err = body?.error?.message || `HTTP ${resp.status}`;
-      await supabase.from('whatsapp_credentials').update({ verified: false, last_error: err }).eq('workspace_id', workspace_id);
+      await supabase.from('whatsapp_credentials').update({ verified: false, last_error: err }).eq('id', creds.id);
       return json({ verified: false, error: err });
     }
 
@@ -38,7 +40,7 @@ Deno.serve(async (req) => {
       verified_name: body.verified_name || creds.verified_name,
       quality_rating: body.quality_rating || creds.quality_rating,
       messaging_limit: body.name_status || creds.messaging_limit,
-    }).eq('workspace_id', workspace_id);
+    }).eq('id', creds.id);
 
     return json({ verified: true, phone: body.display_phone_number, name: body.verified_name });
   } catch (e) {

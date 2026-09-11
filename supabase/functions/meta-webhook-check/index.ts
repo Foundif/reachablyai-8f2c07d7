@@ -19,6 +19,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const workspace_id = body?.workspace_id as string | undefined;
+    const credential_id = body?.credential_id as string | undefined;
     const repair = body?.repair !== false;
     if (!workspace_id) return json({ error: 'workspace_id required' }, 400);
 
@@ -56,7 +57,9 @@ Deno.serve(async (req) => {
     }
 
     // 2) WABA-level app subscription
-    const { data: creds } = await admin.from('whatsapp_credentials').select('*').eq('workspace_id', workspace_id).maybeSingle();
+    let credsQuery = admin.from('whatsapp_credentials').select('*').eq('workspace_id', workspace_id);
+    if (credential_id) credsQuery = credsQuery.eq('id', credential_id);
+    const { data: creds } = await credsQuery.order('is_primary', { ascending: false }).limit(1).maybeSingle();
     if (!creds?.access_token || !creds?.waba_id) return json({ ...out, error: 'WhatsApp not connected' }, 400);
 
     const saResp = await fetch(`https://graph.facebook.com/${GV}/${creds.waba_id}/subscribed_apps`, {

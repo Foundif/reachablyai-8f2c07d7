@@ -52,7 +52,8 @@ Deno.serve(async (req) => {
     const { data: campaign } = await admin.from('campaigns').select('*').eq('id', campaign_id).maybeSingle();
     if (!campaign) return json({ error: 'Campaign not found' }, 404);
 
-    const { data: creds } = await admin.from('whatsapp_credentials').select('*').eq('workspace_id', campaign.workspace_id).maybeSingle();
+    const { data: creds } = await admin.from('whatsapp_credentials').select('*')
+      .eq('workspace_id', campaign.workspace_id).order('is_primary', { ascending: false }).limit(1).maybeSingle();
     if (!creds?.access_token || !creds?.phone_number_id) {
       return json({ error: 'WhatsApp Cloud API not configured. Set credentials in Settings first.' }, 400);
     }

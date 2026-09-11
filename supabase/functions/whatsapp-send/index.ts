@@ -18,14 +18,16 @@ Deno.serve(async (req) => {
     const user = userData?.user;
     if (!user) return json({ error: 'Unauthorized' }, 401);
 
-    const { conversation_id, workspace_id, to, body, template_id, media_url, media_type, filename, location, variables } = await req.json();
+    const { conversation_id, workspace_id, whatsapp_credential_id, to, body, template_id, media_url, media_type, filename, location, variables } = await req.json();
     if (!workspace_id || !to) return json({ error: 'workspace_id and to required' }, 400);
 
     // Verify membership
     const { data: mem } = await admin.from('workspace_members').select('user_id').eq('workspace_id', workspace_id).eq('user_id', user.id).maybeSingle();
     if (!mem) return json({ error: 'Not a workspace member' }, 403);
 
-    const { data: creds } = await admin.from('whatsapp_credentials').select('*').eq('workspace_id', workspace_id).maybeSingle();
+    let credsQuery = admin.from('whatsapp_credentials').select('*').eq('workspace_id', workspace_id);
+    if (whatsapp_credential_id) credsQuery = credsQuery.eq('id', whatsapp_credential_id);
+    const { data: creds } = await credsQuery.order('is_primary', { ascending: false }).limit(1).maybeSingle();
     if (!creds?.access_token || !creds?.phone_number_id) return json({ error: 'WhatsApp not configured' }, 400);
 
     // Get or create conversation

@@ -7,6 +7,7 @@ import AppFooter from './AppFooter';
 import PaymentAlertBanner from './PaymentAlertBanner';
 import TrialBanner from './TrialBanner';
 import { useGlobalAlerts } from '@/hooks/useGlobalAlerts';
+import FeedbackWidget from '@/components/feedback/FeedbackWidget';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -32,6 +33,7 @@ const AppLayout = ({ children, fullBleed = false }: AppLayoutProps) => {
       </main>
 
       <MobileNav />
+      <FeedbackWidget />
     </div>
   );
 };

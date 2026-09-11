@@ -33,12 +33,13 @@ const VERTICALS = [
 
 interface Props {
   workspaceId: string;
+  credentialId?: string;
   connected: boolean;
   fallbackName: string;
   cachedProfile?: Partial<BusinessProfile>;
 }
 
-const WhatsAppBusinessProfile = ({ workspaceId, connected, fallbackName, cachedProfile }: Props) => {
+const WhatsAppBusinessProfile = ({ workspaceId, credentialId, connected, fallbackName, cachedProfile }: Props) => {
   const [profile, setProfile] = useState<BusinessProfile>({ ...EMPTY_PROFILE, ...cachedProfile });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -48,19 +49,19 @@ const WhatsAppBusinessProfile = ({ workspaceId, connected, fallbackName, cachedP
   const load = async () => {
     if (!connected) return;
     setLoading(true);
-    const { data, error } = await supabase.functions.invoke('whatsapp-profile', { body: { action: 'get', workspace_id: workspaceId } });
+    const { data, error } = await supabase.functions.invoke('whatsapp-profile', { body: { action: 'get', workspace_id: workspaceId, credential_id: credentialId } });
     setLoading(false);
     if (error || (data as any)?.error) return toast.error((data as any)?.error || error?.message || 'Could not load business profile');
     const remote = (data as any)?.profile || {};
     setProfile({ ...EMPTY_PROFILE, ...remote, websites: remote.websites?.length ? remote.websites.slice(0, 2) : [''] });
   };
 
-  useEffect(() => { load(); }, [workspaceId, connected]);
+  useEffect(() => { load(); }, [workspaceId, credentialId, connected]);
 
   const save = async () => {
     setSaving(true);
     const { data, error } = await supabase.functions.invoke('whatsapp-profile', {
-      body: { action: 'update', workspace_id: workspaceId, profile },
+      body: { action: 'update', workspace_id: workspaceId, credential_id: credentialId, profile },
     });
     setSaving(false);
     if (error || (data as any)?.error) return toast.error((data as any)?.error || error?.message || 'Could not update business profile');
@@ -76,7 +77,7 @@ const WhatsAppBusinessProfile = ({ workspaceId, connected, fallbackName, cachedP
     const reader = new FileReader();
     reader.onload = async () => {
       const { data, error } = await supabase.functions.invoke('whatsapp-profile', {
-        body: { action: 'upload_picture', workspace_id: workspaceId, file_base64: reader.result, file_type: file.type },
+        body: { action: 'upload_picture', workspace_id: workspaceId, credential_id: credentialId, file_base64: reader.result, file_type: file.type },
       });
       setUploading(false);
       if (error || (data as any)?.error) return toast.error((data as any)?.error || error?.message || 'Could not update profile picture');
