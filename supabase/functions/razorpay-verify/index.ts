@@ -64,6 +64,17 @@ Deno.serve(async (req) => {
       return json({ success: true, credited: leadsGranted, month_key: monthKey });
     }
 
+    if (kind === 'onboarding') {
+      if (!ws?.id) return json({ error: 'No workspace' }, 400);
+      await admin.from('workspace_onboarding').upsert({
+        workspace_id: ws.id,
+        setup_package_paid: true,
+        setup_package_paid_at: new Date().toISOString(),
+        setup_package_payment_id: razorpay_payment_id,
+      } as any, { onConflict: 'workspace_id' });
+      return json({ success: true, onboarding_paid: true });
+    }
+
     // Subscription
     if (!PLAN_IDS.includes(plan_id)) return json({ error: 'Unknown plan' }, 400);
     const period = billing_period === 'yearly' ? 'yearly' : 'monthly';

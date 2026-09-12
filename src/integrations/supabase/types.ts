@@ -752,6 +752,51 @@ export type Database = {
           },
         ]
       }
+      feedback_messages: {
+        Row: {
+          author_id: string | null
+          author_role: string
+          body: string
+          created_at: string
+          id: string
+          ticket_id: string
+          workspace_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          author_role?: string
+          body: string
+          created_at?: string
+          id?: string
+          ticket_id: string
+          workspace_id: string
+        }
+        Update: {
+          author_id?: string | null
+          author_role?: string
+          body?: string
+          created_at?: string
+          id?: string
+          ticket_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "feedback_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_messages_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feedback_tickets: {
         Row: {
           category: string
@@ -1035,6 +1080,74 @@ export type Database = {
           max_users?: number
           name?: string
           plan_id?: string
+        }
+        Relationships: []
+      }
+      product_update_reads: {
+        Row: {
+          read_at: string
+          update_id: string
+          user_id: string
+        }
+        Insert: {
+          read_at?: string
+          update_id: string
+          user_id: string
+        }
+        Update: {
+          read_at?: string
+          update_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_update_reads_update_id_fkey"
+            columns: ["update_id"]
+            isOneToOne: false
+            referencedRelation: "product_updates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_updates: {
+        Row: {
+          body: string
+          category: string
+          created_at: string
+          icon: string | null
+          id: string
+          image_url: string | null
+          is_published: boolean
+          link_url: string | null
+          published_at: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          category?: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          image_url?: string | null
+          is_published?: boolean
+          link_url?: string | null
+          published_at?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          category?: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          image_url?: string | null
+          is_published?: boolean
+          link_url?: string | null
+          published_at?: string
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1830,6 +1943,47 @@ export type Database = {
           },
         ]
       }
+      workspace_onboarding: {
+        Row: {
+          completed_steps: string[]
+          created_at: string
+          dismissed: boolean
+          setup_package_paid: boolean
+          setup_package_paid_at: string | null
+          setup_package_payment_id: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          completed_steps?: string[]
+          created_at?: string
+          dismissed?: boolean
+          setup_package_paid?: boolean
+          setup_package_paid_at?: string | null
+          setup_package_payment_id?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          completed_steps?: string[]
+          created_at?: string
+          dismissed?: boolean
+          setup_package_paid?: boolean
+          setup_package_paid_at?: string | null
+          setup_package_payment_id?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_onboarding_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_settings: {
         Row: {
           away_enabled: boolean
@@ -1934,6 +2088,10 @@ export type Database = {
       ensure_personal_workspace: {
         Args: { _email: string; _uid: string }
         Returns: string
+      }
+      is_workspace_admin: {
+        Args: { _uid: string; _ws: string }
+        Returns: boolean
       }
       is_workspace_member: {
         Args: { _uid: string; _ws: string }
