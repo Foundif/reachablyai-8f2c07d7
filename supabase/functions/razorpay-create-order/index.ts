@@ -53,6 +53,9 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Done-for-you onboarding package — fixed price, decided server-side.
+    if (kind === 'onboarding') amount = 5990;
+
     // Lead top-ups are priced at a flat ₹1 per lead.
     const leads = Math.round(Number(body.leads || 0));
     if (kind === 'scrape_topup') {
