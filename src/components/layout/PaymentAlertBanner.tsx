@@ -22,7 +22,8 @@ const PaymentAlertBanner = () => {
     (async () => {
       const wsId = await resolveWorkspaceId(user.id, profile);
       if (!wsId) return;
-      const { data: cred } = await supabase.from('whatsapp_credentials' as any).select('*').eq('workspace_id', wsId).maybeSingle();
+      const { data: cred } = await supabase.from('whatsapp_credentials' as any)
+        .select('id,last_error').eq('workspace_id', wsId).order('is_primary', { ascending: false }).limit(1).maybeSingle();
       const due = (cred as any)?.last_error ? null : (cred as any)?.balance_due ?? null;
       setMetaDue(typeof due === 'number' ? due : null);
     })();

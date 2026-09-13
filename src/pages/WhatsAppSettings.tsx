@@ -202,6 +202,9 @@ const WhatsAppSettings = () => {
   };
   useEffect(() => { load(); }, [user, profile]);
 
+  // Secrets are never sent to the browser, so we infer "already saved" from the connection state.
+  const credsSaved = !!(creds && (creds.verified || creds.connected_at || String(creds.status || '').toLowerCase() === 'connected'));
+
   const selectConnection = (connection: Creds) => {
     setCreds(connection);
     setForm({
