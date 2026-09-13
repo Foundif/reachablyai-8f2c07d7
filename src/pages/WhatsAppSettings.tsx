@@ -50,6 +50,16 @@ interface Creds {
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
+/**
+ * Secret columns (access token, app secret, webhook verify token) are not readable
+ * through the API by design, so we always request the connection columns explicitly.
+ */
+const CRED_COLUMNS =
+  'id,workspace_id,phone_number_id,waba_id,business_phone,label,is_primary,verified,verified_at,' +
+  'status,connection_type,connected_at,last_error,verified_name,quality_rating,messaging_limit,' +
+  'profile_picture_url,profile_address,profile_description,profile_email,profile_vertical,' +
+  'profile_websites,profile_about,profile_synced_at,created_at,updated_at';
+
 const mask = (s: string | null) => s && s.length > 6 ? `••••${s.slice(-4)}` : (s || '');
 
 const WhatsAppSettings = () => {
@@ -167,7 +177,7 @@ const WhatsAppSettings = () => {
     setWsId(id);
     if (!id) { setLoading(false); return; }
     const [{ data }, { data: workspace }] = await Promise.all([
-      supabase.from('whatsapp_credentials' as any).select('*').eq('workspace_id', id).order('is_primary', { ascending: false }).order('created_at'),
+      supabase.from('whatsapp_credentials' as any).select(CRED_COLUMNS).eq('workspace_id', id).order('is_primary', { ascending: false }).order('created_at'),
       supabase.from('workspaces' as any).select('plan_id, extra_numbers').eq('id', id).maybeSingle(),
     ]);
     const rows = (data as any as Creds[]) || [];
@@ -185,19 +195,22 @@ const WhatsAppSettings = () => {
         business_phone: c.business_phone || '',
         access_token: '',
         app_secret: '',
-        webhook_verify_token: c.webhook_verify_token || '',
+        webhook_verify_token: '',
       });
     }
     setLoading(false);
   };
   useEffect(() => { load(); }, [user, profile]);
 
+  // Secrets are never sent to the browser, so we infer "already saved" from the connection state.
+  const credsSaved = !!(creds && (creds.verified || creds.connected_at || String(creds.status || '').toLowerCase() === 'connected'));
+
   const selectConnection = (connection: Creds) => {
     setCreds(connection);
     setForm({
       phone_number_id: connection.phone_number_id || '', waba_id: connection.waba_id || '',
       business_phone: connection.business_phone || '', access_token: '', app_secret: '',
-      webhook_verify_token: connection.webhook_verify_token || '',
+      webhook_verify_token: '',
     });
   };
 
@@ -374,14 +387,14 @@ const WhatsAppSettings = () => {
                 <div><Label>WhatsApp Business Account ID *</Label><Input value={form.waba_id} onChange={e => setForm({ ...form, waba_id: e.target.value })} placeholder="e.g. 987654321098765" /></div>
                 <div><Label>Business phone number</Label><Input value={form.business_phone} onChange={e => setForm({ ...form, business_phone: e.target.value })} placeholder="+91…" /></div>
                 <div>
-                  <Label>Access Token {creds?.access_token && <span className="text-xs text-muted-foreground">(saved: {mask(creds.access_token)})</span>}</Label>
+                  <Label>Access Token {credsSaved && <span className="text-xs text-muted-foreground">(saved — hidden for security)</span>}</Label>
                   <div className="flex gap-2">
                     <Input type={showToken ? 'text' : 'password'} value={form.access_token} onChange={e => setForm({ ...form, access_token: e.target.value })} placeholder="Leave blank to keep existing" />
                     <Button type="button" variant="outline" onClick={() => setShowToken(s => !s)}>{showToken ? 'Hide' : 'Show'}</Button>
                   </div>
                 </div>
                 <div className="md:col-span-2">
-                  <Label>App Secret {creds?.app_secret && <span className="text-xs text-muted-foreground">(saved: {mask(creds.app_secret)})</span>}</Label>
+                  <Label>App Secret {credsSaved && <span className="text-xs text-muted-foreground">(saved — hidden for security)</span>}</Label>
                   <Input type="password" value={form.app_secret} onChange={e => setForm({ ...form, app_secret: e.target.value })} placeholder="For webhook signature verification" />
                 </div>
                 <div className="md:col-span-2">
@@ -391,7 +404,7 @@ const WhatsAppSettings = () => {
               </div>
               <div className="flex gap-2">
                 <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
-                <Button variant="outline" onClick={test} disabled={testing || !creds?.access_token}>{testing ? 'Testing…' : 'Test Connection'}</Button>
+                <Button variant="outline" onClick={test} disabled={testing || !creds?.id}>{testing ? 'Testing…' : 'Test Connection'}</Button>
               </div>
             </TabsContent>
           </Tabs>
@@ -409,7 +422,7 @@ const WhatsAppSettings = () => {
           <div>
             <Label className="text-xs">Verify Token</Label>
             <div className="flex gap-2">
-              <Input readOnly value={form.webhook_verify_token || '(set and save above)'} />
+              <Input readOnly value={form.webhook_verify_token || '(kept private — re-enter above to change)'} />
               <Button variant="outline" size="icon" onClick={() => copy(form.webhook_verify_token)} disabled={!form.webhook_verify_token}><Copy className="w-4 h-4" /></Button>
             </div>
           </div>
