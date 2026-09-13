@@ -50,6 +50,16 @@ interface Creds {
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 
+/**
+ * Secret columns (access token, app secret, webhook verify token) are not readable
+ * through the API by design, so we always request the connection columns explicitly.
+ */
+const CRED_COLUMNS =
+  'id,workspace_id,phone_number_id,waba_id,business_phone,label,is_primary,verified,verified_at,' +
+  'status,connection_type,connected_at,last_error,verified_name,quality_rating,messaging_limit,' +
+  'profile_picture_url,profile_address,profile_description,profile_email,profile_vertical,' +
+  'profile_websites,profile_about,profile_synced_at,created_at,updated_at';
+
 const mask = (s: string | null) => s && s.length > 6 ? `••••${s.slice(-4)}` : (s || '');
 
 const WhatsAppSettings = () => {
@@ -167,7 +177,7 @@ const WhatsAppSettings = () => {
     setWsId(id);
     if (!id) { setLoading(false); return; }
     const [{ data }, { data: workspace }] = await Promise.all([
-      supabase.from('whatsapp_credentials' as any).select('*').eq('workspace_id', id).order('is_primary', { ascending: false }).order('created_at'),
+      supabase.from('whatsapp_credentials' as any).select(CRED_COLUMNS).eq('workspace_id', id).order('is_primary', { ascending: false }).order('created_at'),
       supabase.from('workspaces' as any).select('plan_id, extra_numbers').eq('id', id).maybeSingle(),
     ]);
     const rows = (data as any as Creds[]) || [];
@@ -185,7 +195,7 @@ const WhatsAppSettings = () => {
         business_phone: c.business_phone || '',
         access_token: '',
         app_secret: '',
-        webhook_verify_token: c.webhook_verify_token || '',
+        webhook_verify_token: '',
       });
     }
     setLoading(false);
@@ -197,7 +207,7 @@ const WhatsAppSettings = () => {
     setForm({
       phone_number_id: connection.phone_number_id || '', waba_id: connection.waba_id || '',
       business_phone: connection.business_phone || '', access_token: '', app_secret: '',
-      webhook_verify_token: connection.webhook_verify_token || '',
+      webhook_verify_token: '',
     });
   };
 
