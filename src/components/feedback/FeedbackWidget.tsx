@@ -35,6 +35,7 @@ import { toast } from 'sonner';
 
 type Ticket = {
   id: string;
+  workspace_id: string;
   category: string;
   title: string;
   description: string;
@@ -74,6 +75,10 @@ export default function FeedbackWidget() {
   const [category, setCategory] = useState('bug');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [thread, setThread] = useState<{ id: string; author_role: string; body: string; created_at: string }[]>([]);
+  const [reply, setReply] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
+
 
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -108,6 +113,46 @@ export default function FeedbackWidget() {
       void loadTickets();
     }
   }, [open, user]);
+
+  // Reply thread on the active ticket
+  const loadThread = async (ticketId: string) => {
+    const { data } = await supabase
+      .from('feedback_messages' as any)
+      .select('id,author_role,body,created_at')
+      .eq('ticket_id', ticketId)
+      .order('created_at');
+    setThread((data as any) || []);
+  };
+
+  useEffect(() => {
+    if (open && activeTicket) void loadThread(activeTicket.id);
+  }, [open, activeTicket?.id]);
+
+  useEffect(() => {
+    if (!open || !activeTicket) return;
+    const ch = supabase
+      .channel(`ticket-${activeTicket.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'feedback_messages', filter: `ticket_id=eq.${activeTicket.id}` }, () => loadThread(activeTicket.id))
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [open, activeTicket?.id]);
+
+  const sendReply = async () => {
+    if (!user || !activeTicket || reply.trim().length < 2) return;
+    setSendingReply(true);
+    const { error } = await supabase.from('feedback_messages' as any).insert({
+      ticket_id: activeTicket.id,
+      workspace_id: activeTicket.workspace_id,
+      author_role: 'user',
+      author_id: user.id,
+      body: reply.trim(),
+    });
+    setSendingReply(false);
+    if (error) return toast.error(error.message);
+    setReply('');
+    void loadThread(activeTicket.id);
+  };
+
 
   const chooseFiles = (
     event: ChangeEvent<HTMLInputElement>

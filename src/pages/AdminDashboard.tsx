@@ -18,6 +18,8 @@ import {
 import { toast } from 'sonner';
 import { Switch } from '@/components/ui/switch';
 import { ACTION_GROUPS, defaultsFor, type Action } from '@/lib/permissions';
+import AdminFeedbackPanel from '@/components/admin/AdminFeedbackPanel';
+import AdminUpdatesPanel from '@/components/admin/AdminUpdatesPanel';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar,
@@ -80,7 +82,7 @@ const AdminDashboard = () => {
   const [bulkStatus, setBulkStatus] = useState('');
   const [bulkRole, setBulkRole] = useState('');
   const [bulkOpen, setBulkOpen] = useState(false);
-  const [tab, setTab] = useState<'users' | 'analytics' | 'roles'>('users');
+  const [tab, setTab] = useState<'users' | 'analytics' | 'roles' | 'feedback' | 'updates'>('users');
 
   useEffect(() => {
     if (!isAuthenticated) { navigate('/admin-login', { replace: true }); return; }
@@ -281,11 +283,17 @@ const AdminDashboard = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant={tab === 'users' ? 'trust' : 'outline'} size="sm" onClick={() => setTab('users')}><Users className="w-4 h-4" />Users</Button>
           <Button variant={tab === 'roles' ? 'trust' : 'outline'} size="sm" onClick={() => setTab('roles')}><ShieldCheck className="w-4 h-4" />Role Management</Button>
           <Button variant={tab === 'analytics' ? 'trust' : 'outline'} size="sm" onClick={() => setTab('analytics')}><TrendingUp className="w-4 h-4" />Analytics</Button>
+          <Button variant={tab === 'feedback' ? 'trust' : 'outline'} size="sm" onClick={() => setTab('feedback')}><AlertTriangle className="w-4 h-4" />Feedback</Button>
+          <Button variant={tab === 'updates' ? 'trust' : 'outline'} size="sm" onClick={() => setTab('updates')}><Settings className="w-4 h-4" />Updates</Button>
         </div>
+
+        {tab === 'feedback' && <AdminFeedbackPanel apiCall={apiCall} />}
+        {tab === 'updates' && <AdminUpdatesPanel apiCall={apiCall} />}
+
 
         {/* Analytics Tab */}
         {tab === 'analytics' && stats?.chartData && stats.chartData.length > 0 && (
