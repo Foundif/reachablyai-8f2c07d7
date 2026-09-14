@@ -175,6 +175,18 @@ const Dashboard = () => {
         {/* WhatsApp coexistence connection */}
         <ConnectWhatsAppCard connected={stats.waConnected} onConnected={() => wsId && loadStats(wsId)} />
 
+        {/* Setup progress + done-for-you onboarding */}
+        <SetupProgressCard
+          wsId={wsId}
+          checks={{
+            whatsapp: stats.waConnected,
+            contacts: stats.leadsTotal > 0,
+            template: stats.templatesApproved > 0,
+            campaign: stats.campaignsMonth > 0 || stats.messagesSent > 0,
+            automation: stats.automationsActive > 0 || stats.botsActive > 0,
+          }}
+        />
+
         {/* Quick actions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
           <QuickCard icon={Contact} title="Contacts" desc="Import, scrape or add leads." cta="Open Contacts" to="/leads" navigate={navigate} tint="bg-foreground" />
