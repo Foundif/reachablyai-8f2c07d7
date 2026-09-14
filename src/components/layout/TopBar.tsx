@@ -3,6 +3,7 @@ import { SecureImg } from '@/lib/secureMedia';
 import { useNavigate } from 'react-router-dom';
 import { Search, Command } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import UpdatesInbox from '@/components/updates/UpdatesInbox';
 import CommandPalette from './CommandPalette';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -82,6 +83,7 @@ const TopBar = () => {
             </kbd>
           </button>
 
+          <UpdatesInbox />
           <NotificationBell />
         </div>
       </div>
