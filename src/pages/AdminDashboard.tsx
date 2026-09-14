@@ -283,11 +283,17 @@ const AdminDashboard = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant={tab === 'users' ? 'trust' : 'outline'} size="sm" onClick={() => setTab('users')}><Users className="w-4 h-4" />Users</Button>
           <Button variant={tab === 'roles' ? 'trust' : 'outline'} size="sm" onClick={() => setTab('roles')}><ShieldCheck className="w-4 h-4" />Role Management</Button>
           <Button variant={tab === 'analytics' ? 'trust' : 'outline'} size="sm" onClick={() => setTab('analytics')}><TrendingUp className="w-4 h-4" />Analytics</Button>
+          <Button variant={tab === 'feedback' ? 'trust' : 'outline'} size="sm" onClick={() => setTab('feedback')}><AlertTriangle className="w-4 h-4" />Feedback</Button>
+          <Button variant={tab === 'updates' ? 'trust' : 'outline'} size="sm" onClick={() => setTab('updates')}><Settings className="w-4 h-4" />Updates</Button>
         </div>
+
+        {tab === 'feedback' && <AdminFeedbackPanel apiCall={apiCall} />}
+        {tab === 'updates' && <AdminUpdatesPanel apiCall={apiCall} />}
+
 
         {/* Analytics Tab */}
         {tab === 'analytics' && stats?.chartData && stats.chartData.length > 0 && (
