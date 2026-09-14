@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Menu, X, Search, Sparkles } from 'lucide-react';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import UpdatesInbox from '@/components/updates/UpdatesInbox';
 import { MODULE_GROUPS } from '@/lib/modules';
 import { BrandMark } from '@/components/Brand';
 import CommandPalette from './CommandPalette';
@@ -25,6 +26,7 @@ const MobileHeader = () => {
           <button onClick={() => setPaletteOpen(true)} className="ml-auto p-2 rounded-xl hover:bg-white/[0.06] text-muted-foreground">
             <Search className="w-5 h-5" />
           </button>
+          <UpdatesInbox />
           <NotificationBell />
           <button onClick={() => setOpen(!open)} className="p-2 rounded-xl hover:bg-white/[0.06] text-foreground">
             {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}

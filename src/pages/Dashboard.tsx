@@ -11,6 +11,7 @@ import {
 
 import { resolveWorkspaceId } from '@/lib/workspace';
 import ConnectWhatsAppCard from '@/components/home/ConnectWhatsAppCard';
+import SetupProgressCard from '@/components/home/SetupProgressCard';
 
 const QuickCard = ({ icon: Icon, title, desc, cta, to, navigate, tint }: any) => (
   <button
