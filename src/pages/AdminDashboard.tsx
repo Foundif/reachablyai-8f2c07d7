@@ -18,6 +18,8 @@ import {
 import { toast } from 'sonner';
 import { Switch } from '@/components/ui/switch';
 import { ACTION_GROUPS, defaultsFor, type Action } from '@/lib/permissions';
+import AdminFeedbackPanel from '@/components/admin/AdminFeedbackPanel';
+import AdminUpdatesPanel from '@/components/admin/AdminUpdatesPanel';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar,
@@ -80,7 +82,7 @@ const AdminDashboard = () => {
   const [bulkStatus, setBulkStatus] = useState('');
   const [bulkRole, setBulkRole] = useState('');
   const [bulkOpen, setBulkOpen] = useState(false);
-  const [tab, setTab] = useState<'users' | 'analytics' | 'roles'>('users');
+  const [tab, setTab] = useState<'users' | 'analytics' | 'roles' | 'feedback' | 'updates'>('users');
 
   useEffect(() => {
     if (!isAuthenticated) { navigate('/admin-login', { replace: true }); return; }
