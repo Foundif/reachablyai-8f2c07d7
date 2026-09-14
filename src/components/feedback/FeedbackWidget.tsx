@@ -35,6 +35,7 @@ import { toast } from 'sonner';
 
 type Ticket = {
   id: string;
+  workspace_id: string;
   category: string;
   title: string;
   description: string;
