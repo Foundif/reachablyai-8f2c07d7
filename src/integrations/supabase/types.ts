@@ -2081,7 +2081,62 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      whatsapp_connection_status: {
+        Row: {
+          business_phone: string | null
+          connection_type: string | null
+          created_at: string | null
+          id: string | null
+          is_primary: boolean | null
+          label: string | null
+          messaging_limit: string | null
+          phone_number_id: string | null
+          quality_rating: string | null
+          status: string | null
+          verified: boolean | null
+          waba_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          business_phone?: string | null
+          connection_type?: string | null
+          created_at?: string | null
+          id?: string | null
+          is_primary?: boolean | null
+          label?: string | null
+          messaging_limit?: string | null
+          phone_number_id?: string | null
+          quality_rating?: string | null
+          status?: string | null
+          verified?: boolean | null
+          waba_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          business_phone?: string | null
+          connection_type?: string | null
+          created_at?: string | null
+          id?: string | null
+          is_primary?: boolean | null
+          label?: string | null
+          messaging_limit?: string | null
+          phone_number_id?: string | null
+          quality_rating?: string | null
+          status?: string | null
+          verified?: boolean | null
+          waba_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_credentials_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       current_workspace_id: { Args: never; Returns: string }
