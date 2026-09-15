@@ -48,7 +48,7 @@ const PlanUsageCard = () => {
       const c = (q: any) => q.then((r: any) => r.count || 0);
       const [workspace, numbers, users, contacts, clients, messages] = await Promise.all([
         supabase.from('workspaces' as any).select('*').eq('id', wsId).maybeSingle().then(r => r.data),
-        c(supabase.from('whatsapp_credentials' as any).select('id', { count: 'exact', head: true }).eq('workspace_id', wsId)),
+        supabase.rpc('list_whatsapp_connections' as any, { _ws: wsId }).then((r: any) => (r.data as any[])?.length || 0),
         c(supabase.from('workspace_members' as any).select('user_id', { count: 'exact', head: true }).eq('workspace_id', wsId)),
         c(supabase.from('leads' as any).select('id', { count: 'exact', head: true }).eq('workspace_id', wsId)),
         c(supabase.from('wa_conversations' as any).select('id', { count: 'exact', head: true }).eq('workspace_id', wsId)),
