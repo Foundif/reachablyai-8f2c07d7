@@ -2081,62 +2081,7 @@ export type Database = {
       }
     }
     Views: {
-      whatsapp_connection_status: {
-        Row: {
-          business_phone: string | null
-          connection_type: string | null
-          created_at: string | null
-          id: string | null
-          is_primary: boolean | null
-          label: string | null
-          messaging_limit: string | null
-          phone_number_id: string | null
-          quality_rating: string | null
-          status: string | null
-          verified: boolean | null
-          waba_id: string | null
-          workspace_id: string | null
-        }
-        Insert: {
-          business_phone?: string | null
-          connection_type?: string | null
-          created_at?: string | null
-          id?: string | null
-          is_primary?: boolean | null
-          label?: string | null
-          messaging_limit?: string | null
-          phone_number_id?: string | null
-          quality_rating?: string | null
-          status?: string | null
-          verified?: boolean | null
-          waba_id?: string | null
-          workspace_id?: string | null
-        }
-        Update: {
-          business_phone?: string | null
-          connection_type?: string | null
-          created_at?: string | null
-          id?: string | null
-          is_primary?: boolean | null
-          label?: string | null
-          messaging_limit?: string | null
-          phone_number_id?: string | null
-          quality_rating?: string | null
-          status?: string | null
-          verified?: boolean | null
-          waba_id?: string | null
-          workspace_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "whatsapp_credentials_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "workspaces"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
       current_workspace_id: { Args: never; Returns: string }
@@ -2151,6 +2096,24 @@ export type Database = {
       is_workspace_member: {
         Args: { _uid: string; _ws: string }
         Returns: boolean
+      }
+      list_whatsapp_connections: {
+        Args: { _ws: string }
+        Returns: {
+          business_phone: string
+          connection_type: string
+          created_at: string
+          id: string
+          is_primary: boolean
+          label: string
+          messaging_limit: string
+          phone_number_id: string
+          quality_rating: string
+          status: string
+          verified: boolean
+          waba_id: string
+          workspace_id: string
+        }[]
       }
       match_chatbot_chunks: {
         Args: {
