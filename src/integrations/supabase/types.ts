@@ -167,6 +167,109 @@ export type Database = {
           },
         ]
       }
+      business_records: {
+        Row: {
+          advance_amount: number
+          amount: number
+          assigned_to: string | null
+          conversation_id: string | null
+          created_at: string
+          created_by: string | null
+          custom_fields: Json
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string | null
+          id: string
+          lead_id: string | null
+          notes: string | null
+          paid_amount: number
+          payment_status: string
+          record_code: string
+          record_type: string
+          scheduled_at: string | null
+          service: string | null
+          source: string
+          status: string
+          title: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          advance_amount?: number
+          amount?: number
+          assigned_to?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          custom_fields?: Json
+          customer_email?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          id?: string
+          lead_id?: string | null
+          notes?: string | null
+          paid_amount?: number
+          payment_status?: string
+          record_code: string
+          record_type?: string
+          scheduled_at?: string | null
+          service?: string | null
+          source?: string
+          status?: string
+          title?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          advance_amount?: number
+          amount?: number
+          assigned_to?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          custom_fields?: Json
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          id?: string
+          lead_id?: string | null
+          notes?: string | null
+          paid_amount?: number
+          payment_status?: string
+          record_code?: string
+          record_type?: string
+          scheduled_at?: string | null
+          service?: string | null
+          source?: string
+          status?: string
+          title?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_records_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "wa_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_records_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_records_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_recipients: {
         Row: {
           campaign_id: string
@@ -1271,6 +1374,117 @@ export type Database = {
         }
         Relationships: []
       }
+      record_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          payment_link: string | null
+          razorpay_link_id: string | null
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
+          record_id: string
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          payment_link?: string | null
+          razorpay_link_id?: string | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          record_id: string
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          payment_link?: string | null
+          razorpay_link_id?: string | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          record_id?: string
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "record_payments_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "business_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "record_payments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      record_timeline: {
+        Row: {
+          actor_id: string | null
+          actor_name: string | null
+          created_at: string
+          detail: string | null
+          event: string
+          id: string
+          record_id: string
+          workspace_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_name?: string | null
+          created_at?: string
+          detail?: string | null
+          event: string
+          id?: string
+          record_id: string
+          workspace_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          actor_name?: string | null
+          created_at?: string
+          detail?: string | null
+          event?: string
+          id?: string
+          record_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "record_timeline_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "business_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "record_timeline_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scrape_topups: {
         Row: {
           amount_paise: number
@@ -1917,18 +2131,21 @@ export type Database = {
       workspace_members: {
         Row: {
           created_at: string
+          permissions: Json
           role: string
           user_id: string
           workspace_id: string
         }
         Insert: {
           created_at?: string
+          permissions?: Json
           role?: string
           user_id: string
           workspace_id: string
         }
         Update: {
           created_at?: string
+          permissions?: Json
           role?: string
           user_id?: string
           workspace_id?: string
@@ -2126,6 +2343,10 @@ export type Database = {
           id: string
           similarity: number
         }[]
+      }
+      next_record_code: {
+        Args: { _prefix?: string; _ws: string }
+        Returns: string
       }
       workspace_plan_limits: {
         Args: { _ws: string }
