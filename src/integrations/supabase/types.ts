@@ -2097,6 +2097,24 @@ export type Database = {
         Args: { _uid: string; _ws: string }
         Returns: boolean
       }
+      list_whatsapp_connections: {
+        Args: { _ws: string }
+        Returns: {
+          business_phone: string
+          connection_type: string
+          created_at: string
+          id: string
+          is_primary: boolean
+          label: string
+          messaging_limit: string
+          phone_number_id: string
+          quality_rating: string
+          status: string
+          verified: boolean
+          waba_id: string
+          workspace_id: string
+        }[]
+      }
       match_chatbot_chunks: {
         Args: {
           _chatbot_id: string

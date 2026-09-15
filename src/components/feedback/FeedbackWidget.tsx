@@ -330,6 +330,57 @@ export default function FeedbackWidget() {
                 )}
               </div>
 
+              <div className="space-y-2">
+                <p className="text-sm font-semibold">Conversation</p>
+
+                <div className="max-h-56 space-y-2 overflow-y-auto">
+                  {thread.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      No replies yet. Our team will respond here.
+                    </p>
+                  ) : (
+                    thread.map((message) => (
+                      <div
+                        key={message.id}
+                        className={`rounded-lg px-3 py-2 text-sm ${
+                          message.author_role === 'user'
+                            ? 'ml-8 bg-primary/10'
+                            : 'mr-8 bg-muted'
+                        }`}
+                      >
+                        <p className="whitespace-pre-wrap">{message.body}</p>
+
+                        <p className="mt-1 text-[10px] text-muted-foreground">
+                          {message.author_role === 'user' ? 'You' : 'Support'} ·{' '}
+                          {new Date(message.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <Textarea
+                  rows={3}
+                  maxLength={1000}
+                  value={reply}
+                  onChange={(event) => setReply(event.target.value)}
+                  placeholder="Add more details or reply to support…"
+                />
+
+                <Button
+                  onClick={sendReply}
+                  disabled={sendingReply || reply.trim().length < 2}
+                  className="w-full gap-2"
+                >
+                  {sendingReply ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  Send reply
+                </Button>
+              </div>
+
               <p className="text-sm text-muted-foreground">
                 You can submit another ticket after this one
                 is resolved or closed.
