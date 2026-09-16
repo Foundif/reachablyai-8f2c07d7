@@ -152,13 +152,12 @@ const Bookings = () => {
       .update({ status, updated_at: new Date().toISOString() } as any).eq('id', r.id);
     if (error) return toast.error(error.message);
     await supabase.from('record_timeline' as any).insert({
-      record_id: r.id, workspace_id: r.id && wsId, event: 'status_changed',
+      record_id: r.id, workspace_id: wsId, event: 'status_changed',
       detail: `${STATUS_LABEL[r.status] || r.status} → ${STATUS_LABEL[status] || status}`,
       actor_id: user?.id || null, actor_name: profile?.full_name || profile?.email || null,
     } as any);
-    setActive((a) => (a && a.id === r.id ? { ...a, status } : a));
     if (wsId) load(wsId);
-    if (active?.id === r.id) openRecord({ ...r, status });
+    openRecord({ ...r, status });
   };
 
   const openRecord = async (r: Rec) => {
