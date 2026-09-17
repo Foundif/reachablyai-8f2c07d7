@@ -1,7 +1,7 @@
 import {
   Inbox, Contact, MessageSquareText,
   UserCog, Settings, UserCircle,
-  LayoutDashboard, BarChart3, Wallet, Megaphone, Workflow, Bot, Plug,
+  LayoutDashboard, BarChart3, Wallet, Megaphone, Workflow, Bot, Plug, ClipboardList,
 } from 'lucide-react';
 
 
@@ -24,6 +24,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
       { to: '/', icon: LayoutDashboard, label: 'Home', status: 'live' },
       { to: '/inbox', icon: Inbox, label: 'Team Inbox', status: 'live' },
       { to: '/leads', icon: Contact, label: 'Contacts', status: 'live' },
+      { to: '/bookings', icon: ClipboardList, label: 'Bookings', status: 'live' },
     ],
   },
   {

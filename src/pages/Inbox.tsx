@@ -28,6 +28,7 @@ import MessageTicks from '@/components/inbox/MessageTicks';
 import AlbumComposer from '@/components/inbox/AlbumComposer';
 import ForwardDialog from '@/components/inbox/ForwardDialog';
 import TemplatePickerSheet, { renderTemplateText, type TemplateOption } from '@/components/inbox/TemplatePickerSheet';
+import ConversationRecords from '@/components/inbox/ConversationRecords';
 
 
 
@@ -1453,6 +1454,12 @@ function ContactPanel({
               {tags.map(t => <Badge key={t} variant="secondary">{t}</Badge>)}
             </div>
           </div>
+          <ConversationRecords
+            workspaceId={(conversation as any).workspace_id}
+            conversationId={conversation.id}
+            contactPhone={conversation.contact_phone}
+            contactName={conversation.contact_name}
+          />
         </div>
       ) : (
       <div className="p-3 space-y-4 overflow-y-auto flex-1">

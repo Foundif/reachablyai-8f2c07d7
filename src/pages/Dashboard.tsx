@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   Contact, Inbox, Megaphone, Workflow, ArrowRight, Send, Wallet, Sparkles, Upload,
+  ClipboardList, Clock, IndianRupee,
 } from 'lucide-react';
 
 import { resolveWorkspaceId } from '@/lib/workspace';
@@ -62,6 +63,7 @@ const Dashboard = () => {
     templatesApproved: 0, automationsActive: 0, waConnected: false,
     inboxUnread: 0, inboxConversations: 0, messagesToday: 0,
     msgCredits: 0, msgCreditsPack: 1000, aiRepliesMonth: 0, botsActive: 0,
+    recordsToday: 0, pendingPayments: 0, pendingAmount: 0, revenueMonth: 0,
   });
   const [recentLeads, setRecentLeads] = useState<any[]>([]);
   const [recentCampaigns, setRecentCampaigns] = useState<any[]>([]);
@@ -106,6 +108,16 @@ const Dashboard = () => {
       .eq('plan_id', (wsRow as any)?.plan_id || 'trial').maybeSingle();
     const planMsgLimit = Number((limRow as any)?.max_messages ?? 1000);
 
+    // Bookings / records: today's count, outstanding money, revenue this month
+    const [{ data: recToday }, { data: recOpen }, { data: recMonth }] = await Promise.all([
+      supabase.from('business_records' as any).select('id').eq('workspace_id', id).gte('created_at', todayStart.toISOString()),
+      supabase.from('business_records' as any).select('amount,paid_amount').eq('workspace_id', id).neq('payment_status', 'paid').neq('status', 'cancelled'),
+      supabase.from('business_records' as any).select('paid_amount').eq('workspace_id', id).gte('created_at', monthStart),
+    ]);
+    const pendingRows = (recOpen as any[]) || [];
+    const pendingAmount = pendingRows.reduce((s, r) => s + Math.max(0, Number(r.amount || 0) - Number(r.paid_amount || 0)), 0);
+    const revenueMonth = ((recMonth as any[]) || []).reduce((s, r) => s + Number(r.paid_amount || 0), 0);
+
     const cs = (campaigns as any[]) || [];
     const messagesSent = cs.reduce((s, c) => s + (c.sent_count || 0), 0);
     const cred = (creds as any[])?.[0];
@@ -127,6 +139,10 @@ const Dashboard = () => {
       msgCreditsPack: planMsgLimit,
       aiRepliesMonth: aiRepliesMonth || 0,
       botsActive: botsActive || 0,
+      recordsToday: ((recToday as any[]) || []).length,
+      pendingPayments: pendingRows.length,
+      pendingAmount,
+      revenueMonth,
     });
     setRecentCampaigns(cs.slice(0, 5));
     setRecentLeads((recLeads as any[]) || []);
@@ -156,6 +172,7 @@ const Dashboard = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'whatsapp_credentials', filter: `workspace_id=eq.${wsId}` }, () => loadStats(wsId))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_conversations', filter: `workspace_id=eq.${wsId}` }, () => loadStats(wsId))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_messages', filter: `workspace_id=eq.${wsId}` }, () => loadStats(wsId))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'business_records', filter: `workspace_id=eq.${wsId}` }, () => loadStats(wsId))
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [wsId]);
@@ -200,6 +217,13 @@ const Dashboard = () => {
           <ModuleTile icon={Inbox} label="Inbox" value={stats.inboxUnread} hint={`${stats.inboxConversations} chats · ${stats.messagesToday} today`} gradient="bg-foreground" to="/inbox" navigate={navigate} />
           <ModuleTile icon={Megaphone} label="Campaigns" value={stats.campaignsMonth} hint={`${stats.messagesSent} sent this month`} gradient="bg-foreground" to="/campaigns" navigate={navigate} />
           <ModuleTile icon={Workflow} label="Automation" value={stats.automationsActive} hint="Active flows" gradient="bg-foreground" to="/automation" navigate={navigate} />
+        </div>
+
+        {/* Bookings & money */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+          <ModuleTile icon={ClipboardList} label="Bookings today" value={stats.recordsToday} hint="New records created today" gradient="bg-foreground" to="/bookings" navigate={navigate} />
+          <ModuleTile icon={Clock} label="Pending payments" value={stats.pendingPayments} hint={`₹${stats.pendingAmount.toLocaleString('en-IN')} outstanding`} gradient="bg-foreground" to="/bookings" navigate={navigate} />
+          <ModuleTile icon={IndianRupee} label="Revenue this month" value={`₹${stats.revenueMonth.toLocaleString('en-IN')}`} hint="Collected from bookings" gradient="bg-foreground" to="/accounting" navigate={navigate} />
         </div>
 
         {/* Credits */}
