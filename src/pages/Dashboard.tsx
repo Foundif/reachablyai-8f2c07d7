@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   Contact, Inbox, Megaphone, Workflow, ArrowRight, Send, Wallet, Sparkles, Upload,
+  ClipboardList, Clock, IndianRupee,
 } from 'lucide-react';
 
 import { resolveWorkspaceId } from '@/lib/workspace';
@@ -216,6 +217,13 @@ const Dashboard = () => {
           <ModuleTile icon={Inbox} label="Inbox" value={stats.inboxUnread} hint={`${stats.inboxConversations} chats · ${stats.messagesToday} today`} gradient="bg-foreground" to="/inbox" navigate={navigate} />
           <ModuleTile icon={Megaphone} label="Campaigns" value={stats.campaignsMonth} hint={`${stats.messagesSent} sent this month`} gradient="bg-foreground" to="/campaigns" navigate={navigate} />
           <ModuleTile icon={Workflow} label="Automation" value={stats.automationsActive} hint="Active flows" gradient="bg-foreground" to="/automation" navigate={navigate} />
+        </div>
+
+        {/* Bookings & money */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+          <ModuleTile icon={ClipboardList} label="Bookings today" value={stats.recordsToday} hint="New records created today" gradient="bg-foreground" to="/bookings" navigate={navigate} />
+          <ModuleTile icon={Clock} label="Pending payments" value={stats.pendingPayments} hint={`₹${stats.pendingAmount.toLocaleString('en-IN')} outstanding`} gradient="bg-foreground" to="/bookings" navigate={navigate} />
+          <ModuleTile icon={IndianRupee} label="Revenue this month" value={`₹${stats.revenueMonth.toLocaleString('en-IN')}`} hint="Collected from bookings" gradient="bg-foreground" to="/accounting" navigate={navigate} />
         </div>
 
         {/* Credits */}
