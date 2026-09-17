@@ -106,6 +106,16 @@ const Dashboard = () => {
       .eq('plan_id', (wsRow as any)?.plan_id || 'trial').maybeSingle();
     const planMsgLimit = Number((limRow as any)?.max_messages ?? 1000);
 
+    // Bookings / records: today's count, outstanding money, revenue this month
+    const [{ data: recToday }, { data: recOpen }, { data: recMonth }] = await Promise.all([
+      supabase.from('business_records' as any).select('id').eq('workspace_id', id).gte('created_at', todayStart.toISOString()),
+      supabase.from('business_records' as any).select('amount,paid_amount').eq('workspace_id', id).neq('payment_status', 'paid').neq('status', 'cancelled'),
+      supabase.from('business_records' as any).select('paid_amount').eq('workspace_id', id).gte('created_at', monthStart),
+    ]);
+    const pendingRows = (recOpen as any[]) || [];
+    const pendingAmount = pendingRows.reduce((s, r) => s + Math.max(0, Number(r.amount || 0) - Number(r.paid_amount || 0)), 0);
+    const revenueMonth = ((recMonth as any[]) || []).reduce((s, r) => s + Number(r.paid_amount || 0), 0);
+
     const cs = (campaigns as any[]) || [];
     const messagesSent = cs.reduce((s, c) => s + (c.sent_count || 0), 0);
     const cred = (creds as any[])?.[0];
