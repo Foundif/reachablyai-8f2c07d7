@@ -28,6 +28,7 @@ import MessageTicks from '@/components/inbox/MessageTicks';
 import AlbumComposer from '@/components/inbox/AlbumComposer';
 import ForwardDialog from '@/components/inbox/ForwardDialog';
 import TemplatePickerSheet, { renderTemplateText, type TemplateOption } from '@/components/inbox/TemplatePickerSheet';
+import ConversationRecords from '@/components/inbox/ConversationRecords';
 
 
 
