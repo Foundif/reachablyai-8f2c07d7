@@ -62,6 +62,7 @@ const Dashboard = () => {
     templatesApproved: 0, automationsActive: 0, waConnected: false,
     inboxUnread: 0, inboxConversations: 0, messagesToday: 0,
     msgCredits: 0, msgCreditsPack: 1000, aiRepliesMonth: 0, botsActive: 0,
+    recordsToday: 0, pendingPayments: 0, pendingAmount: 0, revenueMonth: 0,
   });
   const [recentLeads, setRecentLeads] = useState<any[]>([]);
   const [recentCampaigns, setRecentCampaigns] = useState<any[]>([]);
@@ -137,6 +138,10 @@ const Dashboard = () => {
       msgCreditsPack: planMsgLimit,
       aiRepliesMonth: aiRepliesMonth || 0,
       botsActive: botsActive || 0,
+      recordsToday: ((recToday as any[]) || []).length,
+      pendingPayments: pendingRows.length,
+      pendingAmount,
+      revenueMonth,
     });
     setRecentCampaigns(cs.slice(0, 5));
     setRecentLeads((recLeads as any[]) || []);
