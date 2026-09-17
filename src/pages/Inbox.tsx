@@ -1453,6 +1453,12 @@ function ContactPanel({
               {tags.map(t => <Badge key={t} variant="secondary">{t}</Badge>)}
             </div>
           </div>
+          <ConversationRecords
+            workspaceId={(conversation as any).workspace_id}
+            conversationId={conversation.id}
+            contactPhone={conversation.contact_phone}
+            contactName={conversation.contact_name}
+          />
         </div>
       ) : (
       <div className="p-3 space-y-4 overflow-y-auto flex-1">

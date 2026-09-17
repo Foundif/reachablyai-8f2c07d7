@@ -36,14 +36,14 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   freelancer: ['*'],
   owner: ['*'],
   manager: [
-    '/', '/inbox', '/leads', '/templates', '/campaigns', '/automation',
+    '/', '/inbox', '/leads', '/bookings', '/templates', '/campaigns', '/automation',
     '/analytics', '/accounting', '/whatsapp-settings', '/team', '/profile', '/pricing',
   ],
   receptionist: [
-    '/', '/inbox', '/leads', '/campaigns', '/profile',
+    '/', '/inbox', '/leads', '/bookings', '/campaigns', '/profile',
   ],
   staff: [
-    '/', '/inbox', '/leads', '/campaigns', '/profile',
+    '/', '/inbox', '/leads', '/bookings', '/campaigns', '/profile',
   ],
 };
 

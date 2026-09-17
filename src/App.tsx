@@ -35,6 +35,7 @@ import Templates from "./pages/Templates";
 import Integrations from "./pages/Integrations";
 import WebhookDetail from "./pages/WebhookDetail";
 import TemplateEditor from "./pages/TemplateEditor";
+import Bookings from "./pages/Bookings";
 
 import Campaigns, { CampaignDetail } from "./pages/Campaigns";
 import Automations from "./pages/Automations";
@@ -84,6 +85,7 @@ const App = () => (
                 <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
                 <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
+                <Route path="/bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
                 <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
                 <Route path="/campaigns/:id" element={<ProtectedRoute><CampaignDetail /></ProtectedRoute>} />
                 <Route path="/automation" element={<ProtectedRoute><Automations /></ProtectedRoute>} />
@@ -115,7 +117,7 @@ const App = () => (
 
                 {/* Legacy redirects */}
                 <Route path="/messages" element={<Navigate to="/inbox" replace />} />
-                <Route path="/bookings" element={<Navigate to="/leads" replace />} />
+                
                 <Route path="/customers" element={<Navigate to="/leads" replace />} />
                 <Route path="/services" element={<Navigate to="/" replace />} />
                 <Route path="/payments" element={<Navigate to="/accounting" replace />} />
