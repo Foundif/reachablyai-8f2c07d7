@@ -216,6 +216,43 @@ const TeamManagement = () => {
                   <p className="text-[11px] text-muted-foreground">Profile page is always accessible so they can sign out.</p>
                 </div>
               )}
+
+              {role === 'staff' && (
+                <div className="space-y-2">
+                  <Label>What can they do in each area?</Label>
+                  <div className="glass-panel p-3 overflow-x-auto">
+                    <table className="w-full text-xs min-w-[420px]">
+                      <thead>
+                        <tr className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                          <th className="text-left font-semibold py-1.5">Area</th>
+                          {PERM_ACTIONS.map((a) => (
+                            <th key={a} className="font-semibold px-1 py-1.5 text-center">{a}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {PERM_MODULES.map((m) => (
+                          <tr key={m.id} className="border-t border-border/40">
+                            <td className="py-1.5 pr-2 font-medium whitespace-nowrap">{m.label}</td>
+                            {PERM_ACTIONS.map((a) => (
+                              <td key={a} className="px-1 py-1.5 text-center">
+                                <Switch
+                                  checked={!!perms[m.id]?.[a]}
+                                  onCheckedChange={() => togglePerm(m.id, a)}
+                                  className="scale-90"
+                                />
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    WhatsApp keys, Razorpay secrets and billing stay owner-only, even with Manage enabled.
+                  </p>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button onClick={submit}><Save className="w-4 h-4" /> {editing ? 'Save changes' : 'Create user'}</Button>
