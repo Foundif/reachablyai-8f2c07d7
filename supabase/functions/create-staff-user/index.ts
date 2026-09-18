@@ -44,11 +44,16 @@ Deno.serve(async (req) => {
         .select('user_id, email, full_name, role, is_staff, allowed_modules, created_at')
         .eq('owner_id', ownerId).eq('is_staff', true).order('created_at', { ascending: false })
       if (error) return json({ error: error.message }, 500)
-      return json({ ok: true, members: data })
+      const { data: mships } = await admin.from('workspace_members')
+        .select('user_id, permissions')
+        .eq('workspace_id', ownerWorkspace.id)
+      const permsByUser = new Map((mships || []).map((m: any) => [m.user_id, m.permissions]))
+      const members = (data || []).map((m: any) => ({ ...m, permissions: permsByUser.get(m.user_id) ?? null }))
+      return json({ ok: true, members })
     }
 
     if (action === 'update') {
-      const { user_id, allowed_modules, role, full_name } = body
+      const { user_id, allowed_modules, role, full_name, permissions } = body
       if (!user_id) return json({ error: 'user_id required' }, 400)
       // Ensure the target belongs to this owner
       const { data: target } = await admin.from('profiles').select('user_id').eq('user_id', user_id).eq('owner_id', ownerId).maybeSingle()
@@ -59,6 +64,14 @@ Deno.serve(async (req) => {
       if (full_name) patch.full_name = full_name
       const { error } = await admin.from('profiles').update(patch).eq('user_id', user_id)
       if (error) return json({ error: error.message }, 500)
+      const wmPatch: Record<string, unknown> = {
+        workspace_id: ownerWorkspace.id,
+        user_id,
+        role: role === 'admin' ? 'admin' : 'agent',
+      }
+      if (permissions && typeof permissions === 'object') wmPatch.permissions = permissions
+      const { error: wmErr } = await admin.from('workspace_members').upsert(wmPatch, { onConflict: 'workspace_id,user_id' })
+      if (wmErr) return json({ error: wmErr.message }, 500)
       return json({ ok: true })
     }
 
