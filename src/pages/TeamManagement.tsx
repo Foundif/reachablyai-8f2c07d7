@@ -12,6 +12,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { MODULE_GROUPS } from '@/lib/modules';
 import { useAuth } from '@/hooks/useAuth';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import {
+  PERM_MODULES, PERM_ACTIONS, STAFF_DEFAULT_PERMISSIONS, ADMIN_ALL_PERMISSIONS,
+  togglePermission, type PermissionMap, type PermModule, type PermAction,
+} from '@/lib/modulePermissions';
 
 type Member = {
   user_id: string;
@@ -20,6 +24,7 @@ type Member = {
   role: string | null;
   is_staff: boolean;
   allowed_modules: string[];
+  permissions?: PermissionMap | null;
   created_at: string;
 };
 
@@ -38,6 +43,7 @@ const TeamManagement = () => {
   const [showPass, setShowPass] = useState(false);
   const [role, setRole] = useState<'admin' | 'staff'>('staff');
   const [mods, setMods] = useState<string[]>(['/', '/inbox', '/leads']);
+  const [perms, setPerms] = useState<PermissionMap>(STAFF_DEFAULT_PERMISSIONS);
 
   const call = async (body: Record<string, unknown>) => {
     const { data, error } = await supabase.functions.invoke('create-staff-user', { body });
@@ -60,6 +66,7 @@ const TeamManagement = () => {
   const resetForm = () => {
     setEditing(null); setFullName(''); setEmail(''); setPassword('');
     setRole('staff'); setMods(['/', '/inbox', '/leads']); setShowPass(false);
+    setPerms(STAFF_DEFAULT_PERMISSIONS);
   };
 
   const openCreate = () => { resetForm(); setOpen(true); };
@@ -67,21 +74,26 @@ const TeamManagement = () => {
     setEditing(m); setFullName(m.full_name || ''); setEmail(m.email || '');
     setRole((m.role === 'admin' ? 'admin' : 'staff'));
     setMods(m.allowed_modules || []);
+    setPerms((m.permissions as PermissionMap) || STAFF_DEFAULT_PERMISSIONS);
     setOpen(true);
   };
 
   const toggleMod = (route: string) =>
     setMods((prev) => prev.includes(route) ? prev.filter((r) => r !== route) : [...prev, route]);
 
+  const togglePerm = (module: PermModule, action: PermAction) =>
+    setPerms((prev) => togglePermission(prev, module, action));
+
   const submit = async () => {
     try {
+      const finalPerms = role === 'admin' ? ADMIN_ALL_PERMISSIONS : perms;
       if (editing) {
-        await call({ action: 'update', user_id: editing.user_id, full_name: fullName, role, allowed_modules: role === 'admin' ? [] : mods });
+        await call({ action: 'update', user_id: editing.user_id, full_name: fullName, role, allowed_modules: role === 'admin' ? [] : mods, permissions: finalPerms });
         toast.success('User updated');
       } else {
         if (!email || !password) return toast.error('Email and password required');
         if (password.length < 6) return toast.error('Password must be 6+ chars');
-        await call({ email, password, full_name: fullName, role, allowed_modules: mods });
+        await call({ email, password, full_name: fullName, role, allowed_modules: mods, permissions: finalPerms });
         toast.success(`User ${email} created — they can log in now`);
       }
       setOpen(false); resetForm(); load();
@@ -202,6 +214,43 @@ const TeamManagement = () => {
                     ))}
                   </div>
                   <p className="text-[11px] text-muted-foreground">Profile page is always accessible so they can sign out.</p>
+                </div>
+              )}
+
+              {role === 'staff' && (
+                <div className="space-y-2">
+                  <Label>What can they do in each area?</Label>
+                  <div className="glass-panel p-3 overflow-x-auto">
+                    <table className="w-full text-xs min-w-[420px]">
+                      <thead>
+                        <tr className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                          <th className="text-left font-semibold py-1.5">Area</th>
+                          {PERM_ACTIONS.map((a) => (
+                            <th key={a} className="font-semibold px-1 py-1.5 text-center">{a}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {PERM_MODULES.map((m) => (
+                          <tr key={m.id} className="border-t border-border/40">
+                            <td className="py-1.5 pr-2 font-medium whitespace-nowrap">{m.label}</td>
+                            {PERM_ACTIONS.map((a) => (
+                              <td key={a} className="px-1 py-1.5 text-center">
+                                <Switch
+                                  checked={!!perms[m.id]?.[a]}
+                                  onCheckedChange={() => togglePerm(m.id, a)}
+                                  className="scale-90"
+                                />
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    WhatsApp keys, Razorpay secrets and billing stay owner-only, even with Manage enabled.
+                  </p>
                 </div>
               )}
             </div>

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ChangePasswordModal from '@/components/profile/ChangePasswordModal';
+import useWorkspacePlan from '@/hooks/useWorkspacePlan';
 import { isNotificationMuted, setNotificationMuted, playNotificationSound, enableNotificationSound } from '@/hooks/useNotifications';
 
 type Row = { icon: any; label: string; sub?: string; right?: React.ReactNode; onClick?: () => void };
@@ -70,8 +71,12 @@ const Profile = () => {
 
 
   const isStaff = !!(profile as any)?.is_staff;
-  const planStatus = (profile as any)?.subscription_status || 'free';
-  const planLabel = planStatus === 'pro' ? 'Pro' : planStatus === 'growth' ? 'Growth' : 'Free';
+  const wsPlan = useWorkspacePlan();
+  const planLabel = wsPlan.planName;
+  const hasPlan = !!wsPlan.plan;
+  const renewText = wsPlan.renewsAt
+    ? `Renews ${wsPlan.renewsAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
+    : null;
   const storeName = isStaff
     ? (profile?.full_name || user?.email?.split('@')[0] || 'Team member')
     : (profile?.store_name || 'My Business');
@@ -115,16 +120,38 @@ const Profile = () => {
           />
         )}
 
-        {!isStaff && (
+        {isStaff ? (
           <SectionCard
             title="Plan"
             rows={[
               {
-                icon: Crown, label: planLabel === 'Free' ? 'Upgrade to Pro' : `${planLabel} plan active`,
-                sub: planLabel === 'Free' ? 'Unlimited bookings & exports' : 'Manage subscription & invoices',
-                right: <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${planLabel === 'Free' ? 'bg-emerald-500/15 text-emerald-600' : 'bg-primary/15 text-primary'}`}>{planLabel.toUpperCase()}</span>,
-                onClick: () => navigate(planLabel === 'Free' ? '/pricing' : '/billing'),
+                icon: Crown,
+                label: hasPlan ? `${planLabel} plan` : 'Workspace plan',
+                sub: hasPlan
+                  ? `Included with your workspace · managed by the owner`
+                  : 'Managed by the workspace owner',
+                right: <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-primary/15 text-primary">{planLabel.toUpperCase()}</span>,
               },
+            ]}
+          />
+        ) : (
+          <SectionCard
+            title="Plan"
+            rows={[
+              {
+                icon: Crown,
+                label: hasPlan ? `Current plan: ${planLabel}` : 'Choose a plan',
+                sub: hasPlan
+                  ? [wsPlan.status === 'active' ? 'Active' : wsPlan.status,
+                     wsPlan.billingPeriod === 'yearly' ? 'Yearly billing' : 'Monthly billing',
+                     renewText].filter(Boolean).join(' · ')
+                  : 'Unlock full limits, more numbers and users',
+                right: <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${hasPlan ? 'bg-primary/15 text-primary' : 'bg-emerald-500/15 text-emerald-600'}`}>{planLabel.toUpperCase()}</span>,
+                onClick: () => navigate('/pricing'),
+              },
+              ...(hasPlan && !wsPlan.isHighestTier
+                ? [{ icon: Crown, label: 'Upgrade plan', sub: 'More numbers, users and messages', onClick: () => navigate('/pricing') } as Row]
+                : []),
               { icon: Receipt, label: 'Billing & Invoices', sub: 'Download GST invoices', onClick: () => navigate('/billing') },
               { icon: Gift, label: 'Refer & Earn Credits', sub: 'Invite a friend, earn ₹500', onClick: () => toast.info('Referral programme launching soon') },
             ]}
