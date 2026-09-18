@@ -12,6 +12,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { MODULE_GROUPS } from '@/lib/modules';
 import { useAuth } from '@/hooks/useAuth';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import {
+  PERM_MODULES, PERM_ACTIONS, STAFF_DEFAULT_PERMISSIONS, ADMIN_ALL_PERMISSIONS,
+  togglePermission, type PermissionMap, type PermModule, type PermAction,
+} from '@/lib/modulePermissions';
 
 type Member = {
   user_id: string;
@@ -20,6 +24,7 @@ type Member = {
   role: string | null;
   is_staff: boolean;
   allowed_modules: string[];
+  permissions?: PermissionMap | null;
   created_at: string;
 };
 
