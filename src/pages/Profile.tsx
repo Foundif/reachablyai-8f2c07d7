@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ChangePasswordModal from '@/components/profile/ChangePasswordModal';
+import useWorkspacePlan from '@/hooks/useWorkspacePlan';
 import { isNotificationMuted, setNotificationMuted, playNotificationSound, enableNotificationSound } from '@/hooks/useNotifications';
 
 type Row = { icon: any; label: string; sub?: string; right?: React.ReactNode; onClick?: () => void };
@@ -70,8 +71,12 @@ const Profile = () => {
 
 
   const isStaff = !!(profile as any)?.is_staff;
-  const planStatus = (profile as any)?.subscription_status || 'free';
-  const planLabel = planStatus === 'pro' ? 'Pro' : planStatus === 'growth' ? 'Growth' : 'Free';
+  const wsPlan = useWorkspacePlan();
+  const planLabel = wsPlan.planName;
+  const hasPlan = !!wsPlan.plan;
+  const renewText = wsPlan.renewsAt
+    ? `Renews ${wsPlan.renewsAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
+    : null;
   const storeName = isStaff
     ? (profile?.full_name || user?.email?.split('@')[0] || 'Team member')
     : (profile?.store_name || 'My Business');
