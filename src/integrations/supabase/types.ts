@@ -14,6 +14,104 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_keys: {
+        Row: {
+          active: boolean
+          call_count: number
+          created_at: string
+          created_by: string | null
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          scopes: string[]
+          workspace_id: string
+        }
+        Insert: {
+          active?: boolean
+          call_count?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          scopes?: string[]
+          workspace_id: string
+        }
+        Update: {
+          active?: boolean
+          call_count?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          scopes?: string[]
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_keys_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_logs: {
+        Row: {
+          api_key_id: string | null
+          created_at: string
+          endpoint: string
+          error: string | null
+          id: string
+          payload: Json | null
+          status: number
+          workspace_id: string
+        }
+        Insert: {
+          api_key_id?: string | null
+          created_at?: string
+          endpoint: string
+          error?: string | null
+          id?: string
+          payload?: Json | null
+          status: number
+          workspace_id: string
+        }
+        Update: {
+          api_key_id?: string | null
+          created_at?: string
+          endpoint?: string
+          error?: string | null
+          id?: string
+          payload?: Json | null
+          status?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_logs_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_logs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       auto_reply_log: {
         Row: {
           contact_phone: string
@@ -507,6 +605,7 @@ export type Database = {
         Row: {
           chatbot_id: string
           created_at: string
+          flow_state: Json
           human_takeover: boolean
           id: string
           last_message_at: string | null
@@ -521,6 +620,7 @@ export type Database = {
         Insert: {
           chatbot_id: string
           created_at?: string
+          flow_state?: Json
           human_takeover?: boolean
           id?: string
           last_message_at?: string | null
@@ -535,6 +635,7 @@ export type Database = {
         Update: {
           chatbot_id?: string
           created_at?: string
+          flow_state?: Json
           human_takeover?: boolean
           id?: string
           last_message_at?: string | null
@@ -679,6 +780,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           enabled: boolean
+          flow: Json
+          flow_enabled: boolean
           id: string
           launcher_text: string
           name: string
@@ -696,6 +799,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           enabled?: boolean
+          flow?: Json
+          flow_enabled?: boolean
           id?: string
           launcher_text?: string
           name: string
@@ -713,6 +818,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           enabled?: boolean
+          flow?: Json
+          flow_enabled?: boolean
           id?: string
           launcher_text?: string
           name?: string

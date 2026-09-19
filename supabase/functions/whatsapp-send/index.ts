@@ -9,21 +9,31 @@ const json = (b: any, s = 200) => new Response(JSON.stringify(b), { status: s, h
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   try {
-    const authHeader = req.headers.get('Authorization') || '';
-    const jwt = authHeader.replace('Bearer ', '');
-    if (!jwt) return json({ error: 'Unauthorized' }, 401);
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const admin = createClient(Deno.env.get('SUPABASE_URL')!, serviceKey);
 
-    const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-    const { data: userData } = await admin.auth.getUser(jwt);
-    const user = userData?.user;
-    if (!user) return json({ error: 'Unauthorized' }, 401);
+    // Trusted server-to-server call from another Reachably edge function (public API).
+    const isInternal = (req.headers.get('x-reachably-internal') || '') === serviceKey;
+
+    let actorId: string | null = null;
+    if (!isInternal) {
+      const authHeader = req.headers.get('Authorization') || '';
+      const jwt = authHeader.replace('Bearer ', '');
+      if (!jwt) return json({ error: 'Unauthorized' }, 401);
+      const { data: userData } = await admin.auth.getUser(jwt);
+      const user = userData?.user;
+      if (!user) return json({ error: 'Unauthorized' }, 401);
+      actorId = user.id;
+    }
 
     const { conversation_id, workspace_id, whatsapp_credential_id, to, body, template_id, media_url, media_type, filename, location, variables } = await req.json();
     if (!workspace_id || !to) return json({ error: 'workspace_id and to required' }, 400);
 
-    // Verify membership
-    const { data: mem } = await admin.from('workspace_members').select('user_id').eq('workspace_id', workspace_id).eq('user_id', user.id).maybeSingle();
-    if (!mem) return json({ error: 'Not a workspace member' }, 403);
+    if (!isInternal) {
+      // Verify membership
+      const { data: mem } = await admin.from('workspace_members').select('user_id').eq('workspace_id', workspace_id).eq('user_id', actorId!).maybeSingle();
+      if (!mem) return json({ error: 'Not a workspace member' }, 403);
+    }
 
     let credsQuery = admin.from('whatsapp_credentials').select('*').eq('workspace_id', workspace_id);
     if (whatsapp_credential_id) credsQuery = credsQuery.eq('id', whatsapp_credential_id);
@@ -147,7 +157,7 @@ Deno.serve(async (req) => {
       await admin.from('wa_messages').insert({
         workspace_id, conversation_id: convId, direction: 'outbound',
         from_phone: creds.business_phone, to_phone: to, body: body || tplName || (msgType === 'location' ? '📍 Location' : null), message_type: msgType,
-        template_name: tplName, media_url: media_url || null, status: 'failed', error: err, sent_by: user.id,
+        template_name: tplName, media_url: media_url || null, status: 'failed', error: err, sent_by: actorId,
       });
       return json({ error: err }, 400);
     }
@@ -156,7 +166,7 @@ Deno.serve(async (req) => {
     await admin.from('wa_messages').insert({
       workspace_id, conversation_id: convId, direction: 'outbound', wa_message_id: wamid,
       from_phone: creds.business_phone, to_phone: to, body: body || tplName || (msgType === 'location' ? '📍 Location' : null), message_type: msgType,
-      template_name: tplName, media_url: media_url || null, status: 'sent', sent_by: user.id,
+      template_name: tplName, media_url: media_url || null, status: 'sent', sent_by: actorId,
     });
 
     await admin.from('wa_conversations').update({
