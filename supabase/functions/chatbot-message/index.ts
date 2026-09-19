@@ -77,6 +77,83 @@ Deno.serve(async (req) => {
       return json({ reply: null, human_takeover: true });
     }
 
+    // ---------- Visual flow engine ----------
+    const steps: any[] = Array.isArray((bot as any).flow) ? (bot as any).flow : [];
+    const saveAssistant = async (text: string) => {
+      await admin.from('chatbot_messages').insert({
+        conversation_id: conv.id, chatbot_id: bot.id, workspace_id: bot.workspace_id,
+        role: 'assistant', content: text,
+      });
+      await admin.from('chatbot_conversations').update({
+        last_message_at: new Date().toISOString(), last_message_preview: text.slice(0, 200),
+      }).eq('id', conv.id);
+    };
+
+    if ((bot as any).flow_enabled && steps.length) {
+      const state: any = (conv as any).flow_state || {};
+      if (!state.done) {
+        const byId = new Map<string, any>(steps.map((s: any) => [s.id, s]));
+        const answers: Record<string, string> = state.answers || {};
+        const fill = (t: string) => (t || '').replace(/\{\{(\w+)\}\}/g, (_m, k) => answers[k] ?? '');
+        const current = state.current ? byId.get(state.current) : null;
+        let nextId: string | null = null;
+
+        if (!current) {
+          nextId = steps[0].id;
+        } else if (current.type === 'question') {
+          answers[current.field || current.id] = message;
+          nextId = current.next || null;
+        } else if (current.type === 'choice') {
+          const opts: any[] = current.options || [];
+          const m = message.trim().toLowerCase();
+          let pick = opts.find((o) => (o.label || '').toLowerCase() === m);
+          if (!pick) { const n = parseInt(m, 10); if (n >= 1 && n <= opts.length) pick = opts[n - 1]; }
+          if (!pick) pick = opts.find((o) => o.label && m.includes(String(o.label).toLowerCase()));
+          if (!pick) {
+            const retry = `Please reply with one of these options:\n${opts.map((o, i) => `${i + 1}. ${o.label}`).join('\n')}`;
+            await saveAssistant(retry);
+            return json({ reply: retry, flow: true, conversation_id: conv.id });
+          }
+          answers[current.field || current.id] = pick.label;
+          nextId = pick.next || current.next || null;
+        } else {
+          nextId = current.next || null;
+        }
+
+        const out: string[] = [];
+        let pendingId: string | null = null;
+        let handoff = false;
+        let handToAi = false;
+        let id: string | null = nextId;
+        let guard = 0;
+        while (id && guard++ < 30) {
+          const s = byId.get(id);
+          if (!s) break;
+          const text = fill(s.text);
+          if (s.type === 'message') { if (text) out.push(text); id = s.next || null; continue; }
+          if (s.type === 'handoff') { if (text) out.push(text); handoff = true; break; }
+          if (s.type === 'ai') { if (text) out.push(text); handToAi = true; break; }
+          if (text) out.push(text);
+          if (s.type === 'choice') out.push((s.options || []).map((o: any, i: number) => `${i + 1}. ${o.label}`).join('\n'));
+          pendingId = s.id;
+          break;
+        }
+
+        await admin.from('chatbot_conversations').update({
+          flow_state: { current: pendingId, answers, done: !pendingId },
+          human_takeover: handoff ? true : conv.human_takeover,
+        }).eq('id', conv.id);
+
+        if (out.length && !handToAi) {
+          const reply = out.join('\n\n');
+          await saveAssistant(reply);
+          return json({ reply, flow: true, human_takeover: handoff, conversation_id: conv.id });
+        }
+        if (handoff) return json({ reply: null, human_takeover: true, conversation_id: conv.id });
+        // otherwise fall through to the AI assistant below
+      }
+    }
+
     // RAG retrieval
     let context = '';
     try {
