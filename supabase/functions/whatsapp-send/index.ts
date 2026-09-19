@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
       await admin.from('wa_messages').insert({
         workspace_id, conversation_id: convId, direction: 'outbound',
         from_phone: creds.business_phone, to_phone: to, body: body || tplName || (msgType === 'location' ? '📍 Location' : null), message_type: msgType,
-        template_name: tplName, media_url: media_url || null, status: 'failed', error: err, sent_by: user.id,
+        template_name: tplName, media_url: media_url || null, status: 'failed', error: err, sent_by: actorId,
       });
       return json({ error: err }, 400);
     }
@@ -166,7 +166,7 @@ Deno.serve(async (req) => {
     await admin.from('wa_messages').insert({
       workspace_id, conversation_id: convId, direction: 'outbound', wa_message_id: wamid,
       from_phone: creds.business_phone, to_phone: to, body: body || tplName || (msgType === 'location' ? '📍 Location' : null), message_type: msgType,
-      template_name: tplName, media_url: media_url || null, status: 'sent', sent_by: user.id,
+      template_name: tplName, media_url: media_url || null, status: 'sent', sent_by: actorId,
     });
 
     await admin.from('wa_conversations').update({
