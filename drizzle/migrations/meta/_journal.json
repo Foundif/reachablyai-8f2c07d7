@@ -8,6 +8,13 @@
       "when": 1789826361131,
       "tag": "0000_api_keys_and_chatbot_flows",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789880054412,
+      "tag": "0001_flow_intake_settings",
+      "breakpoints": true
     }
   ]
 }
