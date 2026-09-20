@@ -37,7 +37,25 @@ type Rec = {
   customer_name: string; customer_phone: string | null; customer_email: string | null;
   status: string; payment_status: string; amount: number; advance_amount: number; paid_amount: number;
   service: string | null; scheduled_at: string | null; notes: string | null; assigned_to: string | null;
-  created_at: string; conversation_id: string | null;
+  created_at: string; conversation_id: string | null; source?: string | null;
+  custom_fields?: Record<string, any> | null;
+};
+
+const FIELD_LABELS: Record<string, string> = {
+  service: 'Service', name: 'Name', phone: 'Phone', booking_for: 'Booking for',
+  passenger_name: 'Passenger name', passenger_phone: 'Passenger phone',
+  transport_mode: 'Transport mode', transport_details: 'Service category',
+  service_info: 'Service info', address: 'Reporting address', landmark: 'Nearest landmark',
+  date: 'Date', time: 'Reporting time', hours: 'Expected hours/days', addons: 'Add-ons',
+  status: 'Submission status',
+};
+const HIDDEN_FIELDS = new Set(['flow_token', 'flow_id', 'version', 'screen', '__version__']);
+const fieldLabel = (k: string) => FIELD_LABELS[k] || k.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+const fieldValue = (v: any) => {
+  if (Array.isArray(v)) return v.length ? v.map((x) => String(x).replace(/_/g, ' ')).join(', ') : '—';
+  if (v === null || v === undefined || v === '') return '—';
+  if (typeof v === 'object') return JSON.stringify(v);
+  return String(v);
 };
 
 const StatusPill = ({ value, map }: { value: string; map: Record<string, string> }) => (
@@ -367,6 +385,22 @@ const Bookings = () => {
                   </div>
                 ))}
               </div>
+
+              {active.custom_fields && Object.keys(active.custom_fields).filter((k) => !HIDDEN_FIELDS.has(k)).length > 0 && (
+                <div className="space-y-2">
+                  <Label>Submitted details{active.source === 'whatsapp_flow' ? ' (WhatsApp form)' : ''}</Label>
+                  <div className="glass-panel divide-y divide-border">
+                    {Object.entries(active.custom_fields)
+                      .filter(([k]) => !HIDDEN_FIELDS.has(k))
+                      .map(([k, v]) => (
+                        <div key={k} className="flex gap-3 px-3 py-2 text-sm">
+                          <span className="text-muted-foreground min-w-[8rem] shrink-0">{fieldLabel(k)}</span>
+                          <span className="font-medium break-words">{fieldValue(v)}</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> Timeline</Label>
