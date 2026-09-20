@@ -2314,6 +2314,8 @@ export type Database = {
           away_message: string
           business_hours: Json
           created_at: string
+          flow_advance_amount: number
+          flow_service_prices: Json
           timezone: string
           updated_at: string
           welcome_enabled: boolean
@@ -2325,6 +2327,8 @@ export type Database = {
           away_message?: string
           business_hours?: Json
           created_at?: string
+          flow_advance_amount?: number
+          flow_service_prices?: Json
           timezone?: string
           updated_at?: string
           welcome_enabled?: boolean
@@ -2336,6 +2340,8 @@ export type Database = {
           away_message?: string
           business_hours?: Json
           created_at?: string
+          flow_advance_amount?: number
+          flow_service_prices?: Json
           timezone?: string
           updated_at?: string
           welcome_enabled?: boolean

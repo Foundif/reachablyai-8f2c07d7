@@ -1,6 +1,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { chargeCredits, refundCredits } from '../_shared/credits.ts';
+import { extractFlowResponse, flowSummary, handleFlowSubmission } from '../_shared/flowIntake.ts';
 
 const json = (b: any, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
@@ -141,7 +142,10 @@ Deno.serve(async (req) => {
             const mediaNode = m.image || m.video || m.audio || m.document || m.sticker || null;
             const mediaKind = m.image ? 'image' : m.video ? 'video' : m.audio ? 'audio'
               : m.document ? 'document' : m.sticker ? 'sticker' : null;
+            // WhatsApp Flow submission (nfm_reply) — every field the customer filled in
+            const flowFields = extractFlowResponse(m);
             const bodyText =
+              (flowFields ? flowSummary(flowFields) : null) ||
               m.text?.body || m.button?.text ||
               m.interactive?.button_reply?.title || m.interactive?.list_reply?.title ||
               mediaNode?.caption ||
@@ -254,6 +258,29 @@ Deno.serve(async (req) => {
               workspace_id, phone_number_id: phoneId, event_type: 'message', from_phone: from,
               status: 'ok', summary: `Inbound ${m.type}: ${(bodyText || '').slice(0, 80)}`, payload: m,
             });
+
+            // ===== WhatsApp Flow submission → CRM record + advance payment link =====
+            if (flowFields) {
+              try {
+                const out = await handleFlowSubmission({
+                  admin, creds: { ...creds, phone_number_id: phoneId! },
+                  workspace_id, conversation_id: convId, lead_id: leadId, from, fields: flowFields,
+                });
+                await admin.from('wa_webhook_events').insert({
+                  workspace_id, phone_number_id: phoneId, event_type: 'flow_submission', from_phone: from,
+                  status: out.linkError ? 'error' : 'ok',
+                  summary: `Record ${out.record.record_code} created from Flow`,
+                  error: out.linkError, payload: flowFields,
+                });
+              } catch (flowErr: any) {
+                await admin.from('wa_webhook_events').insert({
+                  workspace_id, phone_number_id: phoneId, event_type: 'flow_submission', from_phone: from,
+                  status: 'error', summary: 'Flow submission could not be saved',
+                  error: String(flowErr?.message || flowErr), payload: flowFields,
+                });
+              }
+              continue; // no keyword/welcome auto-reply on top of the booking confirmation
+            }
 
             // ===== Auto-replies pipeline: keyword rules → welcome → away =====
             try {
