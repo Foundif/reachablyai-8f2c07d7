@@ -259,6 +259,29 @@ Deno.serve(async (req) => {
               status: 'ok', summary: `Inbound ${m.type}: ${(bodyText || '').slice(0, 80)}`, payload: m,
             });
 
+            // ===== WhatsApp Flow submission → CRM record + advance payment link =====
+            if (flowFields) {
+              try {
+                const out = await handleFlowSubmission({
+                  admin, creds: { ...creds, phone_number_id: phoneId! },
+                  workspace_id, conversation_id: convId, lead_id: leadId, from, fields: flowFields,
+                });
+                await admin.from('wa_webhook_events').insert({
+                  workspace_id, phone_number_id: phoneId, event_type: 'flow_submission', from_phone: from,
+                  status: out.linkError ? 'error' : 'ok',
+                  summary: `Record ${out.record.record_code} created from Flow`,
+                  error: out.linkError, payload: flowFields,
+                });
+              } catch (flowErr: any) {
+                await admin.from('wa_webhook_events').insert({
+                  workspace_id, phone_number_id: phoneId, event_type: 'flow_submission', from_phone: from,
+                  status: 'error', summary: 'Flow submission could not be saved',
+                  error: String(flowErr?.message || flowErr), payload: flowFields,
+                });
+              }
+              continue; // no keyword/welcome auto-reply on top of the booking confirmation
+            }
+
             // ===== Auto-replies pipeline: keyword rules → welcome → away =====
             try {
               let repliedThisTurn = false;
