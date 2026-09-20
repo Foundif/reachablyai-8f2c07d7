@@ -1,6 +1,7 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { chargeCredits, refundCredits } from '../_shared/credits.ts';
+import { extractFlowResponse, flowSummary, handleFlowSubmission } from '../_shared/flowIntake.ts';
 
 const json = (b: any, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
@@ -141,7 +142,10 @@ Deno.serve(async (req) => {
             const mediaNode = m.image || m.video || m.audio || m.document || m.sticker || null;
             const mediaKind = m.image ? 'image' : m.video ? 'video' : m.audio ? 'audio'
               : m.document ? 'document' : m.sticker ? 'sticker' : null;
+            // WhatsApp Flow submission (nfm_reply) — every field the customer filled in
+            const flowFields = extractFlowResponse(m);
             const bodyText =
+              (flowFields ? flowSummary(flowFields) : null) ||
               m.text?.body || m.button?.text ||
               m.interactive?.button_reply?.title || m.interactive?.list_reply?.title ||
               mediaNode?.caption ||
