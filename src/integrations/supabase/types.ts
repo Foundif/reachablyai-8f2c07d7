@@ -2235,6 +2235,75 @@ export type Database = {
           },
         ]
       }
+      whatsapp_flows: {
+        Row: {
+          categories: string[]
+          created_at: string
+          created_by: string | null
+          cta_text: string
+          first_screen: string | null
+          flow_id: string | null
+          id: string
+          json_definition: Json
+          last_error: string | null
+          name: string
+          published_at: string | null
+          status: string
+          updated_at: string
+          whatsapp_credential_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          categories?: string[]
+          created_at?: string
+          created_by?: string | null
+          cta_text?: string
+          first_screen?: string | null
+          flow_id?: string | null
+          id?: string
+          json_definition?: Json
+          last_error?: string | null
+          name: string
+          published_at?: string | null
+          status?: string
+          updated_at?: string
+          whatsapp_credential_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          categories?: string[]
+          created_at?: string
+          created_by?: string | null
+          cta_text?: string
+          first_screen?: string | null
+          flow_id?: string | null
+          id?: string
+          json_definition?: Json
+          last_error?: string | null
+          name?: string
+          published_at?: string | null
+          status?: string
+          updated_at?: string
+          whatsapp_credential_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_flows_whatsapp_credential_id_fkey"
+            columns: ["whatsapp_credential_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_credentials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_flows_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_members: {
         Row: {
           created_at: string
