@@ -16,7 +16,6 @@ async function sendAutoReply(admin: any, creds: any, workspace_id: string, convI
     const ok = resp.ok;
     const wamid = rb?.messages?.[0]?.id || null;
     const err = ok ? null : (rb?.error?.message || `HTTP ${resp.status}`);
-    if (!ok) await refundCredits(admin, workspace_id, 1, 'service');
     await admin.from('wa_messages').insert({
       workspace_id, conversation_id: convId, direction: 'outbound', wa_message_id: wamid,
       from_phone: creds.business_phone, to_phone: to, body: text, message_type: 'text',
