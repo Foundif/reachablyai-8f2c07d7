@@ -341,9 +341,16 @@ Deno.serve(async (req) => {
                   run_count: (a.run_count || 0) + 1, last_run_at: new Date().toISOString(),
                 }).eq('id', a.id);
 
+                const templateRef = a.action_type === 'send_template'
+                  ? (a.action_config?.template_name || a.action_config?.template_id || a.action_config?.template)
+                  : null;
                 const replyText = a.action_config?.reply_text || (a.action_type === 'send_text' ? a.action_config?.text : null);
-                if (replyText && !(await alreadySentRecently(admin, workspace_id, from, `keyword:${a.id}`, 1))) {
-                  await sendAutoReply(admin, creds, workspace_id, convId, from, replyText, `keyword:${a.id}`, a.id);
+                const notRepeated = !(await alreadySentRecently(admin, workspace_id, from, `keyword:${a.id}`, 1));
+                if (templateRef && notRepeated) {
+                  await sendAutoTemplate(admin, { ...creds, phone_number_id: phoneId! }, workspace_id, convId, from, String(templateRef), `keyword:${a.id}`, a.id);
+                  repliedThisTurn = true;
+                } else if (replyText && notRepeated) {
+                  await sendAutoReply(admin, { ...creds, phone_number_id: phoneId! }, workspace_id, convId, from, replyText, `keyword:${a.id}`, a.id);
                   repliedThisTurn = true;
                 }
               }
