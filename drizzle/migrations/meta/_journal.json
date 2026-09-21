@@ -15,6 +15,13 @@
       "when": 1789880054412,
       "tag": "0001_flow_intake_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789984124590,
+      "tag": "0002_remove_whatsapp_credentials_from_realtime",
+      "breakpoints": true
     }
   ]
 }
