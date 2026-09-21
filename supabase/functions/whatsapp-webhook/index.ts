@@ -342,7 +342,7 @@ Deno.serve(async (req) => {
                 }).eq('id', a.id);
 
                 const templateRef = a.action_type === 'send_template'
-                  ? (a.action_config?.template_name || a.action_config?.template_id || a.action_config?.template)
+                  ? (a.template_id || a.action_config?.template_name || a.action_config?.template_id || a.action_config?.template)
                   : null;
                 const replyText = a.action_config?.reply_text || (a.action_type === 'send_text' ? a.action_config?.text : null);
                 const notRepeated = !(await alreadySentRecently(admin, workspace_id, from, `keyword:${a.id}`, 1));
