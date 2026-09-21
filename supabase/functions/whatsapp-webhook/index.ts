@@ -1,6 +1,54 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { extractFlowResponse, flowSummary, handleFlowSubmission } from '../_shared/flowIntake.ts';
+import { buildTemplatePayload } from '../_shared/templatePayload.ts';
+
+// Sends an approved template (e.g. the booking form template carrying the Flow button)
+// as the reply to a keyword such as "hi" or "help".
+async function sendAutoTemplate(admin: any, creds: any, workspace_id: string, convId: string, to: string, templateRef: string, ruleKind: string, ruleRef: string | null) {
+  try {
+    let q = admin.from('templates').select('*').eq('workspace_id', workspace_id).limit(1);
+    q = /^[0-9a-f-]{36}$/i.test(templateRef) ? q.eq('id', templateRef) : q.eq('name', templateRef);
+    const { data: tpl } = await q.maybeSingle();
+    if (!tpl) throw new Error(`template "${templateRef}" not found`);
+
+    const payload = buildTemplatePayload(tpl as any, { phone: to, name: null, variables: {} });
+    const resp = await fetch(`https://graph.facebook.com/v20.0/${creds.phone_number_id}/messages`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${creds.access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'template', template: payload }),
+    });
+    const rb = await resp.json();
+    const ok = resp.ok;
+    const err = ok ? null : (rb?.error?.message || `HTTP ${resp.status}`);
+    await admin.from('wa_messages').insert({
+      workspace_id, conversation_id: convId, direction: 'outbound',
+      wa_message_id: rb?.messages?.[0]?.id || null,
+      from_phone: creds.business_phone, to_phone: to, body: `[template] ${tpl.name}`,
+      message_type: 'template', status: ok ? 'sent' : 'failed', error: err,
+    });
+    if (ok) {
+      await admin.from('wa_conversations').update({
+        last_message_at: new Date().toISOString(),
+        last_message_text: `[template] ${tpl.name}`,
+        last_message_direction: 'outbound',
+      }).eq('id', convId);
+      await admin.from('auto_reply_log').insert({ workspace_id, contact_phone: to, rule_kind: ruleKind, rule_ref: ruleRef });
+    }
+    await admin.from('wa_webhook_events').insert({
+      workspace_id, phone_number_id: creds.phone_number_id, event_type: 'auto_reply',
+      status: ok ? 'ok' : 'error', summary: `${ruleKind} → ${to}: template ${tpl.name}`, error: err,
+      payload: { rule_ref: ruleRef, template: tpl.name },
+    });
+    return ok;
+  } catch (e: any) {
+    await admin.from('wa_webhook_events').insert({
+      workspace_id, phone_number_id: creds.phone_number_id, event_type: 'auto_reply',
+      status: 'error', summary: `auto-template failed (${ruleKind})`, error: String(e?.message || e),
+    });
+    return false;
+  }
+}
 
 const json = (b: any, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
