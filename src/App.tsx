@@ -36,6 +36,8 @@ import Integrations from "./pages/Integrations";
 import WebhookDetail from "./pages/WebhookDetail";
 import TemplateEditor from "./pages/TemplateEditor";
 import Bookings from "./pages/Bookings";
+import Flows from "./pages/Flows";
+import ApiSettings from "./pages/ApiSettings";
 
 import Campaigns, { CampaignDetail } from "./pages/Campaigns";
 import Automations from "./pages/Automations";
@@ -95,6 +97,8 @@ const App = () => (
 
                 <Route path="/scraper" element={<ProtectedRoute><ComingSoonModule title="Lead Scraper" description="Google Maps / GMB lead scraper with location, keyword and 'website missing' filters — shipping in step 2h." /></ProtectedRoute>} />
                 <Route path="/templates" element={<ProtectedRoute><Templates /></ProtectedRoute>} />
+                <Route path="/flows" element={<ProtectedRoute><Flows /></ProtectedRoute>} />
+                <Route path="/settings/api" element={<ProtectedRoute><ApiSettings /></ProtectedRoute>} />
                 <Route path="/integrations" element={<ProtectedRoute><Integrations /></ProtectedRoute>} />
                 <Route path="/integrations/webhooks/:id" element={<ProtectedRoute><WebhookDetail /></ProtectedRoute>} />
 
@@ -122,7 +126,7 @@ const App = () => (
                 <Route path="/services" element={<Navigate to="/" replace />} />
                 <Route path="/payments" element={<Navigate to="/accounting" replace />} />
                 <Route path="/sheets" element={<Navigate to="/leads" replace />} />
-                <Route path="/flow-editor" element={<Navigate to="/automation" replace />} />
+                <Route path="/flow-editor" element={<Navigate to="/flows" replace />} />
                 <Route path="/razorpay" element={<Navigate to="/whatsapp-settings" replace />} />
                 <Route path="/billing" element={<Navigate to="/pricing" replace />} />
 
