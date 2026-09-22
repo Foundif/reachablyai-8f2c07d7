@@ -1,0 +1,198 @@
+// Ready-to-use WhatsApp Flow (bottom-sheet form) preset: service menu -> booking form -> review -> confirmed.
+export const TN45_FLOW_PRESET = {
+  version: '7.3',
+  screens: [
+    {
+      id: 'SERVICE_MENU',
+      title: 'Choose Service',
+      terminal: false,
+      data: {},
+      layout: {
+        type: 'SingleColumnLayout',
+        children: [
+          {
+            type: 'Form',
+            name: 'service_form',
+            children: [
+              {
+                type: 'RadioButtonsGroup',
+                name: 'service',
+                label: 'Select the service you need',
+                required: true,
+                'data-source': [
+                  { id: 'terminal-railbus', title: 'Terminal Rail/Bus Pickup - Rs.200' },
+                  { id: 'home-railbus', title: 'Home to Rail/Bus - Rs.200' },
+                  { id: 'railbus-home', title: 'Rail/Bus to Home - Rs.200' },
+                  { id: 'festivity-half', title: 'Festivity Half Day - Rs.600' },
+                  { id: 'festivity-full', title: 'Festivity Full Day - Rs.1200' },
+                  { id: 'hospital', title: 'Hospital Assistance - Rs.500' },
+                  { id: 'outstation', title: 'Outstation - Rs.1200/day' },
+                ],
+              },
+              {
+                type: 'Footer',
+                label: 'Continue',
+                'on-click-action': {
+                  name: 'navigate',
+                  next: { type: 'screen', name: 'BOOKING_FORM' },
+                  payload: { service: '${form.service}' },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      id: 'BOOKING_FORM',
+      title: 'Booking Details',
+      terminal: false,
+      data: { service: { type: 'string', __example__: 'terminal-railbus' } },
+      layout: {
+        type: 'SingleColumnLayout',
+        children: [
+          {
+            type: 'Form',
+            name: 'booking_form',
+            children: [
+              { type: 'TextInput', name: 'name', label: 'Your name', 'input-type': 'text', required: true },
+              { type: 'TextInput', name: 'phone', label: 'Your mobile number', 'input-type': 'phone', required: true },
+              {
+                type: 'Dropdown',
+                name: 'booking_for',
+                label: 'Booking for',
+                required: true,
+                'data-source': [
+                  { id: 'myself', title: 'Myself' },
+                  { id: 'someone_else', title: 'Someone else' },
+                ],
+              },
+              { type: 'TextInput', name: 'passenger_name', label: 'Passenger name (if other)', 'input-type': 'text', required: false },
+              { type: 'TextInput', name: 'passenger_phone', label: 'Passenger mobile (if other)', 'input-type': 'phone', required: false },
+              {
+                type: 'Dropdown',
+                name: 'transport_mode',
+                label: 'Mode of transport',
+                required: true,
+                'data-source': [
+                  { id: 'train', title: 'Train' },
+                  { id: 'bus', title: 'Bus' },
+                  { id: 'flight', title: 'Flight' },
+                  { id: 'private', title: 'Private vehicle' },
+                ],
+              },
+              { type: 'TextInput', name: 'transport_details', label: 'Train/Bus/Flight number', 'input-type': 'text', required: false },
+              { type: 'TextArea', name: 'address', label: 'Pickup / drop address', required: true },
+              { type: 'TextInput', name: 'landmark', label: 'Nearby landmark', 'input-type': 'text', required: false },
+              { type: 'DatePicker', name: 'date', label: 'Service date', required: true },
+              { type: 'TextInput', name: 'time', label: 'Service time (e.g. 09:30 AM)', 'input-type': 'text', required: true },
+              { type: 'TextInput', name: 'hours', label: 'Hours needed (if hourly)', 'input-type': 'number', required: false },
+              {
+                type: 'CheckboxGroup',
+                name: 'addons',
+                label: 'Add-ons',
+                required: false,
+                'data-source': [
+                  { id: 'wheelchair', title: 'Wheelchair (+Rs.50)' },
+                  { id: 'battery', title: 'Battery car assistance' },
+                  { id: 'porter', title: 'Porter support' },
+                ],
+              },
+              { type: 'TextArea', name: 'notes', label: 'Anything else we should know?', required: false },
+              {
+                type: 'Footer',
+                label: 'Review booking',
+                'on-click-action': {
+                  name: 'navigate',
+                  next: { type: 'screen', name: 'REVIEW_BOOKING' },
+                  payload: {
+                    service: '${data.service}',
+                    name: '${form.name}',
+                    phone: '${form.phone}',
+                    booking_for: '${form.booking_for}',
+                    passenger_name: '${form.passenger_name}',
+                    passenger_phone: '${form.passenger_phone}',
+                    transport_mode: '${form.transport_mode}',
+                    transport_details: '${form.transport_details}',
+                    address: '${form.address}',
+                    landmark: '${form.landmark}',
+                    date: '${form.date}',
+                    time: '${form.time}',
+                    hours: '${form.hours}',
+                    addons: '${form.addons}',
+                    notes: '${form.notes}',
+                  },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      id: 'REVIEW_BOOKING',
+      title: 'Confirm Booking',
+      terminal: false,
+      data: {
+        service: { type: 'string', __example__: 'terminal-railbus' },
+        name: { type: 'string', __example__: 'Ahamed' },
+        phone: { type: 'string', __example__: '919000000000' },
+        booking_for: { type: 'string', __example__: 'myself' },
+        passenger_name: { type: 'string', __example__: '' },
+        passenger_phone: { type: 'string', __example__: '' },
+        transport_mode: { type: 'string', __example__: 'train' },
+        transport_details: { type: 'string', __example__: 'TN 12635' },
+        address: { type: 'string', __example__: 'Chennai Central' },
+        landmark: { type: 'string', __example__: 'Gate 2' },
+        date: { type: 'string', __example__: '2026-10-01' },
+        time: { type: 'string', __example__: '09:30 AM' },
+        hours: { type: 'string', __example__: '' },
+        addons: { type: 'array', items: { type: 'string' }, __example__: [] },
+        notes: { type: 'string', __example__: '' },
+      },
+      layout: {
+        type: 'SingleColumnLayout',
+        children: [
+          { type: 'TextHeading', text: 'Please check your details' },
+          { type: 'TextBody', text: 'Service: ${data.service}' },
+          { type: 'TextBody', text: 'Name: ${data.name} (${data.phone})' },
+          { type: 'TextBody', text: 'Date & time: ${data.date} at ${data.time}' },
+          { type: 'TextBody', text: 'Address: ${data.address}' },
+          { type: 'TextCaption', text: 'An advance of Rs.200 confirms your booking. Balance is paid at the end of service.' },
+          {
+            type: 'Form',
+            name: 'review_form',
+            children: [
+              {
+                type: 'Footer',
+                label: 'Submit booking',
+                'on-click-action': {
+                  name: 'complete',
+                  payload: {
+                    service: '${data.service}',
+                    name: '${data.name}',
+                    phone: '${data.phone}',
+                    booking_for: '${data.booking_for}',
+                    passenger_name: '${data.passenger_name}',
+                    passenger_phone: '${data.passenger_phone}',
+                    transport_mode: '${data.transport_mode}',
+                    transport_details: '${data.transport_details}',
+                    address: '${data.address}',
+                    landmark: '${data.landmark}',
+                    date: '${data.date}',
+                    time: '${data.time}',
+                    hours: '${data.hours}',
+                    addons: '${data.addons}',
+                    notes: '${data.notes}',
+                  },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+  ],
+};
+
+export const TN45_PRESET_STRING = JSON.stringify(TN45_FLOW_PRESET, null, 2);
