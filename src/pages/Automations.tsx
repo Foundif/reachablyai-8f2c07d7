@@ -17,7 +17,7 @@ import { resolveWorkspaceId } from '@/lib/workspace';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
 type TriggerType = 'new_lead' | 'tag_added' | 'status_changed' | 'keyword_match' | 'no_reply_24h';
-type ActionType = 'send_template' | 'send_text' | 'add_tag' | 'set_status' | 'assign_agent';
+type ActionType = 'send_template' | 'send_text' | 'send_flow' | 'add_tag' | 'set_status' | 'assign_agent';
 
 interface Automation {
   id: string; name: string; enabled: boolean;
@@ -26,6 +26,7 @@ interface Automation {
   template_id: string | null; run_count: number; last_run_at: string | null;
 }
 interface Template { id: string; name: string; status: string; }
+interface FlowRow { id: string; name: string; status: string; }
 
 const TRIGGER_LABELS: Record<TriggerType, string> = {
   new_lead: 'New lead created',
@@ -37,6 +38,7 @@ const TRIGGER_LABELS: Record<TriggerType, string> = {
 const ACTION_LABELS: Record<ActionType, string> = {
   send_template: 'Send WhatsApp template',
   send_text: 'Send text reply',
+  send_flow: 'Send WhatsApp form (Flow)',
   add_tag: 'Add tag',
   set_status: 'Change lead status',
   assign_agent: 'Assign to agent',
@@ -48,6 +50,7 @@ const Automations = () => {
   const [wsId, setWsId] = useState<string | null>(null);
   const [items, setItems] = useState<Automation[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [flows, setFlows] = useState<FlowRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
@@ -57,6 +60,8 @@ const Automations = () => {
     action_type: 'send_template' as ActionType,
     template_id: '',
     action_value: '',
+    flow_row_id: '',
+    cta: '',
   });
 
   const load = async () => {
@@ -65,12 +70,14 @@ const Automations = () => {
     const id = await resolveWorkspaceId(user.id, profile);
     setWsId(id);
     if (!id) { setLoading(false); return; }
-    const [{ data: a }, { data: t }] = await Promise.all([
+    const [{ data: a }, { data: t }, { data: f }] = await Promise.all([
       supabase.from('automations' as any).select('*').eq('workspace_id', id).order('created_at', { ascending: false }),
       supabase.from('templates' as any).select('id,name,status').eq('workspace_id', id).eq('status', 'approved'),
+      supabase.from('whatsapp_flows' as any).select('id,name,status,flow_id').eq('workspace_id', id).not('flow_id', 'is', null),
     ]);
     setItems((a as any) || []);
     setTemplates((t as any) || []);
+    setFlows((f as any) || []);
     setLoading(false);
   };
   useEffect(() => { load(); }, [user, profile]);
@@ -79,6 +86,8 @@ const Automations = () => {
     if (!wsId) return;
     if (!form.name.trim()) return toast.error('Name required');
     if (form.action_type === 'send_template' && !form.template_id) return toast.error('Pick a template');
+    if (form.action_type === 'send_flow' && !form.flow_row_id) return toast.error('Pick a WhatsApp form');
+    if (form.action_type === 'send_flow' && form.trigger_type !== 'keyword_match') return toast.error('Forms can only be sent as a reply to a keyword');
     if (form.action_type === 'send_text' && !form.action_value.trim()) return toast.error('Enter reply text');
     if (form.action_type === 'add_tag' && !form.action_value.trim()) return toast.error('Enter tag');
     if (form.action_type === 'set_status' && !form.action_value.trim()) return toast.error('Pick status');
@@ -92,6 +101,11 @@ const Automations = () => {
     if (form.action_type === 'add_tag') action_config.tag = form.action_value.trim();
     if (form.action_type === 'set_status') action_config.status = form.action_value.trim();
     if (form.action_type === 'send_text') action_config.text = form.action_value.trim();
+    if (form.action_type === 'send_flow') {
+      action_config.flow_row_id = form.flow_row_id;
+      if (form.action_value.trim()) action_config.body = form.action_value.trim();
+      if (form.cta.trim()) action_config.cta = form.cta.trim();
+    }
 
 
     const { error } = await supabase.from('automations' as any).insert({
@@ -107,7 +121,7 @@ const Automations = () => {
     if (error) return toast.error(error.message);
     toast.success('Automation created');
     setOpen(false);
-    setForm({ name: '', trigger_type: 'new_lead', trigger_value: '', action_type: 'send_template', template_id: '', action_value: '' });
+    setForm({ name: '', trigger_type: 'new_lead', trigger_value: '', action_type: 'send_template', template_id: '', action_value: '', flow_row_id: '', cta: '' });
     load();
   };
 
@@ -179,6 +193,19 @@ const Automations = () => {
                   )}
                   {form.action_type === 'send_text' && (
                     <Input className="mt-2" placeholder="Reply text sent to the customer" value={form.action_value} onChange={e => setForm({ ...form, action_value: e.target.value })} maxLength={1000} />
+                  )}
+                  {form.action_type === 'send_flow' && (
+                    <div className="mt-2 space-y-2">
+                      <Select value={form.flow_row_id} onValueChange={v => setForm({ ...form, flow_row_id: v })}>
+                        <SelectTrigger><SelectValue placeholder={flows.length ? 'Pick WhatsApp form' : 'No forms saved to WhatsApp yet'} /></SelectTrigger>
+                        <SelectContent>
+                          {flows.map(f => <SelectItem key={f.id} value={f.id}>{f.name} · {f.status}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <Input placeholder="Message above the button (e.g. Tap below to book your service)" value={form.action_value} onChange={e => setForm({ ...form, action_value: e.target.value })} maxLength={1000} />
+                      <Input placeholder="Button text (max 20, e.g. Book Service)" value={form.cta} onChange={e => setForm({ ...form, cta: e.target.value })} maxLength={20} />
+                      <p className="text-xs text-muted-foreground">Works when the customer messages first (e.g. "Hi"). Create and publish forms on the WhatsApp Forms page.</p>
+                    </div>
                   )}
 
                   {form.action_type === 'add_tag' && (

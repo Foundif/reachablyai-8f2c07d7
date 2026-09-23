@@ -52,12 +52,13 @@ const PROVIDERS: Provider[] = [
     name: 'Razorpay',
     logo: razorpayLogo.url,
     tagline: 'Send Payment notifications and subscription updates to drive quick recovery.',
-    blurb: 'Integrate Razorpay with your Official WhatsApp Business Number and share payment updates with your customers.',
+    blurb: `Payments go straight to your own bank account. To confirm bookings automatically when a customer pays, open Razorpay Dashboard → Settings → Webhooks → Add, paste this URL and tick "payment_link.paid": https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/razorpay-record-webhook`,
     docs: 'https://razorpay.com/docs/payments/payment-links/',
     fields: [
       { key: 'brand_name', label: 'Brand name', placeholder: 'Enter your brand name' },
       { key: 'key_id', label: 'Razorpay Key ID', placeholder: 'rzp_live_xxxxxxxx' },
       { key: 'key_secret', label: 'Razorpay Key Secret', placeholder: '••••••••', secret: true },
+      { key: 'webhook_secret', label: 'Webhook secret (optional)', placeholder: 'Same secret you typed in Razorpay webhook', secret: true },
     ],
     capabilities: [
       'Send customized payment links',

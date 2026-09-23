@@ -52,6 +52,68 @@ async function sendAutoTemplate(admin: any, creds: any, workspace_id: string, co
 
 const json = (b: any, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
+// Sends a published WhatsApp Flow (bottom-sheet form) as an interactive message.
+// Used by keyword automations such as "hi" / "book" — the customer just messaged,
+// so the 24-hour window is open and no template is required.
+async function sendAutoFlow(admin: any, creds: any, workspace_id: string, convId: string, to: string, cfg: any, ruleKind: string, ruleRef: string | null) {
+  try {
+    const { data: flow } = await admin.from('whatsapp_flows').select('id, name, flow_id, status, first_screen, cta_text')
+      .eq('workspace_id', workspace_id).eq('id', cfg.flow_row_id).maybeSingle();
+    if (!flow?.flow_id) throw new Error('Flow not found or not saved to WhatsApp yet');
+    const bodyText = String(cfg.body || 'Tap the button below to book in under a minute.').slice(0, 1024);
+    const cta = String(cfg.cta || flow.cta_text || 'Book now').slice(0, 20);
+    const interactive: any = {
+      type: 'flow',
+      body: { text: bodyText },
+      action: {
+        name: 'flow',
+        parameters: {
+          flow_message_version: '3',
+          flow_token: `auto-${flow.id}-${Date.now()}`,
+          flow_id: flow.flow_id,
+          flow_cta: cta,
+          flow_action: 'navigate',
+          flow_action_payload: { screen: flow.first_screen || 'SERVICE_MENU' },
+          ...(flow.status !== 'PUBLISHED' ? { mode: 'draft' } : {}),
+        },
+      },
+    };
+    if (cfg.header) interactive.header = { type: 'text', text: String(cfg.header).slice(0, 60) };
+    const resp = await fetch(`https://graph.facebook.com/v20.0/${creds.phone_number_id}/messages`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${creds.access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messaging_product: 'whatsapp', recipient_type: 'individual', to, type: 'interactive', interactive }),
+    });
+    const rb = await resp.json();
+    const ok = resp.ok;
+    const err = ok ? null : (rb?.error?.message || `HTTP ${resp.status}`);
+    const label = `[form] ${flow.name}`;
+    await admin.from('wa_messages').insert({
+      workspace_id, conversation_id: convId, direction: 'outbound', wa_message_id: rb?.messages?.[0]?.id || null,
+      from_phone: creds.business_phone, to_phone: to, body: `${label}\n${bodyText}`, message_type: 'interactive',
+      status: ok ? 'sent' : 'failed', error: err,
+    });
+    if (ok) {
+      await admin.from('wa_conversations').update({
+        last_message_at: new Date().toISOString(), last_message_text: label, last_message_direction: 'outbound',
+      }).eq('id', convId);
+      await admin.from('auto_reply_log').insert({ workspace_id, contact_phone: to, rule_kind: ruleKind, rule_ref: ruleRef });
+    }
+    await admin.from('wa_webhook_events').insert({
+      workspace_id, phone_number_id: creds.phone_number_id, event_type: 'auto_reply',
+      status: ok ? 'ok' : 'error', summary: `${ruleKind} → ${to}: flow ${flow.name}`, error: err,
+      payload: { rule_ref: ruleRef, flow_id: flow.flow_id },
+    });
+    return ok;
+  } catch (e: any) {
+    await admin.from('wa_webhook_events').insert({
+      workspace_id, phone_number_id: creds.phone_number_id, event_type: 'auto_reply',
+      status: 'error', summary: `auto-flow failed (${ruleKind})`, error: String(e?.message || e),
+    });
+    return false;
+  }
+}
+
 // Send a WhatsApp free-form text and log it as an outbound message + auto_reply_log entry
 async function sendAutoReply(admin: any, creds: any, workspace_id: string, convId: string, to: string, text: string, ruleKind: string, ruleRef: string | null) {
   try {
@@ -346,7 +408,10 @@ Deno.serve(async (req) => {
                   : null;
                 const replyText = a.action_config?.reply_text || (a.action_type === 'send_text' ? a.action_config?.text : null);
                 const notRepeated = !(await alreadySentRecently(admin, workspace_id, from, `keyword:${a.id}`, 1));
-                if (templateRef && notRepeated) {
+                if (a.action_type === 'send_flow' && a.action_config?.flow_row_id && notRepeated) {
+                  await sendAutoFlow(admin, { ...creds, phone_number_id: phoneId! }, workspace_id, convId, from, a.action_config, `keyword:${a.id}`, a.id);
+                  repliedThisTurn = true;
+                } else if (templateRef && notRepeated) {
                   await sendAutoTemplate(admin, { ...creds, phone_number_id: phoneId! }, workspace_id, convId, from, String(templateRef), `keyword:${a.id}`, a.id);
                   repliedThisTurn = true;
                 } else if (replyText && notRepeated) {

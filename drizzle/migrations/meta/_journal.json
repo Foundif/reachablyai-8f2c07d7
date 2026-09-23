@@ -22,6 +22,13 @@
       "when": 1789984124590,
       "tag": "0002_remove_whatsapp_credentials_from_realtime",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790153863786,
+      "tag": "0003_automation_actions_text_and_flow",
+      "breakpoints": true
     }
   ]
 }
