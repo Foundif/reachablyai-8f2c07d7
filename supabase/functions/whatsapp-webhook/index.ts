@@ -73,7 +73,7 @@ async function sendAutoFlow(admin: any, creds: any, workspace_id: string, convId
           flow_id: flow.flow_id,
           flow_cta: cta,
           flow_action: 'navigate',
-          flow_action_payload: { screen: flow.first_screen || 'SERVICE_MENU' },
+          flow_action_payload: { screen: flow.first_screen || 'FORM' },
           ...(flow.status !== 'PUBLISHED' ? { mode: 'draft' } : {}),
         },
       },
