@@ -104,6 +104,7 @@ export async function handleFlowSubmission(opts: {
   fields: Record<string, any>;
 }) {
   const { admin, creds, workspace_id, conversation_id, lead_id, from, fields } = opts;
+  const isTravelBooking = Boolean(fields.transport_mode || fields.booking_for || fields.passenger_name || fields.passenger_phone);
 
   const { data: settings } = await admin.from('workspace_settings')
     .select('flow_service_prices, flow_advance_amount').eq('workspace_id', workspace_id).maybeSingle();
@@ -124,19 +125,25 @@ export async function handleFlowSubmission(opts: {
   const customerPhone = digits(fields.phone) || from;
   const scheduled_at = parseScheduledAt(fields.date, fields.time);
 
-  const { data: code } = await admin.rpc('next_record_code', { _ws: workspace_id, _prefix: 'BK' });
+  const recordPrefix = isTravelBooking ? 'BK' : 'FM';
+  const { data: code } = await admin.rpc('next_record_code', { _ws: workspace_id, _prefix: recordPrefix });
+
+  const genericTitle = String(fields.subject || fields.interest || fields.event || fields.feedback || fields.message || '').trim();
+  const title = isTravelBooking
+    ? (serviceId ? prettyValue(serviceId) : 'WhatsApp booking')
+    : (genericTitle ? genericTitle.slice(0, 100) : 'WhatsApp form submission');
 
   const { data: rec, error: recErr } = await admin.from('business_records').insert({
     workspace_id,
-    record_code: code || `BK-${Date.now()}`,
-    record_type: 'booking',
-    title: serviceId ? prettyValue(serviceId) : 'WhatsApp booking',
+    record_code: code || `${recordPrefix}-${Date.now()}`,
+    record_type: isTravelBooking ? 'booking' : 'form_submission',
+    title,
     customer_name: customerName,
     customer_phone: customerPhone,
-    status: 'pending_payment',
+    status: isTravelBooking ? 'pending_payment' : 'new',
     payment_status: 'pending',
     amount: total,
-    advance_amount: advanceAmount,
+    advance_amount: isTravelBooking ? advanceAmount : 0,
     service: serviceId || null,
     scheduled_at,
     source: 'whatsapp_flow',
@@ -157,15 +164,15 @@ export async function handleFlowSubmission(opts: {
   if (lead_id) {
     await admin.from('leads').update({
       name: customerName,
-      notes: `Latest booking ${rec.record_code}`,
+      notes: `Latest form submission ${rec.record_code}`,
       status: 'qualified',
     }).eq('id', lead_id);
   }
 
-  // ---- Advance payment link (workspace-owned Razorpay keys) ----
+  // ---- Advance payment link (travel booking only; workspace-owned Razorpay keys) ----
   let link: string | null = null;
   let linkError: string | null = null;
-  try {
+  if (isTravelBooking) try {
     const { data: integ } = await admin.from('integrations').select('settings')
       .eq('workspace_id', workspace_id).eq('provider', 'razorpay').maybeSingle();
     const key_id = (integ?.settings as any)?.key_id;
@@ -208,9 +215,11 @@ export async function handleFlowSubmission(opts: {
   }
 
   // ---- Notify the customer on the same WhatsApp chat ----
-  const text = link
-    ? `✅ Booking received — ${rec.record_code}\n${prettyValue(serviceId)}\n\nPay the advance of ₹${advanceAmount} to confirm:\n${link}\n\nBalance is payable at the end of the service.`
-    : `✅ Booking received — ${rec.record_code}\nOur team will send you the advance payment link shortly.`;
+  const text = isTravelBooking
+    ? (link
+      ? `✅ Booking received — ${rec.record_code}\n${prettyValue(serviceId)}\n\nPay the advance of ₹${advanceAmount} to confirm:\n${link}\n\nBalance is payable at the end of the service.`
+      : `✅ Booking received — ${rec.record_code}\nOur team will send you the advance payment link shortly.`)
+    : `✅ Form received — ${rec.record_code}\nThank you. Our team will get back to you shortly.`;
 
   try {
     const resp = await fetch(`https://graph.facebook.com/v20.0/${creds.phone_number_id}/messages`, {

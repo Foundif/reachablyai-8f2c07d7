@@ -6,13 +6,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import FlowPhonePreview from '@/components/flows/FlowPhonePreview';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { resolveWorkspaceId } from '@/lib/workspace';
-import { TN45_PRESET_STRING } from '@/lib/flowPreset';
+import { FLOW_STARTERS, stringifyFlow, validateFlowJson } from '@/lib/flowStudio';
 import { toast } from 'sonner';
-import { Plus, RefreshCw, Send, Sparkles, Trash2, UploadCloud, CheckCircle2, AlertTriangle, Loader2, Workflow } from 'lucide-react';
+import { Plus, RefreshCw, Send, Trash2, UploadCloud, CheckCircle2, AlertTriangle, Loader2, Workflow, Braces, Copy, WandSparkles } from 'lucide-react';
 
 interface FlowRow {
   id: string;
@@ -46,23 +49,14 @@ const Flows = () => {
   const [draftScreen, setDraftScreen] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState('');
+  const [starterId, setStarterId] = useState('blank');
   const [testOpen, setTestOpen] = useState(false);
   const [testNumber, setTestNumber] = useState('');
   const [testBody, setTestBody] = useState('Tap below to open the booking form.');
 
   const selected = useMemo(() => rows.find(r => r.id === selectedId) || null, [rows, selectedId]);
 
-  const jsonValidity = useMemo(() => {
-    if (!draftJson.trim()) return { ok: false, error: 'Form code is empty', screens: [] as string[] };
-    try {
-      const parsed = JSON.parse(draftJson);
-      const screens: string[] = (parsed?.screens || []).map((s: any) => s?.id).filter(Boolean);
-      if (!screens.length) return { ok: false, error: 'No screens found in this form code', screens };
-      return { ok: true, error: '', screens };
-    } catch (e) {
-      return { ok: false, error: e instanceof Error ? e.message : 'Invalid JSON', screens: [] as string[] };
-    }
-  }, [draftJson]);
+  const jsonValidity = useMemo(() => validateFlowJson(draftJson), [draftJson]);
 
   useEffect(() => {
     if (!user) return;
@@ -110,14 +104,16 @@ const Flows = () => {
 
   const createFlow = async () => {
     if (!wsId || !newName.trim()) return;
+    const starter = FLOW_STARTERS.find(item => item.id === starterId) || FLOW_STARTERS[0];
     setBusy('create');
     const { data, error } = await supabase.from('whatsapp_flows' as any).insert({
       workspace_id: wsId,
       name: newName.trim(),
       categories: ['OTHER'],
       status: 'DRAFT',
-      json_definition: {},
-      cta_text: 'Book Service',
+      json_definition: starter.definition,
+      first_screen: starter.definition.screens?.[0]?.id || 'FORM',
+      cta_text: starter.cta,
       created_by: user?.id,
     } as any).select('*').single();
     setBusy(null);
@@ -127,15 +123,15 @@ const Flows = () => {
     const row = data as any as FlowRow;
     setRows(prev => [row, ...prev]);
     pick(row);
-    toast.success('Form created — add the form code and publish');
+    toast.success('Form created — customise it, preview it, then publish');
   };
 
   const saveDraft = async () => {
     if (!selected) return;
-    if (!jsonValidity.ok) { toast.error(jsonValidity.error); return; }
+    if (!jsonValidity.ok) { toast.error(jsonValidity.errors[0]); return; }
     setBusy('save');
     const parsed = JSON.parse(draftJson);
-    const firstScreen = draftScreen || jsonValidity.screens[0];
+    const firstScreen = draftScreen || jsonValidity.screens[0]?.id;
     const { error } = await supabase.from('whatsapp_flows' as any).update({
       name: draftName.trim() || selected.name,
       json_definition: parsed,
@@ -161,7 +157,7 @@ const Flows = () => {
         toast.success('Latest form code loaded from WhatsApp');
       } else if (action === 'publish' || action === 'upload') {
         if (!selected) return;
-        if (!jsonValidity.ok) { toast.error(jsonValidity.error); setBusy(null); return; }
+         if (!jsonValidity.ok) { toast.error(jsonValidity.errors[0]); setBusy(null); return; }
         await saveDraftSilently();
         const res = await invoke({ action, id: selected.id });
         toast.success(action === 'publish' ? 'Published on WhatsApp — ready to send' : 'Saved to WhatsApp as a draft');
@@ -184,7 +180,7 @@ const Flows = () => {
     await supabase.from('whatsapp_flows' as any).update({
       name: draftName.trim() || selected.name,
       json_definition: JSON.parse(draftJson),
-      first_screen: draftScreen || jsonValidity.screens[0],
+      first_screen: draftScreen || jsonValidity.screens[0]?.id,
       cta_text: draftCta.trim() || 'Open form',
     } as any).eq('id', selected.id);
   };
@@ -197,13 +193,24 @@ const Flows = () => {
     toast.success('Removed from Reachably');
   };
 
+  const formatJson = () => {
+    if (!jsonValidity.definition) { toast.error(jsonValidity.errors[0]); return; }
+    setDraftJson(stringifyFlow(jsonValidity.definition));
+    toast.success('Form code formatted');
+  };
+
+  const copyJson = async () => {
+    await navigator.clipboard.writeText(draftJson);
+    toast.success('Form code copied');
+  };
+
   return (
     <AppLayout>
       <div className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">WhatsApp Forms</h1>
-            <p className="text-sm text-muted-foreground">Build the booking form customers fill inside WhatsApp, publish it and test it on your own number.</p>
+            <p className="text-sm text-muted-foreground">Create any form customers can complete inside WhatsApp, preview every screen, publish, and test it.</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => runAction('sync')} disabled={busy === 'sync'}>
@@ -214,7 +221,7 @@ const Flows = () => {
           </div>
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-[300px_1fr]">
+        <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
           {/* List */}
           <Card className="p-3 h-fit">
             {loading ? (
@@ -248,6 +255,7 @@ const Flows = () => {
 
           {/* Editor */}
           {selected ? (
+            <div className="space-y-4 min-w-0">
             <Card className="p-4 space-y-4">
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="space-y-1.5">
@@ -260,7 +268,10 @@ const Flows = () => {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Opening screen</Label>
-                  <Input value={draftScreen} onChange={e => setDraftScreen(e.target.value)} placeholder={jsonValidity.screens[0] || 'SERVICE_MENU'} />
+                  <Select value={draftScreen || jsonValidity.screens[0]?.id || ''} onValueChange={setDraftScreen}>
+                    <SelectTrigger><SelectValue placeholder="Choose a screen" /></SelectTrigger>
+                    <SelectContent>{jsonValidity.screens.map(screen => <SelectItem key={screen.id} value={screen.id}>{screen.title || screen.id}</SelectItem>)}</SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -271,13 +282,14 @@ const Flows = () => {
                 </div>
               )}
 
-              <div className="space-y-1.5">
+              <Tabs defaultValue="build" className="space-y-3">
+                <TabsList className="grid w-full grid-cols-2 sm:w-[320px]"><TabsTrigger value="build">Form code</TabsTrigger><TabsTrigger value="preview">Preview</TabsTrigger></TabsList>
+                <TabsContent value="build" className="space-y-1.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Label>Form code</Label>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => { setDraftJson(TN45_PRESET_STRING); toast.success('Travel booking preset loaded'); }}>
-                      <Sparkles className="w-3.5 h-3.5 mr-1" /> Load booking preset
-                    </Button>
+                  <Label>Meta Flow JSON</Label>
+                  <div className="flex flex-wrap gap-1">
+                    <Button size="sm" variant="ghost" onClick={formatJson} disabled={!jsonValidity.definition}><Braces className="w-3.5 h-3.5 mr-1" /> Format</Button>
+                    <Button size="sm" variant="ghost" onClick={copyJson} disabled={!draftJson}><Copy className="w-3.5 h-3.5 mr-1" /> Copy</Button>
                     {selected.flow_id && (
                       <Button size="sm" variant="ghost" onClick={() => runAction('fetch_json')} disabled={busy === 'fetch_json'}>
                         <RefreshCw className="w-3.5 h-3.5 mr-1" /> Load from WhatsApp
@@ -296,12 +308,14 @@ const Flows = () => {
                   <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                     <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
                     <span>{jsonValidity.screens.length} screen(s):</span>
-                    {jsonValidity.screens.map(s => <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>)}
+                    {jsonValidity.screens.map(s => <Badge key={s.id} variant="secondary" className="text-[10px]">{s.id}</Badge>)}
                   </div>
                 ) : (
-                  <p className="text-xs text-destructive">{jsonValidity.error}</p>
+                  <div className="space-y-1">{jsonValidity.errors.map(error => <p key={error} className="text-xs text-destructive">{error}</p>)}</div>
                 )}
-              </div>
+                </TabsContent>
+                <TabsContent value="preview" className="lg:hidden"><FlowPhonePreview screens={jsonValidity.screens} initialScreen={draftScreen} /></TabsContent>
+              </Tabs>
 
               <div className="flex flex-wrap gap-2 pt-1">
                 <Button variant="outline" onClick={saveDraft} disabled={busy === 'save'}>Save</Button>
@@ -321,10 +335,15 @@ const Flows = () => {
                 </Button>
               </div>
               <p className="text-[11px] text-muted-foreground">
-                Once published, attach this form to a template button or trigger it from Automation when a customer says “Hi”.
-                Every submission creates a booking with its own code, saves all details and sends the advance payment link back on the same chat.
+                 Once published, attach this form to a template button or trigger it from Automation when a customer sends a keyword.
+                 Every submission gets a unique CRM reference and saves all submitted fields. Travel bookings keep their automatic advance-payment flow.
               </p>
             </Card>
+            <Card className="hidden lg:block p-4">
+              <div className="mb-3"><h2 className="font-semibold">Live preview</h2><p className="text-xs text-muted-foreground">Screen-by-screen preview updates as you edit the JSON.</p></div>
+              <FlowPhonePreview screens={jsonValidity.screens} initialScreen={draftScreen} />
+            </Card>
+            </div>
           ) : (
             <Card className="p-10 text-center text-sm text-muted-foreground">Pick a form on the left, or create a new one.</Card>
           )}
@@ -332,12 +351,17 @@ const Flows = () => {
       </div>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>New WhatsApp form</DialogTitle>
-            <DialogDescription>Give it a name your team will recognise, e.g. “Travel booking form”.</DialogDescription>
+            <DialogDescription>Choose a starting point. Every field and screen can be changed later.</DialogDescription>
           </DialogHeader>
-          <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Travel booking form" />
+          <div className="space-y-4">
+            <div className="space-y-1.5"><Label>Form name</Label><Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Customer enquiry" /></div>
+            <div className="space-y-2"><Label>Start with</Label><div className="grid gap-2 sm:grid-cols-2">
+              {FLOW_STARTERS.map(starter => <Button key={starter.id} type="button" variant={starterId === starter.id ? 'default' : 'outline'} className="h-auto justify-start px-3 py-3 text-left" onClick={() => { setStarterId(starter.id); if (!newName) setNewName(starter.name); }}><WandSparkles className="mr-2 h-4 w-4 shrink-0" /><span className="min-w-0"><span className="block text-sm font-medium">{starter.name}</span><span className="block whitespace-normal text-xs opacity-70">{starter.description}</span></span></Button>)}
+            </div></div>
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
             <Button onClick={createFlow} disabled={!newName.trim() || busy === 'create'}>Create</Button>
