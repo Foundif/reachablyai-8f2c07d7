@@ -1,7 +1,7 @@
 # Roadmap
 
-- [ ] Fix current Flow Studio build issues
-- [ ] Complete general-purpose form creation and preview
-- [ ] Verify generic CRM submission handling
+- [x] Fix current Flow Studio build issues
+- [x] Complete general-purpose form creation and preview
+- [x] Verify generic CRM submission handling
 - [ ] Deploy updated WhatsApp functions
-- [ ] Verify desktop and mobile Flow Studio
+- [x] Verify desktop and mobile Flow Studio
