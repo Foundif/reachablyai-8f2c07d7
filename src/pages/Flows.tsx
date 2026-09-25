@@ -45,14 +45,14 @@ const Flows = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draftJson, setDraftJson] = useState('');
   const [draftName, setDraftName] = useState('');
-  const [draftCta, setDraftCta] = useState('Book Service');
+  const [draftCta, setDraftCta] = useState('Open form');
   const [draftScreen, setDraftScreen] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [starterId, setStarterId] = useState('blank');
   const [testOpen, setTestOpen] = useState(false);
   const [testNumber, setTestNumber] = useState('');
-  const [testBody, setTestBody] = useState('Tap below to open the booking form.');
+  const [testBody, setTestBody] = useState('Tap below to open the form.');
 
   const selected = useMemo(() => rows.find(r => r.id === selectedId) || null, [rows, selectedId]);
 
@@ -120,6 +120,7 @@ const Flows = () => {
     if (error) { toast.error(error.message); return; }
     setCreateOpen(false);
     setNewName('');
+    setStarterId('blank');
     const row = data as any as FlowRow;
     setRows(prev => [row, ...prev]);
     pick(row);
@@ -177,12 +178,13 @@ const Flows = () => {
 
   const saveDraftSilently = async () => {
     if (!selected || !jsonValidity.ok) return;
-    await supabase.from('whatsapp_flows' as any).update({
+    const { error } = await supabase.from('whatsapp_flows' as any).update({
       name: draftName.trim() || selected.name,
       json_definition: JSON.parse(draftJson),
       first_screen: draftScreen || jsonValidity.screens[0]?.id,
       cta_text: draftCta.trim() || 'Open form',
     } as any).eq('id', selected.id);
+    if (error) throw error;
   };
 
   const removeFlow = async (row: FlowRow) => {
@@ -206,18 +208,18 @@ const Flows = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-5">
+      <div className="p-4 md:p-6 lg:p-8 space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">WhatsApp Forms</h1>
             <p className="text-sm text-muted-foreground">Create any form customers can complete inside WhatsApp, preview every screen, publish, and test it.</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => runAction('sync')} disabled={busy === 'sync'}>
+          <div className="flex w-full gap-2 sm:w-auto">
+            <Button className="flex-1 sm:flex-none" variant="outline" onClick={() => runAction('sync')} disabled={busy === 'sync'}>
               {busy === 'sync' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
               Sync from WhatsApp
             </Button>
-            <Button onClick={() => setCreateOpen(true)}><Plus className="w-4 h-4 mr-2" /> New form</Button>
+            <Button className="flex-1 sm:flex-none" onClick={() => setCreateOpen(true)}><Plus className="w-4 h-4 mr-2" /> New form</Button>
           </div>
         </div>
 
@@ -256,7 +258,7 @@ const Flows = () => {
           {/* Editor */}
           {selected ? (
             <div className="space-y-4 min-w-0">
-            <Card className="p-4 space-y-4">
+            <Card className="p-3 sm:p-4 space-y-4 overflow-hidden">
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="space-y-1.5">
                   <Label>Form name</Label>
@@ -301,7 +303,7 @@ const Flows = () => {
                   value={draftJson}
                   onChange={e => setDraftJson(e.target.value)}
                   spellCheck={false}
-                  className="font-mono text-[11px] leading-relaxed min-h-[360px]"
+                  className="font-mono text-[11px] leading-relaxed min-h-[360px] max-h-[62dvh] overflow-auto whitespace-pre"
                   placeholder='{"version":"7.3","screens":[ ... ]}'
                 />
                 {jsonValidity.ok ? (
@@ -330,7 +332,7 @@ const Flows = () => {
                 <Button variant="outline" onClick={() => setTestOpen(true)} disabled={selected.status !== 'PUBLISHED'}>
                   <Send className="w-4 h-4 mr-2" /> Send test to my phone
                 </Button>
-                <Button variant="ghost" className="text-destructive ml-auto" onClick={() => removeFlow(selected)}>
+                <Button variant="ghost" className="text-destructive sm:ml-auto" onClick={() => removeFlow(selected)}>
                   <Trash2 className="w-4 h-4 mr-2" /> Remove
                 </Button>
               </div>
@@ -370,7 +372,7 @@ const Flows = () => {
       </Dialog>
 
       <Dialog open={testOpen} onOpenChange={setTestOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Send a test form</DialogTitle>
             <DialogDescription>We will send the form button to this WhatsApp number right now.</DialogDescription>

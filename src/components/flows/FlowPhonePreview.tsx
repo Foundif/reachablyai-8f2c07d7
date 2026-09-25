@@ -19,13 +19,16 @@ function PreviewComponent({ component, goTo }: { component: FlowComponent; goTo:
   if (type === 'TextSubheading') return <h4 className="text-sm font-semibold">{component.text || 'Subheading'}</h4>;
   if (type === 'TextBody') return <p className="text-sm leading-relaxed text-foreground/90">{component.text || 'Body text'}</p>;
   if (type === 'TextCaption') return <p className="text-xs leading-relaxed text-muted-foreground">{component.text || 'Caption text'}</p>;
-  if (type === 'TextInput' || type === 'DatePicker') return <div className="space-y-1.5"><Label className="text-xs">{component.label || component.name || 'Text field'}{component.required ? ' *' : ''}</Label><Input type={type === 'DatePicker' ? 'date' : 'text'} placeholder={type === 'DatePicker' ? '' : 'Type your answer'} className="h-10 bg-background" /></div>;
+  if (type === 'TextInput' || type === 'DatePicker') {
+    const inputType = type === 'DatePicker' ? 'date' : component['input-type'] === 'email' ? 'email' : component['input-type'] === 'phone' ? 'tel' : component['input-type'] === 'number' ? 'number' : 'text';
+    return <div className="space-y-1.5"><Label className="text-xs">{component.label || component.name || 'Text field'}{component.required ? ' *' : ''}</Label><Input type={inputType} placeholder={type === 'DatePicker' ? '' : 'Type your answer'} className="h-10 bg-background" /></div>;
+  }
   if (type === 'TextArea') return <div className="space-y-1.5"><Label className="text-xs">{component.label || component.name || 'Long answer'}{component.required ? ' *' : ''}</Label><Textarea placeholder="Type your answer" rows={3} className="resize-none bg-background" /></div>;
   if (type === 'Dropdown') return <div className="space-y-1.5"><Label className="text-xs">{component.label || component.name || 'Select'}{component.required ? ' *' : ''}</Label><Select><SelectTrigger className="bg-background"><SelectValue placeholder="Select an option" /></SelectTrigger><SelectContent>{optionsOf(component).map((option, index) => <SelectItem key={option.id || index} value={option.id || String(index)}>{option.title || option.id || `Option ${index + 1}`}</SelectItem>)}</SelectContent></Select></div>;
   if (type === 'RadioButtonsGroup') return <fieldset className="space-y-2"><legend className="text-xs font-medium mb-2">{component.label || component.name || 'Choose one'}{component.required ? ' *' : ''}</legend>{optionsOf(component).map((option, index) => <label key={option.id || index} className="flex items-center gap-3 rounded-md border bg-background p-3 text-sm"><input type="radio" name={component.name || 'radio'} className="accent-primary" /><span>{option.title || option.id || `Option ${index + 1}`}</span></label>)}</fieldset>;
   if (type === 'CheckboxGroup') return <fieldset className="space-y-2"><legend className="text-xs font-medium mb-2">{component.label || component.name || 'Choose options'}{component.required ? ' *' : ''}</legend>{optionsOf(component).map((option, index) => <label key={option.id || index} className="flex items-center gap-3 rounded-md border bg-background p-3 text-sm"><Checkbox /><span>{option.title || option.id || `Option ${index + 1}`}</span></label>)}</fieldset>;
   if (type === 'OptIn') return <label className="flex items-start gap-3 text-sm"><Checkbox className="mt-0.5" /><span>{component.label || 'I agree'}</span></label>;
-  if (type === 'EmbeddedLink') return <button type="button" className="text-sm font-medium underline underline-offset-4">{component.text || component.label || 'Open link'}</button>;
+  if (type === 'EmbeddedLink') return <Button type="button" variant="link" className="h-auto p-0 text-sm">{component.text || component.label || 'Open link'}</Button>;
   if (type === 'Footer') {
     const target = component['on-click-action']?.next?.name;
     return <Button className="w-full mt-2" onClick={() => target && goTo(target)}>{component.label || (target ? 'Continue' : 'Submit')}</Button>;
@@ -36,8 +39,9 @@ function PreviewComponent({ component, goTo }: { component: FlowComponent; goTo:
 export default function FlowPhonePreview({ screens, initialScreen }: Props) {
   const [activeId, setActiveId] = useState(initialScreen || screens[0]?.id || '');
   useEffect(() => {
-    if (!screens.some(screen => screen.id === activeId)) setActiveId(initialScreen || screens[0]?.id || '');
-  }, [screens, initialScreen, activeId]);
+    if (initialScreen && screens.some(screen => screen.id === initialScreen)) setActiveId(initialScreen);
+    else if (!screens.some(screen => screen.id === activeId)) setActiveId(screens[0]?.id || '');
+  }, [screens, initialScreen]);
   const activeIndex = Math.max(0, screens.findIndex(screen => screen.id === activeId));
   const screen = screens[activeIndex];
   const screenLabel = useMemo(() => `${activeIndex + 1} of ${screens.length}`, [activeIndex, screens.length]);
