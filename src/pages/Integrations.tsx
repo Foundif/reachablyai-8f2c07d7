@@ -17,6 +17,7 @@ import { resolveWorkspaceId } from '@/lib/workspace';
 import { toast } from 'sonner';
 import { Copy, Loader2, Plug, Trash2, ExternalLink, Webhook, ChevronRight } from 'lucide-react';
 import ShopifyRiskMapping from '@/components/integrations/ShopifyRiskMapping';
+import webhookIcon from '@/assets/webhook-icon.png';
 import razorpayLogo from '@/assets/razorpay.svg.asset.json';
 import shiprocketLogo from '@/assets/shiprocket.png.asset.json';
 
@@ -38,7 +39,7 @@ const PROVIDERS: Provider[] = [
   {
     id: 'webhook',
     name: 'Generic Webhook',
-    logo: 'https://cdn.simpleicons.org/webhooks/C73A63',
+    logo: webhookIcon,
     tagline: 'Trigger WhatsApp messages from an external system using webhook.',
     blurb: 'Post JSON to your Reachably endpoint from any external system and trigger WhatsApp messages instantly.',
     fields: [
