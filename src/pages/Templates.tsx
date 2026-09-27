@@ -1,3 +1,4 @@
+import TemplateMediaPreview from '@/components/templates/TemplateMediaPreview';
 import { useEffect, useState } from 'react';
 import { SecureImg, SecureVideo } from '@/lib/secureMedia';
 import { useNavigate } from 'react-router-dom';
@@ -251,10 +252,12 @@ const Templates = () => {
                     {t.header_type && !['none', 'text'].includes(t.header_type) && (
                       <div className="mb-2 rounded-lg overflow-hidden bg-muted h-24">
                         {t.header_media_url && t.header_type === 'image' ? (
-                          <SecureImg src={t.header_media_url} alt={`${t.name} header image`} loading="lazy" className="h-24 w-full object-contain" />
+                          <SecureImg src={t.header_media_url} alt={`${t.name} header image`} loading="lazy" className="h-24 w-full object-cover" />
                         ) : t.header_media_url && t.header_type === 'video' ? (
-                          <SecureVideo src={t.header_media_url} muted className="h-24 w-full object-contain" />
+                          <SecureVideo src={t.header_media_url} muted className="h-24 w-full object-cover" />
                         ) : (
+                        ) : t.header_media_url && t.header_type === 'document' ? (
+                          <TemplateMediaPreview url={t.header_media_url} type="document" className="h-24 w-full" />
                           <div className="h-24 grid place-items-center text-xs text-muted-foreground capitalize">{t.header_type} header</div>
                         )}
                       </div>
@@ -264,9 +267,9 @@ const Templates = () => {
                         {t.carousel_cards.map((c, i) => (
                           <div key={i} className="h-20 w-24 shrink-0 rounded-lg overflow-hidden bg-muted">
                             {c.header_media_url && c.header_type === 'video' ? (
-                              <SecureVideo src={c.header_media_url} muted className="h-full w-full object-contain" />
+                              <SecureVideo src={c.header_media_url} muted className="h-full w-full object-cover" />
                             ) : c.header_media_url ? (
-                              <SecureImg src={c.header_media_url} alt={`Card ${i + 1}`} loading="lazy" className="h-full w-full object-contain" />
+                              <SecureImg src={c.header_media_url} alt={`Card ${i + 1}`} loading="lazy" className="h-full w-full object-cover" />
                             ) : (
                               <div className="h-full grid place-items-center text-[10px] text-muted-foreground">Card {i + 1}</div>
                             )}

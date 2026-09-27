@@ -1,3 +1,4 @@
+import TemplateMediaPreview from '@/components/templates/TemplateMediaPreview';
 import { useEffect, useMemo, useState } from 'react';
 import { SecureImg, SecureVideo } from '@/lib/secureMedia';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -283,8 +284,8 @@ const TemplateEditor = () => {
       {value && kind !== 'document' && (
         <div className="rounded-lg overflow-hidden bg-muted flex items-center justify-center">
           {kind === 'video'
-            ? <SecureVideo src={value} muted controls className="w-full max-h-56 object-contain" />
-            : <SecureImg src={value} alt="Selected media preview" className="w-full max-h-56 object-contain" />}
+            ? <SecureVideo src={value} muted controls className="w-full max-h-56 object-cover" />
+            : <SecureImg src={value} alt="Selected media preview" className="w-full max-h-56 object-cover" />}
         </div>
       )}
       <div className="flex gap-2">
@@ -567,7 +568,7 @@ const TemplateEditor = () => {
                     {form.carousel_cards.map((c, i) => (
                       <div key={i} className="rounded-lg bg-white shadow-sm p-2 w-56 shrink-0 snap-start space-y-1.5 flex flex-col">
                         {c.header_media_url && c.header_type === 'image'
-                          ? <SecureImg src={c.header_media_url} alt="" className="rounded w-full h-auto object-contain bg-slate-100" />
+                          ? <SecureImg src={c.header_media_url} alt="" className="rounded w-full aspect-[1.91/1] object-cover" />
                           : <div className="rounded w-full h-24 bg-slate-200 flex items-center justify-center text-slate-400"><Play className="w-5 h-5" /></div>}
                         <div className="text-[12px] text-slate-800 whitespace-pre-wrap break-words flex-1">{c.body || 'Card text…'}</div>
                         <div className="border-t pt-1 text-center text-[12px] text-[#00a5f4] font-medium">
@@ -580,7 +581,7 @@ const TemplateEditor = () => {
                 <div className="rounded-lg bg-white shadow-sm p-2.5 text-sm text-slate-800 space-y-1.5 max-w-[290px]">
                   {form.header_type === 'text' && form.header && <div className="font-semibold">{form.header}</div>}
                   {form.header_type === 'image' && (form.header_media_url
-                    ? <SecureImg src={form.header_media_url} alt="" className="rounded w-full max-h-56 object-contain bg-slate-100" />
+                    ? <SecureImg src={form.header_media_url} alt="" className="rounded w-full aspect-[1.91/1] object-cover" />
                     : <div className="rounded w-full h-28 bg-slate-200" />)}
                   {form.header_type === 'video' && (
                     <div className="rounded w-full h-28 bg-slate-900 flex items-center justify-center text-white/70"><Play className="w-6 h-6" /></div>
@@ -589,7 +590,7 @@ const TemplateEditor = () => {
                     <div className="rounded w-full bg-slate-100 p-3 flex items-center gap-2 text-slate-600 text-xs"><MapPin className="w-5 h-5" /> Map location (filled in when you send)</div>
                   )}
                   {form.header_type === 'document' && (
-                    <div className="rounded w-full bg-slate-100 p-3 flex items-center gap-2 text-slate-600 text-xs"><FileText className="w-5 h-5" /> Document.pdf</div>
+                    <TemplateMediaPreview url={form.header_media_url} type="document" className="rounded w-full h-44" />
                   )}
                   <div className="whitespace-pre-wrap break-words text-[13px]">
                     {renderedPreview || <span className="text-slate-400">Your message body will appear here…</span>}

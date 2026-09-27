@@ -1238,7 +1238,7 @@ function ScrapeLeadsDialog({ wsId, onDone }: { wsId: string | null; onDone: () =
       <DialogTrigger asChild>
         <Button variant="outline" className="gap-1"><Sparkles className="w-4 h-4" /> Find Leads</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain">
         <DialogHeader>
           <DialogTitle>Lead finder — Google Maps</DialogTitle>
         </DialogHeader>
