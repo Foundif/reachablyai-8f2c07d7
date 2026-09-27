@@ -255,9 +255,9 @@ const Templates = () => {
                           <SecureImg src={t.header_media_url} alt={`${t.name} header image`} loading="lazy" className="h-24 w-full object-cover" />
                         ) : t.header_media_url && t.header_type === 'video' ? (
                           <SecureVideo src={t.header_media_url} muted className="h-24 w-full object-cover" />
-                        ) : (
                         ) : t.header_media_url && t.header_type === 'document' ? (
                           <TemplateMediaPreview url={t.header_media_url} type="document" className="h-24 w-full" />
+                        ) : (
                           <div className="h-24 grid place-items-center text-xs text-muted-foreground capitalize">{t.header_type} header</div>
                         )}
                       </div>
