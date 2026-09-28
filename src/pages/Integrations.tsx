@@ -114,6 +114,27 @@ const PROVIDERS: Provider[] = [
     ],
   },
   {
+    id: 'google_sheets',
+    name: 'Google Sheets',
+    icon: Table2,
+    tagline: 'Every booking and payment appears live in your own Google Sheet.',
+    blurb: 'Connect your own Google Sheet and Reachably writes each booking as a row, then updates the same row when the advance is paid.',
+    free: true,
+    docs: 'https://developers.google.com/apps-script/guides/web',
+    fields: [
+      { key: 'web_app_url', label: 'Apps Script web app URL', placeholder: 'https://script.google.com/macros/s/.../exec' },
+      { key: 'tab', label: 'Sheet tab name', placeholder: 'Bookings' },
+      { key: 'secret', label: 'Secret (optional)', placeholder: 'Same value you set as SECRET in Apps Script', secret: true },
+    ],
+    capabilities: [
+      'New booking added as a row instantly',
+      'Same row updated when the advance is paid',
+      'Passenger, address, date, add-ons and notes included',
+      'Amount, advance, paid and balance columns',
+      'Share the sheet with your team or accountant',
+    ],
+  },
+  {
     id: 'shopify',
     name: 'Shopify',
     logo: 'https://cdn.simpleicons.org/shopify/95BF47',
