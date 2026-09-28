@@ -328,7 +328,7 @@ const Integrations = () => {
                     return (
                       <Card key={p.id} className="p-4 space-y-3 hover-lift">
                         <div className="flex items-start justify-between gap-3">
-                          <Logo src={p.logo} alt={p.name} />
+                          <Logo provider={p} />
                           <Badge variant="outline" className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30">Connected</Badge>
                         </div>
                         <div>
@@ -358,7 +358,7 @@ const Integrations = () => {
                 {PROVIDERS.map(p => (
                   <Card key={p.id} className="p-4 space-y-3 hover-lift cursor-pointer" onClick={() => setDetail(p)}>
                     <div className="flex items-center gap-2">
-                      <Logo src={p.logo} alt={p.name} />
+                      <Logo provider={p} />
                       {p.free && <Badge variant="outline" className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30">Free</Badge>}
                     </div>
                     <p className="font-semibold">{p.name}</p>
@@ -378,7 +378,7 @@ const Integrations = () => {
             <>
               <DialogHeader>
                 <div className="flex items-start gap-3">
-                  <Logo src={detail.logo} alt={detail.name} className="w-12 h-12" />
+                  <Logo provider={detail} className="w-12 h-12" />
                   <div className="flex-1">
                     <DialogTitle>{detail.name} Integration</DialogTitle>
                     <DialogDescription>{detail.blurb}</DialogDescription>
