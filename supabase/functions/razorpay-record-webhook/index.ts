@@ -139,5 +139,13 @@ Deno.serve(async (req) => {
     console.error('confirmation send failed', e);
   }
 
+  // ---- Update the same row in the client's Google Sheet ----
+  await syncRecordToSheet(admin, rec.workspace_id, {
+    ...rec,
+    paid_amount: totalPaid,
+    payment_status: fullyPaid ? 'paid' : 'partially_paid',
+    status,
+  });
+
   return json({ ok: true, record: rec.record_code, status, payment_status: fullyPaid ? 'paid' : 'partially_paid' });
 });
