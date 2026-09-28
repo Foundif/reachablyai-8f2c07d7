@@ -192,6 +192,21 @@ const Integrations = () => {
   const [pendingRemove, setPendingRemove] = useState<Provider | null>(null);
   const [hookDialog, setHookDialog] = useState(false);
   const [hookName, setHookName] = useState('');
+  const [sheetBusy, setSheetBusy] = useState<'test' | 'backfill' | null>(null);
+
+  const callSheetSync = async (action: 'test' | 'sync_all') => {
+    setSheetBusy(action === 'test' ? 'test' : 'backfill');
+    const { data, error } = await supabase.functions.invoke('sheet-sync', { body: { action } });
+    setSheetBusy(null);
+    if (error) {
+      let detail = error.message;
+      try { detail = await (error as any)?.context?.text?.() || detail; } catch { /* keep message */ }
+      return toast.error('Sheet sync failed', { description: String(detail).slice(0, 300) });
+    }
+    if ((data as any)?.ok === false) return toast.error('Sheet sync failed', { description: (data as any).error });
+    if (action === 'test') toast.success('Test row added to your Google Sheet');
+    else toast.success(`Sent ${(data as any)?.synced ?? 0} records to your sheet`);
+  };
 
   const load = async () => {
     if (!user) return;
