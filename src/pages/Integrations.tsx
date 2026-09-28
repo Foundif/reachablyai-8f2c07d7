@@ -360,6 +360,20 @@ const Integrations = () => {
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
+                        {p.id === 'google_sheets' && (
+                          <div className="flex flex-col gap-2 sm:flex-row">
+                            <Button size="sm" variant="secondary" className="flex-1" disabled={sheetBusy !== null}
+                              onClick={() => callSheetSync('test')}>
+                              {sheetBusy === 'test' ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                              Send test row
+                            </Button>
+                            <Button size="sm" variant="secondary" className="flex-1" disabled={sheetBusy !== null}
+                              onClick={() => callSheetSync('sync_all')}>
+                              {sheetBusy === 'backfill' ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                              Sync existing
+                            </Button>
+                          </div>
+                        )}
                       </Card>
                     );
                   })}
