@@ -244,5 +244,9 @@ export async function handleFlowSubmission(opts: {
     }
   } catch (_) { /* non-fatal: the record already exists in the CRM */ }
 
+  // ---- Google Sheets live sync (quiet no-op when the sheet isn't connected) ----
+  const freshRec = link ? { ...rec, payment_status: 'link_sent' } : rec;
+  await syncRecordToSheet(admin, workspace_id, freshRec);
+
   return { record: rec, link, linkError };
 }

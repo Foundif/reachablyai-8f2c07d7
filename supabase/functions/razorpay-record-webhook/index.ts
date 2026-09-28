@@ -3,6 +3,7 @@
 // confirmation back on the same WhatsApp chat the booking came from.
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { syncRecordToSheet } from '../_shared/sheetSync.ts';
 
 const json = (b: any, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
