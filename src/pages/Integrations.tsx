@@ -15,7 +15,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { resolveWorkspaceId } from '@/lib/workspace';
 import { toast } from 'sonner';
-import { Copy, Loader2, Plug, Trash2, ExternalLink, Webhook, ChevronRight } from 'lucide-react';
+import { Copy, Loader2, Plug, Trash2, ExternalLink, Webhook, ChevronRight, Table2, RefreshCw } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import ShopifyRiskMapping from '@/components/integrations/ShopifyRiskMapping';
 import webhookIcon from '@/assets/webhook-icon.png';
 import razorpayLogo from '@/assets/razorpay.svg.asset.json';
@@ -26,7 +27,8 @@ type Field = { key: string; label: string; placeholder?: string; secret?: boolea
 type Provider = {
   id: string;
   name: string;
-  logo: string;
+  logo?: string;
+  icon?: LucideIcon;
   tagline: string;
   blurb: string;
   free?: boolean;
@@ -34,6 +36,48 @@ type Provider = {
   fields: Field[];
   capabilities: string[];
 };
+
+// Apps Script the client pastes into their own Google Sheet. It appends a new row
+// per booking and updates the existing row when the payment status changes.
+const SHEETS_SCRIPT = `function doPost(e) {
+  var body = JSON.parse(e.postData.contents);
+  var props = PropertiesService.getScriptProperties();
+  var expected = props.getProperty('SECRET') || '';
+  if (expected && body.secret !== expected) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'Bad secret' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var name = body.tab || 'Bookings';
+  var sheet = ss.getSheetByName(name) || ss.insertSheet(name);
+  var cols = body.columns;
+
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(cols);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, cols.length).setFontWeight('bold');
+  }
+
+  var header = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var values = cols.map(function (c) { return body.row[c] === undefined ? '' : body.row[c]; });
+  var keyCol = header.indexOf(body.key) + 1;
+  var keyValue = body.row[body.key];
+  var rowIndex = 0;
+
+  if (keyCol > 0 && keyValue && sheet.getLastRow() > 1) {
+    var keys = sheet.getRange(2, keyCol, sheet.getLastRow() - 1, 1).getValues();
+    for (var i = 0; i < keys.length; i++) {
+      if (String(keys[i][0]) === String(keyValue)) { rowIndex = i + 2; break; }
+    }
+  }
+
+  if (rowIndex) sheet.getRange(rowIndex, 1, 1, values.length).setValues([values]);
+  else sheet.appendRow(values);
+
+  return ContentService.createTextOutput(JSON.stringify({ ok: true, updated: !!rowIndex }))
+    .setMimeType(ContentService.MimeType.JSON);
+}`;
 
 const PROVIDERS: Provider[] = [
   {
@@ -70,6 +114,27 @@ const PROVIDERS: Provider[] = [
     ],
   },
   {
+    id: 'google_sheets',
+    name: 'Google Sheets',
+    icon: Table2,
+    tagline: 'Every booking and payment appears live in your own Google Sheet.',
+    blurb: 'Connect your own Google Sheet and Reachably writes each booking as a row, then updates the same row when the advance is paid.',
+    free: true,
+    docs: 'https://developers.google.com/apps-script/guides/web',
+    fields: [
+      { key: 'web_app_url', label: 'Apps Script web app URL', placeholder: 'https://script.google.com/macros/s/.../exec' },
+      { key: 'tab', label: 'Sheet tab name', placeholder: 'Bookings' },
+      { key: 'secret', label: 'Secret (optional)', placeholder: 'Same value you set as SECRET in Apps Script', secret: true },
+    ],
+    capabilities: [
+      'New booking added as a row instantly',
+      'Same row updated when the advance is paid',
+      'Passenger, address, date, add-ons and notes included',
+      'Amount, advance, paid and balance columns',
+      'Share the sheet with your team or accountant',
+    ],
+  },
+  {
     id: 'shopify',
     name: 'Shopify',
     logo: 'https://cdn.simpleicons.org/shopify/95BF47',
@@ -103,9 +168,13 @@ interface WebhookRow { id: string; name: string; token: string; active: boolean;
 
 const FN_BASE = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/generic-webhook`;
 
-const Logo = ({ src, alt, className = 'w-10 h-10' }: { src: string; alt: string; className?: string }) => (
+const Logo = ({ provider, className = 'w-10 h-10' }: { provider: Provider; className?: string }) => (
   <div className={`${className} rounded-xl bg-muted/60 grid place-items-center overflow-hidden shrink-0`}>
-    <img src={src} alt={`${alt} logo`} className="w-3/5 h-3/5 object-contain" loading="lazy" />
+    {provider.logo
+      ? <img src={provider.logo} alt={`${provider.name} logo`} className="w-3/5 h-3/5 object-contain" loading="lazy" />
+      : provider.icon
+        ? <provider.icon className="w-3/5 h-3/5 text-emerald-600" aria-label={`${provider.name} logo`} />
+        : null}
   </div>
 );
 
@@ -123,6 +192,21 @@ const Integrations = () => {
   const [pendingRemove, setPendingRemove] = useState<Provider | null>(null);
   const [hookDialog, setHookDialog] = useState(false);
   const [hookName, setHookName] = useState('');
+  const [sheetBusy, setSheetBusy] = useState<'test' | 'backfill' | null>(null);
+
+  const callSheetSync = async (action: 'test' | 'sync_all') => {
+    setSheetBusy(action === 'test' ? 'test' : 'backfill');
+    const { data, error } = await supabase.functions.invoke('sheet-sync', { body: { action } });
+    setSheetBusy(null);
+    if (error) {
+      let detail = error.message;
+      try { detail = await (error as any)?.context?.text?.() || detail; } catch { /* keep message */ }
+      return toast.error('Sheet sync failed', { description: String(detail).slice(0, 300) });
+    }
+    if ((data as any)?.ok === false) return toast.error('Sheet sync failed', { description: (data as any).error });
+    if (action === 'test') toast.success('Test row added to your Google Sheet');
+    else toast.success(`Sent ${(data as any)?.synced ?? 0} records to your sheet`);
+  };
 
   const load = async () => {
     if (!user) return;
@@ -259,7 +343,7 @@ const Integrations = () => {
                     return (
                       <Card key={p.id} className="p-4 space-y-3 hover-lift">
                         <div className="flex items-start justify-between gap-3">
-                          <Logo src={p.logo} alt={p.name} />
+                          <Logo provider={p} />
                           <Badge variant="outline" className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30">Connected</Badge>
                         </div>
                         <div>
@@ -276,6 +360,20 @@ const Integrations = () => {
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
+                        {p.id === 'google_sheets' && (
+                          <div className="flex flex-col gap-2 sm:flex-row">
+                            <Button size="sm" variant="secondary" className="flex-1" disabled={sheetBusy !== null}
+                              onClick={() => callSheetSync('test')}>
+                              {sheetBusy === 'test' ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                              Send test row
+                            </Button>
+                            <Button size="sm" variant="secondary" className="flex-1" disabled={sheetBusy !== null}
+                              onClick={() => callSheetSync('sync_all')}>
+                              {sheetBusy === 'backfill' ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                              Sync existing
+                            </Button>
+                          </div>
+                        )}
                       </Card>
                     );
                   })}
@@ -289,7 +387,7 @@ const Integrations = () => {
                 {PROVIDERS.map(p => (
                   <Card key={p.id} className="p-4 space-y-3 hover-lift cursor-pointer" onClick={() => setDetail(p)}>
                     <div className="flex items-center gap-2">
-                      <Logo src={p.logo} alt={p.name} />
+                      <Logo provider={p} />
                       {p.free && <Badge variant="outline" className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30">Free</Badge>}
                     </div>
                     <p className="font-semibold">{p.name}</p>
@@ -309,7 +407,7 @@ const Integrations = () => {
             <>
               <DialogHeader>
                 <div className="flex items-start gap-3">
-                  <Logo src={detail.logo} alt={detail.name} className="w-12 h-12" />
+                  <Logo provider={detail} className="w-12 h-12" />
                   <div className="flex-1">
                     <DialogTitle>{detail.name} Integration</DialogTitle>
                     <DialogDescription>{detail.blurb}</DialogDescription>

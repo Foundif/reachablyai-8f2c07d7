@@ -1,5 +1,6 @@
 // Captures a WhatsApp Flow submission (interactive → nfm_reply) as a CRM record,
 // stores every submitted field, and raises the advance payment link automatically.
+import { syncRecordToSheet } from './sheetSync.ts';
 
 const FIELD_LABELS: Record<string, string> = {
   service: 'Service',
@@ -242,6 +243,10 @@ export async function handleFlowSubmission(opts: {
       }).eq('id', conversation_id);
     }
   } catch (_) { /* non-fatal: the record already exists in the CRM */ }
+
+  // ---- Google Sheets live sync (quiet no-op when the sheet isn't connected) ----
+  const freshRec = link ? { ...rec, payment_status: 'link_sent' } : rec;
+  await syncRecordToSheet(admin, workspace_id, freshRec);
 
   return { record: rec, link, linkError };
 }
