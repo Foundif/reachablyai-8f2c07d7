@@ -168,9 +168,13 @@ interface WebhookRow { id: string; name: string; token: string; active: boolean;
 
 const FN_BASE = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/generic-webhook`;
 
-const Logo = ({ src, alt, className = 'w-10 h-10' }: { src: string; alt: string; className?: string }) => (
+const Logo = ({ provider, className = 'w-10 h-10' }: { provider: Provider; className?: string }) => (
   <div className={`${className} rounded-xl bg-muted/60 grid place-items-center overflow-hidden shrink-0`}>
-    <img src={src} alt={`${alt} logo`} className="w-3/5 h-3/5 object-contain" loading="lazy" />
+    {provider.logo
+      ? <img src={provider.logo} alt={`${provider.name} logo`} className="w-3/5 h-3/5 object-contain" loading="lazy" />
+      : provider.icon
+        ? <provider.icon className="w-3/5 h-3/5 text-emerald-600" aria-label={`${provider.name} logo`} />
+        : null}
   </div>
 );
 
