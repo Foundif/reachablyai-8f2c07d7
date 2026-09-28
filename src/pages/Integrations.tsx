@@ -15,7 +15,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { resolveWorkspaceId } from '@/lib/workspace';
 import { toast } from 'sonner';
-import { Copy, Loader2, Plug, Trash2, ExternalLink, Webhook, ChevronRight } from 'lucide-react';
+import { Copy, Loader2, Plug, Trash2, ExternalLink, Webhook, ChevronRight, Table2, RefreshCw } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import ShopifyRiskMapping from '@/components/integrations/ShopifyRiskMapping';
 import webhookIcon from '@/assets/webhook-icon.png';
 import razorpayLogo from '@/assets/razorpay.svg.asset.json';
@@ -26,7 +27,8 @@ type Field = { key: string; label: string; placeholder?: string; secret?: boolea
 type Provider = {
   id: string;
   name: string;
-  logo: string;
+  logo?: string;
+  icon?: LucideIcon;
   tagline: string;
   blurb: string;
   free?: boolean;
@@ -34,6 +36,48 @@ type Provider = {
   fields: Field[];
   capabilities: string[];
 };
+
+// Apps Script the client pastes into their own Google Sheet. It appends a new row
+// per booking and updates the existing row when the payment status changes.
+const SHEETS_SCRIPT = `function doPost(e) {
+  var body = JSON.parse(e.postData.contents);
+  var props = PropertiesService.getScriptProperties();
+  var expected = props.getProperty('SECRET') || '';
+  if (expected && body.secret !== expected) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'Bad secret' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var name = body.tab || 'Bookings';
+  var sheet = ss.getSheetByName(name) || ss.insertSheet(name);
+  var cols = body.columns;
+
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(cols);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, cols.length).setFontWeight('bold');
+  }
+
+  var header = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var values = cols.map(function (c) { return body.row[c] === undefined ? '' : body.row[c]; });
+  var keyCol = header.indexOf(body.key) + 1;
+  var keyValue = body.row[body.key];
+  var rowIndex = 0;
+
+  if (keyCol > 0 && keyValue && sheet.getLastRow() > 1) {
+    var keys = sheet.getRange(2, keyCol, sheet.getLastRow() - 1, 1).getValues();
+    for (var i = 0; i < keys.length; i++) {
+      if (String(keys[i][0]) === String(keyValue)) { rowIndex = i + 2; break; }
+    }
+  }
+
+  if (rowIndex) sheet.getRange(rowIndex, 1, 1, values.length).setValues([values]);
+  else sheet.appendRow(values);
+
+  return ContentService.createTextOutput(JSON.stringify({ ok: true, updated: !!rowIndex }))
+    .setMimeType(ContentService.MimeType.JSON);
+}`;
 
 const PROVIDERS: Provider[] = [
   {
