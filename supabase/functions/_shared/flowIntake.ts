@@ -1,5 +1,6 @@
 // Captures a WhatsApp Flow submission (interactive → nfm_reply) as a CRM record,
 // stores every submitted field, and raises the advance payment link automatically.
+import { syncRecordToSheet } from './sheetSync.ts';
 
 const FIELD_LABELS: Record<string, string> = {
   service: 'Service',
