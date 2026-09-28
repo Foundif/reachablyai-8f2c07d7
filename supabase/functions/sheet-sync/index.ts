@@ -32,10 +32,21 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const action = String(body?.action || '');
 
-    // Workspace of the caller (owner workspace or the workspace they belong to)
+    // Workspace of the caller: active workspace -> membership -> owned workspace
+    let workspace_id: string | null = null;
     const { data: profile } = await admin.from('profiles')
-      .select('workspace_id, owner_id').eq('id', user.id).maybeSingle();
-    const workspace_id = (profile as any)?.workspace_id || null;
+      .select('active_workspace_id').eq('id', user.id).maybeSingle();
+    workspace_id = (profile as any)?.active_workspace_id || null;
+    if (!workspace_id) {
+      const { data: member } = await admin.from('workspace_members')
+        .select('workspace_id').eq('user_id', user.id).order('created_at').limit(1).maybeSingle();
+      workspace_id = (member as any)?.workspace_id || null;
+    }
+    if (!workspace_id) {
+      const { data: owned } = await admin.from('workspaces')
+        .select('id').eq('owner_id', user.id).order('created_at').limit(1).maybeSingle();
+      workspace_id = (owned as any)?.id || null;
+    }
     if (!workspace_id) return json({ error: 'No workspace found for this user' }, 400);
 
     const settings = await getSheetSettings(admin, workspace_id);
