@@ -542,7 +542,7 @@ export const CampaignDetail = () => {
   // Poll while sending
   useEffect(() => {
     if (campaign?.status === 'sending') {
-      pollRef.current = window.setInterval(load, 2500);
+      pollRef.current = window.setInterval(() => { if (!document.hidden) load(); }, 10000);
       return () => { if (pollRef.current) window.clearInterval(pollRef.current); };
     }
   }, [campaign?.status]);

@@ -444,6 +444,29 @@ const Integrations = () => {
                   </div>
                 )}
 
+                {detail.id === 'google_sheets' && (
+                  <div className="rounded-lg border p-3 space-y-3">
+                    <p className="text-xs font-medium">Setup (2 minutes)</p>
+                    <ol className="text-xs text-muted-foreground space-y-1 list-decimal pl-4">
+                      <li>Open your Google Sheet → Extensions → Apps Script.</li>
+                      <li>Delete any code there and paste the script below. Save.</li>
+                      <li>Optional: Project Settings → Script Properties → add <b>SECRET</b> with any password.</li>
+                      <li>Deploy → New deployment → Web app. Execute as <b>Me</b>, access <b>Anyone</b>. Copy the Web app URL.</li>
+                      <li>Click Connect here, paste the URL, tab name (e.g. Bookings) and the same secret.</li>
+                      <li>Press “Send test row” on the connected card to confirm.</li>
+                    </ol>
+                    <pre className="text-[11px] bg-muted/50 rounded p-2 max-h-48 overflow-auto whitespace-pre">{SHEETS_SCRIPT}</pre>
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(SHEETS_SCRIPT); toast.success('Script copied'); }}>Copy script</Button>
+                      {connected.has('google_sheets') && (
+                        <Button size="sm" variant="secondary" disabled={sheetBusy !== null} onClick={() => callSheetSync('test')}>
+                          {sheetBusy === 'test' && <Loader2 className="w-4 h-4 animate-spin mr-2" />}Send test row
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {detail.id === 'shopify' && (
                   <div className="pt-2 border-t space-y-3">
                     <ShopifyRiskMapping workspaceId={wsId} />
