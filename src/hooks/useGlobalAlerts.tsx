@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { playAlert } from '@/lib/sound';
 import { toast } from 'sonner';
+import { usePageVisible } from '@/hooks/usePageVisible';
 
 /**
  * Mount once (in AppLayout). Subscribes to inbound WhatsApp messages and
@@ -11,9 +12,10 @@ import { toast } from 'sonner';
  */
 export function useGlobalAlerts() {
   const { user } = useAuth();
+  const visible = usePageVisible();
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !visible) return;
     let cancelled = false;
     let channels: any[] = [];
 
@@ -55,5 +57,5 @@ export function useGlobalAlerts() {
     })();
 
     return () => { cancelled = true; channels.forEach(c => supabase.removeChannel(c)); };
-  }, [user]);
+  }, [user, visible]);
 }
