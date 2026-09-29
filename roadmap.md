@@ -9,4 +9,7 @@
 - [x] Fix modal spacing and mobile integrations/contacts/lead finder
 - [ ] Add visual screen-by-screen Flow editor alongside JSON and preview
 - [ ] Verify live Meta publishing and end-to-end payment/form delivery (blocked while hosted database is paused)
-- [ ] Finish Google Sheets sync, Services & Tariff, and granular permissions (production-readiness backlog)
+- [x] Google Sheets setup panel (live test blocked: database paused)
+- [x] Pause live connections in background tabs, slower campaign polling
+- [ ] Services & Tariff page + booking price auto-fill (blocked: database paused)
+- [ ] Staff roles page for bookings/payments/leads + test staff account (blocked: database paused)
