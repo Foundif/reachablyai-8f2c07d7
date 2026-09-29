@@ -1,3 +1,4 @@
+import { usePageVisible } from '@/hooks/usePageVisible';
 import { useEffect, useState } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
@@ -161,21 +162,25 @@ const Dashboard = () => {
   }, [user]);
 
   // Realtime: auto-refresh the tiles when data changes
+  const visible = usePageVisible();
   useEffect(() => {
-    if (!wsId) return;
+    if (!wsId || !visible) return;
+    let t: number | undefined;
+    // Debounce: bursts of message events trigger one refresh, not dozens
+    const refresh = () => { window.clearTimeout(t); t = window.setTimeout(() => loadStats(wsId), 1500); };
     const ch = supabase
       .channel(`dash-${wsId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads', filter: `workspace_id=eq.${wsId}` }, () => loadStats(wsId))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'campaigns', filter: `workspace_id=eq.${wsId}` }, () => loadStats(wsId))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'templates', filter: `workspace_id=eq.${wsId}` }, () => loadStats(wsId))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'automations', filter: `workspace_id=eq.${wsId}` }, () => loadStats(wsId))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'whatsapp_credentials', filter: `workspace_id=eq.${wsId}` }, () => loadStats(wsId))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_conversations', filter: `workspace_id=eq.${wsId}` }, () => loadStats(wsId))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_messages', filter: `workspace_id=eq.${wsId}` }, () => loadStats(wsId))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'business_records', filter: `workspace_id=eq.${wsId}` }, () => loadStats(wsId))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads', filter: `workspace_id=eq.${wsId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'campaigns', filter: `workspace_id=eq.${wsId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'templates', filter: `workspace_id=eq.${wsId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'automations', filter: `workspace_id=eq.${wsId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'whatsapp_credentials', filter: `workspace_id=eq.${wsId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_conversations', filter: `workspace_id=eq.${wsId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_messages', filter: `workspace_id=eq.${wsId}` }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'business_records', filter: `workspace_id=eq.${wsId}` }, refresh)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [wsId]);
+    return () => { window.clearTimeout(t); supabase.removeChannel(ch); };
+  }, [wsId, visible]);
 
   const firstName = profile?.full_name ? profile.full_name.split(' ')[0] : '';
 

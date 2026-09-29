@@ -1,3 +1,4 @@
+import { usePageVisible } from '@/hooks/usePageVisible';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { SecureImg, SecureVideo, resolveMediaUrl } from '@/lib/secureMedia';
 import { useSearchParams } from 'react-router-dom';
@@ -106,7 +107,7 @@ const Inbox = () => {
   // Live clock so the 24h window timer ticks in real time
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
+    const t = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(t);
   }, []);
 
@@ -177,8 +178,11 @@ const Inbox = () => {
   }, [user, profile]);
 
   // Realtime for conversations & messages
+  const visible = usePageVisible();
+  const selectedRef = useRef(selectedId);
+  selectedRef.current = selectedId;
   useEffect(() => {
-    if (!wsId) return;
+    if (!wsId || !visible) return;
     const ch = supabase
       .channel(`inbox-${wsId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_conversations', filter: `workspace_id=eq.${wsId}` }, async () => {
@@ -186,7 +190,7 @@ const Inbox = () => {
         setConvs((data as any) || []);
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'wa_messages', filter: `workspace_id=eq.${wsId}` }, (payload: any) => {
-        if (payload.new.conversation_id === selectedId) {
+        if (payload.new.conversation_id === selectedRef.current) {
           setMessages(prev => prev.some(m => m.id === payload.new.id) ? prev : [...prev, payload.new]);
         }
       })
@@ -197,17 +201,20 @@ const Inbox = () => {
 
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [wsId, selectedId]);
+  }, [wsId, visible]);
 
   // Load messages when selecting
   useEffect(() => {
     if (!selectedId) { setMessages([]); return; }
+    let stale = false;
     (async () => {
       const { data } = await supabase.from('wa_messages' as any).select('*').eq('conversation_id', selectedId).order('created_at');
+      if (stale) return; // user switched chats before this loaded
       setMessages((data as any) || []);
       // Mark read
       await supabase.from('wa_conversations' as any).update({ unread_count: 0 }).eq('id', selectedId);
     })();
+    return () => { stale = true; };
   }, [selectedId]);
 
   useEffect(() => {

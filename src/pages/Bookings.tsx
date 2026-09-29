@@ -1,3 +1,4 @@
+import { usePageVisible } from '@/hooks/usePageVisible';
 import { useEffect, useMemo, useState } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
@@ -104,13 +105,15 @@ const Bookings = () => {
     })();
   }, [user]);
 
+  const visible = usePageVisible();
   useEffect(() => {
-    if (!wsId) return;
+    if (!wsId || !visible) return;
+    load(wsId);
     const ch = supabase.channel(`records-${wsId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'business_records', filter: `workspace_id=eq.${wsId}` }, () => load(wsId))
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [wsId]);
+  }, [wsId, visible]);
 
   const filtered = useMemo(() => rows.filter((r) => {
     if (statusFilter !== 'all' && r.status !== statusFilter) return false;
