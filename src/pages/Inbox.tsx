@@ -107,7 +107,7 @@ const Inbox = () => {
   // Live clock so the 24h window timer ticks in real time
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
+    const t = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(t);
   }, []);
 
