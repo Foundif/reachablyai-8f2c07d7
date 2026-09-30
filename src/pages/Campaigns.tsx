@@ -52,6 +52,20 @@ const STATUS_STYLES: Record<string, string> = {
 
 const cleanPhone = (v: string) => v.replace(/[^\d]/g, '');
 
+function friendlyReason(raw: string): string {
+  const t = raw.toLowerCase();
+  if (/131026|not.*whatsapp|undeliverable|unreachable/.test(t)) return 'Not on WhatsApp or number unreachable';
+  if (/131049|ecosystem|marketing.*limit|healthy/.test(t)) return 'WhatsApp limited marketing messages to this person — try later';
+  if (/130429|131056|rate|too many|throughput/.test(t)) return 'Sent too fast — retry';
+  if (/131047|24.?h|re-?engagement|window/.test(t)) return 'Outside 24-hour window — use a template';
+  if (/limit|allowance|quota|plan/.test(t)) return 'Monthly message limit reached';
+  if (/media|image|document|video|download|131052|131053/.test(t)) return 'Template image or file could not load';
+  if (/132\d{3}|template|param/.test(t)) return 'Template problem (not approved or wrong variables)';
+  if (/phone|invalid|format|country/.test(t)) return 'Phone number format wrong — check country code';
+  if (/token|auth|190|permission/.test(t)) return 'WhatsApp connection expired — reconnect';
+  return 'Failed — see details';
+}
+
 // ---------- Wizard ----------
 function BulkWizard({
   open, onOpenChange, wsId, userId, onCreated, leads, templates,
