@@ -581,6 +581,19 @@ export const CampaignDetail = () => {
     load();
   };
 
+  const retryable = recipients.filter((r) => r.status === 'failed' || r.status === 'skipped').length;
+  const retryFailed = async () => {
+    if (!campaign) return;
+    setSending(true);
+    const ids = recipients.filter((r) => r.status === 'failed' || r.status === 'skipped').map((r) => r.id);
+    const { error: rErr } = await supabase.from('campaign_recipients' as any)
+      .update({ status: 'pending', error: null, reason: null, reachable: null }).in('id', ids);
+    if (rErr) { setSending(false); return toast.error('Could not reset these contacts — is the database online?'); }
+    await supabase.from('campaigns' as any).update({ status: 'draft' }).eq('id', campaign.id);
+    setSending(false);
+    await dispatch();
+  };
+
   const progress = useMemo(() => {
     if (!campaign) return 0;
     const done = (campaign.sent_count || 0) + (campaign.failed_count || 0) + (campaign.skipped_count || 0);
@@ -607,7 +620,12 @@ export const CampaignDetail = () => {
           <h1 className="text-2xl font-bold">{campaign.name}</h1>
           <Badge variant="outline" className={STATUS_STYLES[campaign.status]}>{campaign.status}</Badge>
           <Badge variant="outline">{campaign.mode === 'freeform' ? 'Free-form' : 'Template'}</Badge>
-          <div className="ml-auto">
+          <div className="ml-auto flex gap-2 flex-wrap">
+            {retryable > 0 && campaign.status !== 'sending' && (
+              <Button variant="outline" onClick={retryFailed} disabled={sending} className="gap-2">
+                Retry {retryable} failed/skipped
+              </Button>
+            )}
             {['draft', 'failed'].includes(campaign.status) && (
               <Button onClick={dispatch} disabled={sending} className="gap-2">
                 <Send className="w-4 h-4" /> {sending ? 'Starting…' : 'Send now'}
@@ -653,7 +671,14 @@ export const CampaignDetail = () => {
                   <TableCell>{r.phone}</TableCell>
                   <TableCell><Badge variant="outline" className={STATUS_STYLES[r.status]}>{r.status}</Badge></TableCell>
                   <TableCell className="text-xs">{r.sent_at ? new Date(r.sent_at).toLocaleString() : '—'}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground max-w-xs whitespace-normal break-words">{r.error || r.reason || ''}</TableCell>
+                  <TableCell className="text-xs max-w-xs whitespace-normal break-words">
+                    {(r.error || r.reason) && (
+                      <>
+                        <span className="font-medium text-foreground">{friendlyReason(r.error || r.reason || '')}</span>
+                        <span className="block text-muted-foreground">{r.error || r.reason}</span>
+                      </>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
