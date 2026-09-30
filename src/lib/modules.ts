@@ -25,6 +25,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
       { to: '/inbox', icon: Inbox, label: 'Team Inbox', status: 'live' },
       { to: '/leads', icon: Contact, label: 'Contacts', status: 'live' },
       { to: '/bookings', icon: ClipboardList, label: 'Bookings', status: 'live' },
+      { to: '/services', icon: Wallet, label: 'Services & Tariff', status: 'live' },
     ],
   },
   {

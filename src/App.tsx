@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import InstallPrompt from "@/components/pwa/InstallPrompt";
@@ -9,47 +10,55 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { LanguageProvider } from "@/hooks/useLanguage";
-import Dashboard from "./pages/Dashboard";
-import WhatsAppSettings from "./pages/WhatsAppSettings";
-import WhatsAppCallback from "./pages/WhatsAppCallback";
-import Inbox from "./pages/Inbox";
-import Analytics from "./pages/Analytics";
-import Profile from "./pages/Profile";
-import ShopInfo from "./pages/ShopInfo";
-import Guide from "./pages/Guide";
-import Pricing from "./pages/Pricing";
-import Auth from "./pages/Auth";
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const WhatsAppSettings = lazy(() => import("./pages/WhatsAppSettings"));
+const WhatsAppCallback = lazy(() => import("./pages/WhatsAppCallback"));
+const Inbox = lazy(() => import("./pages/Inbox"));
+const Analytics = lazy(() => import("./pages/Analytics"));
+const Profile = lazy(() => import("./pages/Profile"));
+const ShopInfo = lazy(() => import("./pages/ShopInfo"));
+const Guide = lazy(() => import("./pages/Guide"));
+const Pricing = lazy(() => import("./pages/Pricing"));
+const Auth = lazy(() => import("./pages/Auth"));
 import OnboardingGate from "@/components/onboarding/OnboardingGate";
-import AdminLogin from "./pages/AdminLogin";
-import AdminDashboard from "./pages/AdminDashboard";
-import NotFound from "./pages/NotFound";
-import TeamManagement from "./pages/TeamManagement";
-import RolesPermissions from "./pages/RolesPermissions";
-import AuditLogs from "./pages/AuditLogs";
-import Accounting from "./pages/Accounting";
-import Privacy from "./pages/Privacy";
-import Terms from "./pages/Terms";
-import Leads from "./pages/Leads";
-import ComingSoonModule from "./pages/ComingSoonModule";
-import Templates from "./pages/Templates";
-import Integrations from "./pages/Integrations";
-import WebhookDetail from "./pages/WebhookDetail";
-import TemplateEditor from "./pages/TemplateEditor";
-import Bookings from "./pages/Bookings";
-import Flows from "./pages/Flows";
-import ApiSettings from "./pages/ApiSettings";
+const AdminLogin = lazy(() => import("./pages/AdminLogin"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const TeamManagement = lazy(() => import("./pages/TeamManagement"));
+const RolesPermissions = lazy(() => import("./pages/RolesPermissions"));
+const AuditLogs = lazy(() => import("./pages/AuditLogs"));
+const Accounting = lazy(() => import("./pages/Accounting"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
+const Leads = lazy(() => import("./pages/Leads"));
+const ComingSoonModule = lazy(() => import("./pages/ComingSoonModule"));
+const Templates = lazy(() => import("./pages/Templates"));
+const Integrations = lazy(() => import("./pages/Integrations"));
+const WebhookDetail = lazy(() => import("./pages/WebhookDetail"));
+const TemplateEditor = lazy(() => import("./pages/TemplateEditor"));
+const Bookings = lazy(() => import("./pages/Bookings"));
+const Flows = lazy(() => import("./pages/Flows"));
+const ApiSettings = lazy(() => import("./pages/ApiSettings"));
 
-import Campaigns, { CampaignDetail } from "./pages/Campaigns";
-import Automations from "./pages/Automations";
-import AutoReplies from "./pages/AutoReplies";
-import Chatbots from "./pages/Chatbots";
-import ChatbotDetail from "./pages/ChatbotDetail";
+const Campaigns = lazy(() => import("./pages/Campaigns"));
+const CampaignDetail = lazy(() => import("./pages/Campaigns").then((m) => ({ default: m.CampaignDetail })));
+const Services = lazy(() => import("./pages/Services"));
+const Automations = lazy(() => import("./pages/Automations"));
+const AutoReplies = lazy(() => import("./pages/AutoReplies"));
+const Chatbots = lazy(() => import("./pages/Chatbots"));
+const ChatbotDetail = lazy(() => import("./pages/ChatbotDetail"));
 
 
 
 
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 60_000, refetchOnWindowFocus: false, retry: 1 } } });
+
+const PageLoader = () => (
+  <div className="min-h-screen bg-background flex items-center justify-center">
+    <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, profile } = useAuth();
@@ -74,6 +83,7 @@ const App = () => (
             <Sonner />
             <InstallPrompt />
             <BrowserRouter>
+              <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/onboarding" element={<Navigate to="/" replace />} />
@@ -87,6 +97,7 @@ const App = () => (
                 <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
                 <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
+                <Route path="/services" element={<ProtectedRoute><Services /></ProtectedRoute>} />
                 <Route path="/bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
                 <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
                 <Route path="/campaigns/:id" element={<ProtectedRoute><CampaignDetail /></ProtectedRoute>} />
@@ -123,7 +134,7 @@ const App = () => (
                 <Route path="/messages" element={<Navigate to="/inbox" replace />} />
                 
                 <Route path="/customers" element={<Navigate to="/leads" replace />} />
-                <Route path="/services" element={<Navigate to="/" replace />} />
+                
                 <Route path="/payments" element={<Navigate to="/accounting" replace />} />
                 <Route path="/sheets" element={<Navigate to="/leads" replace />} />
                 <Route path="/flow-editor" element={<Navigate to="/flows" replace />} />
@@ -132,6 +143,7 @@ const App = () => (
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              </Suspense>
             </BrowserRouter>
           </TooltipProvider>
         </LanguageProvider>
