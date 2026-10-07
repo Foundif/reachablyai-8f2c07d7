@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.razorpay-record-webhook]
 verify_jwt = false
+
+[functions.meta-leadgen-webhook]
+verify_jwt = false
