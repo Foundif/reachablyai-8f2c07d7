@@ -135,6 +135,31 @@ const PROVIDERS: Provider[] = [
     ],
   },
   {
+    id: 'meta_lead_ads',
+    name: 'Meta Lead Ads',
+    icon: Megaphone,
+    tagline: 'Facebook & Instagram ad leads delivered to WhatsApp in seconds.',
+    blurb: 'Every lead form submission lands in Contacts with campaign, ad and answers, alerts your team on WhatsApp instantly, and can greet the lead automatically.',
+    free: true,
+    docs: 'https://developers.facebook.com/docs/marketing-api/guides/lead-ads/',
+    fields: [
+      { key: 'page_id', label: 'Facebook Page ID', placeholder: '1234567890' },
+      { key: 'page_access_token', label: 'Page access token', placeholder: 'EAAG...', secret: true },
+      { key: 'verify_token', label: 'Webhook verify token', placeholder: 'Any word you choose, e.g. reachably-leads' },
+      { key: 'alert_numbers', label: 'Team WhatsApp numbers (comma separated)', placeholder: '9876543210, 9123456780' },
+      { key: 'alert_template_id', label: 'Alert template ID (optional)', placeholder: 'Approved template for team alerts' },
+      { key: 'greeting_template_id', label: 'Greeting template ID for the lead (optional)', placeholder: 'Approved welcome template' },
+      { key: 'app_secret', label: 'Meta app secret (optional)', placeholder: 'Verifies calls really come from Meta', secret: true },
+    ],
+    capabilities: [
+      'Instant CRM contact with campaign, ad set and ad tags',
+      'All form answers saved in notes',
+      'WhatsApp alert to your sales team with one-tap chat link',
+      'Optional auto-greeting template to the lead',
+      'Duplicate numbers merged, not repeated',
+    ],
+  },
+  {
     id: 'shopify',
     name: 'Shopify',
     logo: 'https://cdn.simpleicons.org/shopify/95BF47',
@@ -466,6 +491,23 @@ const Integrations = () => {
                     </div>
                   </div>
                 )}
+
+                {detail.id === 'meta_lead_ads' && (
+                  <div className="rounded-lg border p-3 space-y-3">
+                    <p className="text-xs font-medium">Setup</p>
+                    <ol className="text-xs text-muted-foreground space-y-1 list-decimal pl-4">
+                      <li>Click Connect and fill your Facebook Page ID, Page access token (with leads_retrieval), a verify token of your choice, and team WhatsApp numbers.</li>
+                      <li>In your Meta app → Webhooks → Page, paste the callback URL below and the same verify token.</li>
+                      <li>Subscribe to the <b>leadgen</b> field and add your Page under Lead Access (CRM: your app).</li>
+                      <li>Submit a test lead using Meta's Lead Ads Testing Tool — it appears in Contacts and your team gets a WhatsApp alert.</li>
+                    </ol>
+                    <code className="block text-[11px] break-all text-muted-foreground">{LEADGEN_URL}</code>
+                    <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(LEADGEN_URL); toast.success('Callback URL copied'); }}>Copy callback URL</Button>
+                    <p className="text-[11px] text-muted-foreground">Team alerts are plain WhatsApp messages, which only arrive if that number messaged your business in the last 24 hours. For guaranteed delivery, add an approved alert template ID (variables: 1 = name, 2 = phone, 3 = campaign).</p>
+                  </div>
+                )}
+
+
 
                 {detail.id === 'shopify' && (
                   <div className="pt-2 border-t space-y-3">
