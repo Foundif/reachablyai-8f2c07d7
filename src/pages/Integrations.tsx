@@ -15,7 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { resolveWorkspaceId } from '@/lib/workspace';
 import { toast } from 'sonner';
-import { Copy, Loader2, Plug, Trash2, ExternalLink, Webhook, ChevronRight, Table2, RefreshCw } from 'lucide-react';
+import { Copy, Loader2, Plug, Trash2, ExternalLink, Webhook, ChevronRight, Table2, RefreshCw, Megaphone } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import ShopifyRiskMapping from '@/components/integrations/ShopifyRiskMapping';
 import webhookIcon from '@/assets/webhook-icon.png';
@@ -192,6 +192,7 @@ interface Row { id: string; provider: string; status: string; display_name: stri
 interface WebhookRow { id: string; name: string; token: string; active: boolean; last_received_at: string | null; template_id: string | null }
 
 const FN_BASE = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/generic-webhook`;
+const LEADGEN_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/meta-leadgen-webhook`;
 
 const Logo = ({ provider, className = 'w-10 h-10' }: { provider: Provider; className?: string }) => (
   <div className={`${className} rounded-xl bg-muted/60 grid place-items-center overflow-hidden shrink-0`}>
