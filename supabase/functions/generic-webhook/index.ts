@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
     const templatePayload = buildTemplatePayload(template, { name: recipientName, phone, variables });
 
     // Enforce this month's plan message allowance
-    const quota = await checkMessageQuota(admin, workspace_id, 1);
+    const quota = await checkMessageQuota(admin, endpoint.workspace_id, 1);
     if (!quota.ok) throw new Error(quota.reason || 'Monthly message limit reached');
 
     const res = await fetch(`https://graph.facebook.com/v21.0/${creds.phone_number_id}/messages`, {
