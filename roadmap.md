@@ -13,3 +13,7 @@
 - [x] Pause live connections in background tabs, slower campaign polling
 - [ ] Services & Tariff page + booking price auto-fill (blocked: database paused)
 - [ ] Staff roles page for bookings/payments/leads + test staff account (blocked: database paused)
+
+## GoWap concepts
+- [x] Phase 1: Meta Lead Ads → CRM lead + instant WhatsApp team alert + optional greeting (needs backend resume to deploy & live test)
+- [ ] Phase 2: Daily Meta Ads performance digest on WhatsApp (spend, leads, CPL) + ad health alerts
