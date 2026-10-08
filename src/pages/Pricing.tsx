@@ -14,6 +14,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import PlanUsageCard from '@/components/pricing/PlanUsageCard';
 import ScaleUpgradePrompt from '@/components/pricing/ScaleUpgradePrompt';
+import PlanComparison from '@/components/pricing/PlanComparison';
 import { useTrial } from '@/hooks/useTrial';
 import { PLANS, Plan, formatINR } from '@/lib/plans';
 import { resolveWorkspaceId } from '@/lib/workspace';
@@ -557,6 +558,8 @@ const PricingContent = () => {
             }}
           />
         )}
+
+        <PlanComparison />
 
         {/* Add-ons */}
         <div className="mt-14">
