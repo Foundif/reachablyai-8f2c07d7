@@ -300,7 +300,7 @@ const PricingContent = () => {
             transition={{ duration: 0.4 }}
           >
             {!workspacePlanLoading && !activePlan && (
-              <div className="inline-flex flex-col items-center gap-1 px-5 py-3 rounded-2xl border border-primary/30 bg-primary/5 mb-6">
+              <div className="inline-flex flex-col items-center text-center gap-1 px-4 sm:px-5 py-3 max-w-full rounded-2xl border border-primary/30 bg-primary/5 mb-6">
                 <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-primary">
                   <Sparkles className="w-3.5 h-3.5" />
                   Limited time Offer!
