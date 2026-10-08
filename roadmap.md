@@ -17,3 +17,6 @@
 ## GoWap concepts
 - [x] Phase 1: Meta Lead Ads → CRM lead + instant WhatsApp team alert + optional greeting (needs backend resume to deploy & live test)
 - [ ] Phase 2: Daily Meta Ads performance digest on WhatsApp (spend, leads, CPL) + ad health alerts
+
+## Pricing
+- [x] Show all built features on plan cards + full comparison table
