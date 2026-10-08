@@ -150,6 +150,12 @@ const PROVIDERS: Provider[] = [
       { key: 'alert_template_id', label: 'Alert template ID (optional)', placeholder: 'Approved template for team alerts' },
       { key: 'greeting_template_id', label: 'Greeting template ID for the lead (optional)', placeholder: 'Approved welcome template' },
       { key: 'app_secret', label: 'Meta app secret (optional)', placeholder: 'Verifies calls really come from Meta', secret: true },
+      { key: 'ad_account_id', label: 'Ad account ID (for daily report)', placeholder: 'act_1234567890' },
+      { key: 'ads_access_token', label: 'Ads access token with ads_read (optional)', placeholder: 'Uses the Page token if empty', secret: true },
+      { key: 'digest_numbers', label: 'Daily report WhatsApp numbers', placeholder: 'Defaults to team numbers' },
+      { key: 'daily_budget_limit', label: 'Daily spend limit (₹) — alert if crossed', placeholder: '2000' },
+      { key: 'max_cpl', label: 'Max cost per lead (₹) — alert if crossed', placeholder: '150' },
+      { key: 'digest_template_id', label: 'Report template ID (optional)', placeholder: '1 date, 2 spend, 3 leads, 4 CPL, 5 alerts' },
     ],
     capabilities: [
       'Instant CRM contact with campaign, ad set and ad tags',
@@ -157,6 +163,8 @@ const PROVIDERS: Provider[] = [
       'WhatsApp alert to your sales team with one-tap chat link',
       'Optional auto-greeting template to the lead',
       'Duplicate numbers merged, not repeated',
+      'Daily WhatsApp report: spend, leads, cost per lead, top campaigns',
+      'Overspend, high cost-per-lead and zero-lead alerts',
     ],
   },
   {
@@ -505,6 +513,15 @@ const Integrations = () => {
                     <code className="block text-[11px] break-all text-muted-foreground">{LEADGEN_URL}</code>
                     <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(LEADGEN_URL); toast.success('Callback URL copied'); }}>Copy callback URL</Button>
                     <p className="text-[11px] text-muted-foreground">Team alerts are plain WhatsApp messages, which only arrive if that number messaged your business in the last 24 hours. For guaranteed delivery, add an approved alert template ID (variables: 1 = name, 2 = phone, 3 = campaign).</p>
+                    <div className="border-t pt-3 space-y-2">
+                      <p className="text-xs font-medium">Daily ad report</p>
+                      <p className="text-[11px] text-muted-foreground">Every morning your team gets yesterday's spend, leads, cost per lead and top campaigns on WhatsApp, with alerts when spend or cost per lead crosses your limits. Add your Ad account ID in Configure.</p>
+                      {connected.has('meta_lead_ads') && (
+                        <Button size="sm" variant="secondary" disabled={digestBusy} onClick={sendDigestNow}>
+                          {digestBusy && <Loader2 className="w-4 h-4 animate-spin mr-2" />}Send report now
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 )}
 
