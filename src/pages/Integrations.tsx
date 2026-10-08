@@ -227,6 +227,18 @@ const Integrations = () => {
   const [hookDialog, setHookDialog] = useState(false);
   const [hookName, setHookName] = useState('');
   const [sheetBusy, setSheetBusy] = useState<'test' | 'backfill' | null>(null);
+  const [digestBusy, setDigestBusy] = useState(false);
+  const sendDigestNow = async () => {
+    if (!wsId) return;
+    setDigestBusy(true);
+    const { data, error } = await supabase.functions.invoke('meta-ads-digest', { body: { workspace_id: wsId } });
+    setDigestBusy(false);
+    if (error || (data as any)?.error) {
+      let msg = (data as any)?.error || error?.message || 'Could not send report';
+      try { msg = JSON.parse(await (error as any)?.context?.text())?.error || msg; } catch { /* keep msg */ }
+      toast.error(msg);
+    } else toast.success('Ad report sent on WhatsApp');
+  };
 
   const callSheetSync = async (action: 'test' | 'sync_all') => {
     setSheetBusy(action === 'test' ? 'test' : 'backfill');
