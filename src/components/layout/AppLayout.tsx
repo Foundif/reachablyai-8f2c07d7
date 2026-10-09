@@ -8,6 +8,7 @@ import PaymentAlertBanner from './PaymentAlertBanner';
 import TrialBanner from './TrialBanner';
 import { useGlobalAlerts } from '@/hooks/useGlobalAlerts';
 import FeedbackWidget from '@/components/feedback/FeedbackWidget';
+import SubscriptionGate from './SubscriptionGate';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -27,7 +28,7 @@ const AppLayout = ({ children, fullBleed = false }: AppLayoutProps) => {
         {!fullBleed && <TopBar />}
         <PaymentAlertBanner />
         <div className={fullBleed ? 'relative flex-1 w-full min-h-0' : 'relative max-w-[1600px] mx-auto flex-1 w-full'}>
-          {children}
+          <SubscriptionGate>{children}</SubscriptionGate>
         </div>
         {!fullBleed && <AppFooter />}
       </main>

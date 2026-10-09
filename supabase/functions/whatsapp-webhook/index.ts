@@ -2,10 +2,12 @@ import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { extractFlowResponse, flowSummary, handleFlowSubmission } from '../_shared/flowIntake.ts';
 import { buildTemplatePayload } from '../_shared/templatePayload.ts';
+import { hasActiveSubscription } from '../_shared/plans.ts';
 
 // Sends an approved template (e.g. the booking form template carrying the Flow button)
 // as the reply to a keyword such as "hi" or "help".
 async function sendAutoTemplate(admin: any, creds: any, workspace_id: string, convId: string, to: string, templateRef: string, ruleKind: string, ruleRef: string | null) {
+  if (!(await hasActiveSubscription(admin, workspace_id))) return;
   try {
     let q = admin.from('templates').select('*').eq('workspace_id', workspace_id).limit(1);
     q = /^[0-9a-f-]{36}$/i.test(templateRef) ? q.eq('id', templateRef) : q.eq('name', templateRef);
@@ -56,6 +58,7 @@ const json = (b: any, s = 200) => new Response(JSON.stringify(b), { status: s, h
 // Used by keyword automations such as "hi" / "book" — the customer just messaged,
 // so the 24-hour window is open and no template is required.
 async function sendAutoFlow(admin: any, creds: any, workspace_id: string, convId: string, to: string, cfg: any, ruleKind: string, ruleRef: string | null) {
+  if (!(await hasActiveSubscription(admin, workspace_id))) return;
   try {
     const { data: flow } = await admin.from('whatsapp_flows').select('id, name, flow_id, status, first_screen, cta_text')
       .eq('workspace_id', workspace_id).eq('id', cfg.flow_row_id).maybeSingle();
@@ -116,6 +119,7 @@ async function sendAutoFlow(admin: any, creds: any, workspace_id: string, convId
 
 // Send a WhatsApp free-form text and log it as an outbound message + auto_reply_log entry
 async function sendAutoReply(admin: any, creds: any, workspace_id: string, convId: string, to: string, text: string, ruleKind: string, ruleRef: string | null) {
+  if (!(await hasActiveSubscription(admin, workspace_id))) return;
   try {
     const resp = await fetch(`https://graph.facebook.com/v20.0/${creds.phone_number_id}/messages`, {
       method: 'POST',

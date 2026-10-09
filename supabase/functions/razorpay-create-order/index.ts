@@ -51,6 +51,8 @@ Deno.serve(async (req) => {
           .select('first_month_discount_used').eq('owner_id', user_id).order('created_at').limit(1).maybeSingle();
         amount = ws?.first_month_discount_used ? price.monthly : price.promoMonthly;
       }
+      // Plan prices are shown exclusive of tax; add 18% GST at checkout.
+      amount = Math.round(amount * 1.18);
     }
 
     // Done-for-you onboarding package — fixed price, decided server-side.

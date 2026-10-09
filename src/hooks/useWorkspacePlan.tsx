@@ -9,6 +9,8 @@ export interface WorkspacePlanState {
   workspaceId: string | null;
   plan: Plan | null;
   planName: string;
+  /** Paid plan present and not past its renewal date */
+  isActive: boolean;
   status: string;
   billingPeriod: 'monthly' | 'yearly' | null;
   renewsAt: Date | null;
@@ -44,16 +46,19 @@ export const useWorkspacePlan = (): WorkspacePlanState => {
     return () => { cancelled = true; };
   }, [user?.id, (profile as any)?.active_workspace_id]);
 
-  const plan = planById(ws?.plan_id);
+  const rawPlan = planById(ws?.plan_id);
   const renewsAt = ws?.plan_renews_at ? new Date(ws.plan_renews_at) : null;
+  const isActive = !!rawPlan && (!renewsAt || renewsAt.getTime() > Date.now());
+  const plan = isActive ? rawPlan : null;
   const isStaff = !!(profile as any)?.is_staff;
 
   return {
     loading,
     workspaceId,
     plan,
-    planName: plan ? plan.name : 'Free trial',
-    status: plan ? (ws?.subscription_status || 'active') : (ws?.subscription_status || 'trialing'),
+    isActive,
+    planName: plan ? plan.name : 'No active plan',
+    status: plan ? 'active' : 'expired',
     billingPeriod: (ws?.billing_period as 'monthly' | 'yearly') || (plan ? 'monthly' : null),
     renewsAt,
     isHighestTier: !!plan && plan.id === PLANS[PLANS.length - 1].id,

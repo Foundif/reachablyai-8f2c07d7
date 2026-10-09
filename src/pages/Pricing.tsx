@@ -16,7 +16,7 @@ import PlanUsageCard from '@/components/pricing/PlanUsageCard';
 import ScaleUpgradePrompt from '@/components/pricing/ScaleUpgradePrompt';
 import PlanComparison from '@/components/pricing/PlanComparison';
 import { useTrial } from '@/hooks/useTrial';
-import { PLANS, Plan, formatINR } from '@/lib/plans';
+import { PLANS, Plan, formatINR, withGst } from '@/lib/plans';
 import { resolveWorkspaceId } from '@/lib/workspace';
 import {
   Check,
@@ -435,7 +435,11 @@ const PricingContent = () => {
                       </div>
 
                       <div className="text-[11px] text-muted-foreground">
-                        Then {formatINR(p.monthly)}/month
+                        + 18% GST · {formatINR(withGst(p.promoMonthly))} total today
+                      </div>
+
+                      <div className="text-[11px] text-muted-foreground">
+                        Then {formatINR(p.monthly)}/month + GST ({formatINR(withGst(p.monthly))})
                       </div>
                     </>
                   ) : (
@@ -451,7 +455,7 @@ const PricingContent = () => {
                       </div>
 
                       <div className="text-[11px] text-muted-foreground mt-1">
-                        Billed once a year
+                        + 18% GST · {formatINR(withGst(p.yearly))} billed once a year
                       </div>
                     </>
                   )}
