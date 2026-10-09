@@ -40,7 +40,18 @@ export async function monthlyMessagesUsed(admin: any, workspaceId: string): Prom
 export interface QuotaCheck { ok: boolean; used: number; limit: number; reason?: string }
 
 /** Checks whether `needed` more outbound messages fit in this month's plan quota. */
+/** True only when the workspace has a paid plan that has not passed its renewal date. */
+export async function hasActiveSubscription(admin: any, workspaceId: string): Promise<boolean> {
+  const { data: ws } = await admin.from('workspaces').select('plan_id, plan_renews_at').eq('id', workspaceId).maybeSingle();
+  if (!ws?.plan_id) return false;
+  if (ws.plan_renews_at && new Date(ws.plan_renews_at).getTime() < Date.now()) return false;
+  return true;
+}
+
 export async function checkMessageQuota(admin: any, workspaceId: string, needed = 1): Promise<QuotaCheck> {
+  if (!(await hasActiveSubscription(admin, workspaceId))) {
+    return { ok: false, used: 0, limit: 0, reason: 'Your Reachably subscription has expired. Renew your plan to send messages again.' };
+  }
   const limits = await planLimitsFor(admin, workspaceId);
   const used = await monthlyMessagesUsed(admin, workspaceId);
   if (used + needed > limits.max_messages) {
