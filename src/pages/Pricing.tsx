@@ -435,7 +435,11 @@ const PricingContent = () => {
                       </div>
 
                       <div className="text-[11px] text-muted-foreground">
-                        Then {formatINR(p.monthly)}/month
+                        + 18% GST · {formatINR(withGst(p.promoMonthly))} total today
+                      </div>
+
+                      <div className="text-[11px] text-muted-foreground">
+                        Then {formatINR(p.monthly)}/month + GST ({formatINR(withGst(p.monthly))})
                       </div>
                     </>
                   ) : (
@@ -451,7 +455,7 @@ const PricingContent = () => {
                       </div>
 
                       <div className="text-[11px] text-muted-foreground mt-1">
-                        Billed once a year
+                        + 18% GST · {formatINR(withGst(p.yearly))} billed once a year
                       </div>
                     </>
                   )}
