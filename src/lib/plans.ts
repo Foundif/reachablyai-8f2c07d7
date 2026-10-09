@@ -178,3 +178,7 @@ export const isPaidPlan = (status?: string | null) =>
 
 export const formatINR = (n: number) =>
   `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+
+export const GST_RATE = 0.18;
+/** Price including 18% GST, rounded to the nearest rupee. */
+export const withGst = (n: number) => Math.round(n * (1 + GST_RATE));
