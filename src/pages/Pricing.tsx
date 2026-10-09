@@ -16,7 +16,7 @@ import PlanUsageCard from '@/components/pricing/PlanUsageCard';
 import ScaleUpgradePrompt from '@/components/pricing/ScaleUpgradePrompt';
 import PlanComparison from '@/components/pricing/PlanComparison';
 import { useTrial } from '@/hooks/useTrial';
-import { PLANS, Plan, formatINR } from '@/lib/plans';
+import { PLANS, Plan, formatINR, withGst } from '@/lib/plans';
 import { resolveWorkspaceId } from '@/lib/workspace';
 import {
   Check,
