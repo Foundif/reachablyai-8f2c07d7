@@ -26,8 +26,7 @@ export const BrandMark = ({
 }) => {
   const { theme } = useTheme();
   const isDark = theme === "dark";
-  const src =
-    variant === "wordmark" ? (isDark ? wordmarkDark.url : wordmarkLight.url) : isDark ? iconDark.url : iconLight.url;
+  const src = variant === "wordmark" ? (isDark ? wordmarkDark : wordmarkLight) : isDark ? iconDark : iconLight;
 
   return (
     <img
