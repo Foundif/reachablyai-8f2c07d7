@@ -1,7 +1,7 @@
-import wordmarkLight from "@/assets/brand/reachably-wordmark-light.png";
-import wordmarkDark from "@/assets/brand/reachably-wordmark-dark.png";
-import iconLight from "@/assets/brand/reachably-icon-light.png";
-import iconDark from "@/assets/brand/reachably-icon-dark.png";
+import wordmarkLight from "@/assets/reachably-wordmark-light.png";
+import wordmarkDark from "@/assets/reachably-wordmark-dark.png";
+import iconLight from "@/assets/reachably-icon-light.png";
+import iconDark from "@/assets/reachably-icon-dark.png";
 import { useTheme } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 
