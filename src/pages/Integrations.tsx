@@ -43,8 +43,12 @@ import {
 import type { LucideIcon } from "lucide-react";
 import ShopifyRiskMapping from "@/components/integrations/ShopifyRiskMapping";
 import webhookIcon from "@/assets/webhook-icon.png";
-import razorpayLogo from "@/assets/razorpay.svg";
-import shiprocketLogo from "@/assets/shiprocket.png";
+
+const razorpayLogo =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath fill='%2302042B' d='M0 0h48v48H0z'/%3E%3Cpath fill='%230C2340' d='M22.5 9h8.2L19.8 39h-8.2z'/%3E%3Cpath fill='%233395FF' d='M26.4 9l-4.5 13.5h7.2L24.8 39l11.9-20.8h-7.8L32.2 9z'/%3E%3C/svg%3E";
+
+const shiprocketLogo =
+  "https://reachably.foundif.com/__l5e/assets-v1/2a02e7e5-5348-4642-9962-a267ff19bea3/shiprocket.png";
 
 type Field = { key: string; label: string; placeholder?: string; secret?: boolean };
 
