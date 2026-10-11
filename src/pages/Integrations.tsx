@@ -119,7 +119,7 @@ const PROVIDERS: Provider[] = [
   {
     id: "razorpay",
     name: "Razorpay",
-    logo: razorpayLogo.url,
+    logo: razorpayLogo,
     tagline: "Send Payment notifications and subscription updates to drive quick recovery.",
     blurb: `Payments go straight to your own bank account. To confirm bookings automatically when a customer pays, open Razorpay Dashboard → Settings → Webhooks → Add, paste this URL and tick "payment_link.paid": https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/razorpay-record-webhook`,
     docs: "https://razorpay.com/docs/payments/payment-links/",
@@ -246,7 +246,7 @@ const PROVIDERS: Provider[] = [
   {
     id: "shiprocket",
     name: "Shiprocket",
-    logo: shiprocketLogo.url,
+    logo: shiprocketLogo,
     tagline: "Send Order updates to your customer on WhatsApp for better experience.",
     blurb: "Push shipment and tracking updates straight to your customers on WhatsApp.",
     docs: "https://apidocs.shiprocket.in/",
