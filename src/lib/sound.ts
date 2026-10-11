@@ -6,7 +6,7 @@ let unlocked = false;
 const get = () => {
   if (typeof window === "undefined") return null;
   if (!audio) {
-    audio = new Audio(alertAsset.url);
+    audio = new Audio(alertAsset);
     audio.preload = "auto";
     audio.volume = 0.9;
   }
