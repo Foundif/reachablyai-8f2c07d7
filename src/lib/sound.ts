@@ -1,4 +1,4 @@
-import alertAsset from "@/assets/notification-alert.mp3";
+const alertAsset = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=";
 
 let audio: HTMLAudioElement | null = null;
 let unlocked = false;
