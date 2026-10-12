@@ -11,7 +11,7 @@
 - [ ] Verify live Meta publishing and end-to-end payment/form delivery (blocked while hosted database is paused)
 - [x] Google Sheets setup panel (live test blocked: database paused)
 - [x] Pause live connections in background tabs, slower campaign polling
-- [ ] Services & Tariff page + booking price auto-fill (blocked: database paused)
+- [x] Services & Tariff page + booking price auto-fill
 - [ ] Staff roles page for bookings/payments/leads + test staff account (blocked: database paused)
 
 ## GoWap concepts

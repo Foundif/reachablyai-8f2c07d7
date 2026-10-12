@@ -84,6 +84,12 @@ const Bookings = () => {
   const [timeline, setTimeline] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [linking, setLinking] = useState(false);
+  const [catalog, setCatalog] = useState<{ id: string; name: string; base_price: number; advance_amount: number }[]>([]);
+  useEffect(() => {
+    if (!wsId) return;
+    (supabase as any).from('services').select('id,name,base_price,advance_amount').eq('workspace_id', wsId).eq('is_active', true).order('name')
+      .then(({ data }: any) => setCatalog(data || []));
+  }, [wsId]);
 
   const load = async (id: string) => {
     const { data, error } = await supabase
@@ -305,7 +311,15 @@ const Bookings = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label>Service / item</Label><Input value={form.service} onChange={(e) => setForm({ ...form, service: e.target.value })} /></div>
+              <div>
+                <Label>Service / item</Label>
+                <Input list="svc-catalog" value={form.service} onChange={(e) => {
+                  const v = e.target.value;
+                  const s = catalog.find((c) => c.name === v);
+                  setForm(s ? { ...form, service: v, amount: String(s.base_price ?? ''), advance_amount: String(s.advance_amount ?? '') } : { ...form, service: v });
+                }} placeholder="Pick from Services or type" />
+                <datalist id="svc-catalog">{catalog.map((c) => <option key={c.id} value={c.name} />)}</datalist>
+              </div>
             </div>
             <div><Label>Customer name *</Label><Input value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-3">
