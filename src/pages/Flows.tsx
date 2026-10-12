@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import FlowPhonePreview from '@/components/flows/FlowPhonePreview';
+import FlowVisualEditor from '@/components/flows/FlowVisualEditor';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { resolveWorkspaceId } from '@/lib/workspace';
@@ -284,8 +285,11 @@ const Flows = () => {
                 </div>
               )}
 
-              <Tabs defaultValue="build" className="space-y-3">
-                <TabsList className="grid w-full grid-cols-2 sm:w-[320px]"><TabsTrigger value="build">Form code</TabsTrigger><TabsTrigger value="preview">Preview</TabsTrigger></TabsList>
+              <Tabs defaultValue="visual" className="space-y-3">
+                <TabsList className="grid w-full grid-cols-3 sm:w-[420px]"><TabsTrigger value="visual">Visual editor</TabsTrigger><TabsTrigger value="build">Form code</TabsTrigger><TabsTrigger value="preview">Preview</TabsTrigger></TabsList>
+                <TabsContent value="visual">
+                  <FlowVisualEditor definition={jsonValidity.definition} onChange={d => setDraftJson(stringifyFlow(d))} />
+                </TabsContent>
                 <TabsContent value="build" className="space-y-1.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <Label>Meta Flow JSON</Label>
