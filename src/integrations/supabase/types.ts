@@ -1677,6 +1677,62 @@ export type Database = {
           },
         ]
       }
+      services: {
+        Row: {
+          add_ons: Json
+          advance_amount: number
+          base_price: number
+          category: string
+          created_at: string
+          description: string
+          duration_minutes: number | null
+          id: string
+          is_active: boolean
+          name: string
+          price_unit: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          add_ons?: Json
+          advance_amount?: number
+          base_price?: number
+          category?: string
+          created_at?: string
+          description?: string
+          duration_minutes?: number | null
+          id?: string
+          is_active?: boolean
+          name: string
+          price_unit?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          add_ons?: Json
+          advance_amount?: number
+          base_price?: number
+          category?: string
+          created_at?: string
+          description?: string
+          duration_minutes?: number | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          price_unit?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "services_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       super_admins: {
         Row: {
           created_at: string | null
