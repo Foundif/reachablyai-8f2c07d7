@@ -30,6 +30,7 @@ import AlbumComposer from '@/components/inbox/AlbumComposer';
 import ForwardDialog from '@/components/inbox/ForwardDialog';
 import TemplatePickerSheet, { renderTemplateText, type TemplateOption } from '@/components/inbox/TemplatePickerSheet';
 import ConversationRecords from '@/components/inbox/ConversationRecords';
+import { useQuickReplies, slashQuery, filterReplies, SlashMenu, QuickReplyManager } from '@/components/inbox/QuickReplies';
 
 
 
@@ -83,6 +84,7 @@ const displayName = (m?: Member | null) =>
 const Inbox = () => {
   const { user, profile } = useAuth();
   const [wsId, setWsId] = useState<string | null>(null);
+  const quickReplies = useQuickReplies(wsId);
   const [searchParams, setSearchParams] = useSearchParams();
   const [convs, setConvs] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -91,6 +93,7 @@ const Inbox = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [draft, setDraft] = useState('');
+  const [qrActive, setQrActive] = useState(0);
   const [sending, setSending] = useState(false);
   const [filter, setFilter] = useState<'all' | 'mine' | 'unassigned' | 'unread'>('all');
   const [tab, setTab] = useState<'new' | 'open' | 'resolved' | 'all'>('all');
@@ -1108,14 +1111,30 @@ const Inbox = () => {
                     </PopoverContent>
                   </Popover>
 
+                  <QuickReplyManager items={quickReplies.items} save={quickReplies.save} disabled={!windowOpen} onPick={r => setDraft(r.text)} />
+                  <div className="relative flex-1 min-w-0">
+                  {slashQuery(draft) !== null && windowOpen && (
+                    <SlashMenu items={filterReplies(quickReplies.items, slashQuery(draft)!)} active={qrActive} onPick={r => { setDraft(r.text); setQrActive(0); }} />
+                  )}
                   <Input
                     value={draft}
-                    onChange={e => setDraft(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
-                    placeholder={recording ? 'Recording… tap stop to send' : windowOpen ? 'Type a message…' : 'Free-form disabled outside 24h window'}
+                    onChange={e => { setDraft(e.target.value); setQrActive(0); }}
+                    onKeyDown={e => {
+                      const q = slashQuery(draft);
+                      if (q !== null) {
+                        const list = filterReplies(quickReplies.items, q);
+                        if (e.key === 'ArrowDown') { e.preventDefault(); setQrActive(i => Math.min(i + 1, list.length - 1)); return; }
+                        if (e.key === 'ArrowUp') { e.preventDefault(); setQrActive(i => Math.max(i - 1, 0)); return; }
+                        if ((e.key === 'Enter' || e.key === 'Tab') && list[qrActive]) { e.preventDefault(); setDraft(list[qrActive].text); setQrActive(0); return; }
+                        if (e.key === 'Escape') { setDraft(''); return; }
+                      }
+                      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+                    }}
+                    placeholder={recording ? 'Recording… tap stop to send' : windowOpen ? 'Type a message or / for quick replies' : 'Free-form disabled outside 24h window'}
                     disabled={!windowOpen || sending || recording}
                     className="rounded-full"
                   />
+                  </div>
                   <Button onClick={send} disabled={!draft.trim() || sending || !windowOpen} size="icon" className="rounded-full shrink-0">
                     <Send className="w-4 h-4" />
                   </Button>
