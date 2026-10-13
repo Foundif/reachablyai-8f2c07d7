@@ -172,7 +172,7 @@ const PROVIDERS: Provider[] = [
     capabilities: [
       "New booking added as a row instantly",
       "Same row updated when the advance is paid",
-      "Passenger, address, date, add-ons and notes included",
+      "Customer, location, date, add-ons and notes included",
       "Amount, advance, paid and balance columns",
       "Share the sheet with your team or accountant",
     ],
