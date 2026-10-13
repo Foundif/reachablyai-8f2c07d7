@@ -14,6 +14,7 @@ import {
 import { resolveWorkspaceId } from '@/lib/workspace';
 import ConnectWhatsAppCard from '@/components/home/ConnectWhatsAppCard';
 import SetupProgressCard from '@/components/home/SetupProgressCard';
+import TodayActivityCard from '@/components/home/TodayActivityCard';
 
 const QuickCard = ({ icon: Icon, title, desc, cta, to, navigate, tint }: any) => (
   <button
@@ -193,6 +194,8 @@ const Dashboard = () => {
           </h1>
           <p className="text-muted-foreground text-sm mt-1">Here's your WhatsApp growth desk for today.</p>
         </div>
+
+        <TodayActivityCard wsId={wsId} credits={stats.msgCredits} creditsPack={stats.msgCreditsPack} aiReplies={stats.aiRepliesMonth} />
 
         {/* WhatsApp coexistence connection */}
         <ConnectWhatsAppCard connected={stats.waConnected} onConnected={() => wsId && loadStats(wsId)} />
