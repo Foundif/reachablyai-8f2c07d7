@@ -201,7 +201,7 @@ const ApiSettings = () => {
               <Snippet title="Send a plain message (only inside the 24-hour window)" code={`curl -X POST "${API_BASE}/send-message" \\
   -H "x-api-key: YOUR_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{ "to": "919876543210", "message": "Your driver is on the way." }'`} />
+  -d '{ "to": "919876543210", "message": "Your booking is confirmed." }'`} />
               <Snippet title="Create or update a contact" code={`curl -X POST "${API_BASE}/contacts" \\
   -H "x-api-key: YOUR_KEY" \\
   -H "Content-Type: application/json" \\

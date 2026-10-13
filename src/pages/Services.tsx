@@ -176,7 +176,7 @@ const Services = () => {
                 <div className="space-y-1.5"><Label>Name</Label><Input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></div>
                 <div className="space-y-1.5"><Label>Category</Label><Input value={edit.category} onChange={(e) => setEdit({ ...edit, category: e.target.value })} /></div>
                 <div className="space-y-1.5"><Label>Price (₹)</Label><Input type="number" min={0} value={edit.base_price} onChange={(e) => setEdit({ ...edit, base_price: Number(e.target.value) })} /></div>
-                <div className="space-y-1.5"><Label>Price unit</Label><Input value={edit.price_unit} onChange={(e) => setEdit({ ...edit, price_unit: e.target.value })} placeholder="per hour, per trip…" /></div>
+                <div className="space-y-1.5"><Label>Price unit</Label><Input value={edit.price_unit} onChange={(e) => setEdit({ ...edit, price_unit: e.target.value })} placeholder="per hour, per session…" /></div>
                 <div className="space-y-1.5"><Label>Advance (₹)</Label><Input type="number" min={0} value={edit.advance_amount} onChange={(e) => setEdit({ ...edit, advance_amount: Number(e.target.value) })} /></div>
                 <div className="space-y-1.5"><Label>Duration (min)</Label><Input type="number" min={0} value={edit.duration_minutes ?? ''} onChange={(e) => setEdit({ ...edit, duration_minutes: e.target.value ? Number(e.target.value) : null })} /></div>
               </div>

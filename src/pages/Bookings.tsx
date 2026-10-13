@@ -44,10 +44,10 @@ type Rec = {
 
 const FIELD_LABELS: Record<string, string> = {
   service: 'Service', name: 'Name', phone: 'Phone', booking_for: 'Booking for',
-  passenger_name: 'Passenger name', passenger_phone: 'Passenger phone',
-  transport_mode: 'Transport mode', transport_details: 'Service category',
-  service_info: 'Service info', address: 'Reporting address', landmark: 'Nearest landmark',
-  date: 'Date', time: 'Reporting time', hours: 'Expected hours/days', addons: 'Add-ons',
+  passenger_name: 'Customer name', passenger_phone: 'Customer phone',
+  transport_mode: 'Service type', transport_details: 'Service category',
+  service_info: 'Service info', address: 'Service location', landmark: 'Nearest landmark',
+  date: 'Date', time: 'Scheduled time', hours: 'Duration', addons: 'Add-ons',
   status: 'Submission status',
 };
 const HIDDEN_FIELDS = new Set(['flow_token', 'flow_id', 'version', 'screen', '__version__']);
