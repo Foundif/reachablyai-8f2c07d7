@@ -745,7 +745,7 @@ const Inbox = () => {
                           {c.unread_count > 0 && (
                             <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">{c.unread_count}</span>
                           )}
-                          <span className="w-2 h-2 rounded-full bg-success" title="WhatsApp" />
+                          <span className="w-2 h-2 rounded-full bg-primary/60" title="WhatsApp" />
                         </span>
                       </div>
 

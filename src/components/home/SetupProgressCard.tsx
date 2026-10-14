@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, Circle, Rocket, X, Loader2, ArrowRight } from 'lucide-react';
+import { CheckCircle2, Circle, X, Loader2, ArrowRight, ChevronUp, ChevronDown, Minus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -39,6 +39,8 @@ const SetupProgressCard = ({ wsId, checks }: Props) => {
   const [paid, setPaid] = useState(false);
   const [paying, setPaying] = useState(false);
   const [ready, setReady] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [showDone, setShowDone] = useState(false);
 
   useEffect(() => {
     if (!wsId) return;
@@ -116,53 +118,72 @@ const SetupProgressCard = ({ wsId, checks }: Props) => {
 
   if (!ready || dismissed || pct === 100) return null;
 
+  const next = steps.find(s => !s.done);
+  const done = steps.filter(s => s.done);
+  const R = 18, C = 2 * Math.PI * R;
+  const Ring = ({ size = 44 }: { size?: number }) => (
+    <svg width={size} height={size} viewBox="0 0 44 44" className="-rotate-90 shrink-0">
+      <circle cx="22" cy="22" r={R} fill="none" stroke="hsl(var(--muted))" strokeWidth="4" />
+      <circle cx="22" cy="22" r={R} fill="none" stroke="hsl(var(--primary))" strokeWidth="4" strokeLinecap="round"
+        strokeDasharray={C} strokeDashoffset={C * (1 - pct / 100)} className="transition-all" />
+    </svg>
+  );
+
+  if (!open) return (
+    <button onClick={() => setOpen(true)}
+      className="fixed z-40 right-4 bottom-20 md:bottom-6 flex items-center gap-2.5 rounded-full border bg-card shadow-lg pl-1.5 pr-4 py-1.5 hover:shadow-xl transition-shadow">
+      <Ring size={36} />
+      <span className="font-semibold text-sm">Setup</span>
+      <span className="text-xs text-muted-foreground">{steps.length - doneCount} left</span>
+      <ChevronUp className="w-4 h-4 text-muted-foreground" />
+    </button>
+  );
+
   return (
-    <Card className="p-4 md:p-5 space-y-4">
-      <div className="flex items-start gap-3">
-        <div className="p-2.5 rounded-xl bg-muted"><Rocket className="w-4 h-4" /></div>
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold">Finish setting up Reachably</p>
-          <p className="text-xs text-muted-foreground">{doneCount} of {steps.length} done · takes about 15 minutes</p>
+    <Card className="fixed z-40 right-3 left-3 sm:left-auto bottom-20 md:bottom-6 sm:w-[380px] max-h-[75vh] overflow-y-auto shadow-2xl rounded-2xl p-0">
+      <div className="flex items-center gap-3 p-4 border-b">
+        <Ring />
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold">Workspace setup</p>
+          <p className="text-xs text-muted-foreground">{doneCount}/{steps.length} · {steps.length - doneCount} remaining</p>
         </div>
-        <Badge variant="secondary">{pct}%</Badge>
-        <button onClick={hide} className="p-1 rounded hover:bg-muted text-muted-foreground" aria-label="Hide setup guide">
-          <X className="w-4 h-4" />
-        </button>
+        <button onClick={() => setOpen(false)} className="p-1.5 rounded hover:bg-muted" aria-label="Minimize"><Minus className="w-4 h-4" /></button>
+        <button onClick={hide} className="p-1.5 rounded hover:bg-muted text-muted-foreground" aria-label="Hide setup guide"><X className="w-4 h-4" /></button>
       </div>
-
-      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-        <div className="h-full rounded-full bg-foreground transition-all" style={{ width: `${pct}%` }} />
-      </div>
-
-      <div className="space-y-1">
-        {steps.map((step) => (
-          <button
-            key={step.key}
-            onClick={() => navigate(step.to)}
-            className="w-full flex items-center gap-3 rounded-xl px-2 py-2 text-left hover:bg-muted/60 transition-colors"
-          >
-            {step.done
-              ? <CheckCircle2 className="w-4 h-4 text-foreground flex-shrink-0" />
-              : <Circle className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
-            <span className={`text-sm flex-1 ${step.done ? 'line-through text-muted-foreground' : ''}`}>{step.label}</span>
-            {!step.done && <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />}
+      {next && (
+        <div className="p-4 border-b space-y-3">
+          <p className="text-[11px] font-semibold tracking-widest text-primary">UP NEXT</p>
+          <p className="font-semibold">{next.label}</p>
+          <Button className="w-full" onClick={() => navigate(next.to)}>Continue <ArrowRight className="w-4 h-4" /></Button>
+        </div>
+      )}
+      <div className="p-3 space-y-1">
+        {steps.filter(s => !s.done).map(s => (
+          <button key={s.key} onClick={() => navigate(s.to)} className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left bg-primary/5 hover:bg-primary/10">
+            <Circle className="w-4 h-4 text-primary" /><span className="text-sm font-medium flex-1">{s.label}</span>
           </button>
         ))}
+        {done.length > 0 && (
+          <>
+            <button onClick={() => setShowDone(v => !v)} className="w-full flex items-center justify-between px-3 py-2 text-sm text-muted-foreground">
+              {done.length} completed {showDone ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+            {showDone && done.map(s => (
+              <div key={s.key} className="flex items-center gap-3 px-3 py-1.5">
+                <CheckCircle2 className="w-4 h-4 text-primary" /><span className="text-sm line-through text-muted-foreground">{s.label}</span>
+              </div>
+            ))}
+          </>
+        )}
       </div>
-
-      <div className="rounded-xl border p-3 flex flex-wrap items-center gap-3">
+      <div className="m-3 mt-0 rounded-xl border p-3 flex flex-wrap items-center gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium">Want us to set it all up for you?</p>
-          <p className="text-xs text-muted-foreground">
-            Guided onboarding: WhatsApp approval, templates, contact import, automations and team training.
-          </p>
+          <p className="text-sm font-medium">Want us to set it all up?</p>
+          <p className="text-xs text-muted-foreground">Done-for-you onboarding & team training.</p>
         </div>
-        {paid ? (
-          <Badge variant="secondary">Purchased</Badge>
-        ) : (
-          <Button size="sm" onClick={buySetup} disabled={paying}>
-            {paying && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            Pay ₹{SETUP_PACKAGE_PRICE.toLocaleString('en-IN')}
+        {paid ? <Badge variant="secondary">Purchased</Badge> : (
+          <Button size="sm" variant="outline" onClick={buySetup} disabled={paying}>
+            {paying && <Loader2 className="w-3.5 h-3.5 animate-spin" />}₹{SETUP_PACKAGE_PRICE.toLocaleString('en-IN')}
           </Button>
         )}
       </div>
