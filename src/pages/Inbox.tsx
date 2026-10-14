@@ -657,29 +657,30 @@ const Inbox = () => {
               </div>
             )}
 
-            <div className="flex items-center gap-1 -mb-3">
+            <div className="flex items-center gap-1.5 overflow-x-auto -mx-0.5 px-0.5 pb-0.5">
               {([
+                { id: 'all', label: 'All chats', icon: Users },
                 { id: 'new', label: 'New', icon: MessageSquareText },
                 { id: 'open', label: 'Open', icon: InboxIcon },
                 { id: 'resolved', label: 'Resolved', icon: CheckCircle2 },
-                { id: 'all', label: 'All', icon: Users },
               ] as const).map(t => (
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
                   className={cn(
-                    'flex-1 flex items-center justify-center gap-1 px-1 pb-2 text-[11px] font-medium border-b-2 transition-colors',
-                    tab === t.id ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
+                    'shrink-0 flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-colors',
+                    tab === t.id ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                   )}
                 >
                   <t.icon className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{t.label}</span>
-                  {tabCounts[t.id] > 0 && (
-                    <span className="ml-0.5 rounded-full bg-muted px-1.5 text-[10px] leading-4">{tabCounts[t.id]}</span>
-                  )}
+                  {t.label}
+                  <span className={cn('rounded-full px-1.5 text-[10px] leading-4', tab === t.id ? 'bg-primary/15' : 'bg-muted')}>
+                    {tabCounts[t.id] > 99 ? '99+' : tabCounts[t.id]}
+                  </span>
                 </button>
               ))}
             </div>
+
 
           </div>
 
@@ -729,13 +730,23 @@ const Inbox = () => {
                           })}
                         </div>
                       )}
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[11px] text-muted-foreground truncate">
-                          {assignee ? displayName(assignee) : 'Unassigned'}
-                        </span>
-                        {c.unread_count > 0 && (
-                          <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">{c.unread_count}</span>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        {assignee ? (
+                          <span className="inline-flex items-center gap-1 max-w-[70%] rounded-full bg-primary/10 text-primary pl-0.5 pr-2 py-0.5 text-[10px] font-medium">
+                            <span className="w-4 h-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[8px] font-bold shrink-0">
+                              {displayName(assignee).slice(0, 2).toUpperCase()}
+                            </span>
+                            <span className="truncate">{displayName(assignee)}</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-muted text-muted-foreground px-2 py-0.5 text-[10px]">Unassigned</span>
                         )}
+                        <span className="ml-auto flex items-center gap-1.5">
+                          {c.unread_count > 0 && (
+                            <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">{c.unread_count}</span>
+                          )}
+                          <span className="w-2 h-2 rounded-full bg-success" title="WhatsApp" />
+                        </span>
                       </div>
 
                     </div>
