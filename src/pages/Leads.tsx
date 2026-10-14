@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { resolveWorkspaceId } from '@/lib/workspace';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import CompaniesPanel from '@/components/contacts/CompaniesPanel';
 
 // ---------- Contact table fields (Turbodev-style column manager) ----------
 type FieldKey = 'name' | 'phone' | 'email' | 'status' | 'source' | 'temperature' | 'tags' | 'notes' | 'created_at' | 'updated_at';
@@ -175,7 +176,7 @@ const Leads = () => {
 
 
   // Turbodev-style table state
-  const [tab, setTab] = useState<'contacts' | 'segments'>('contacts');
+  const [tab, setTab] = useState<'contacts' | 'companies' | 'segments'>('contacts');
   const [columns, setColumns] = useState<FieldKey[]>(() => {
     try {
       const raw = localStorage.getItem(COLS_KEY);
@@ -581,7 +582,7 @@ const Leads = () => {
         {/* Tabs header */}
         <div className="border-b px-4 md:px-6">
           <div className="flex gap-6">
-            {(['contacts', 'segments'] as const).map(t => (
+            {(['contacts', 'companies', 'segments'] as const).map(t => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -595,7 +596,7 @@ const Leads = () => {
           </div>
         </div>
 
-        {tab === 'contacts' ? (
+        {tab === 'companies' ? <CompaniesPanel wsId={wsId} /> : tab === 'contacts' ? (
           <div className="p-3 md:p-6 space-y-4">
             {/* Toolbar */}
             <div className="flex flex-wrap items-center gap-2">
