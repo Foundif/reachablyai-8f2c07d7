@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import ShopifyRiskMapping from "@/components/integrations/ShopifyRiskMapping";
+import ShopifyRecipes from "@/components/integrations/ShopifyRecipes";
 import webhookIcon from "@/assets/webhook-icon.png";
 
 const razorpayLogo =
@@ -761,7 +762,8 @@ const Integrations = () => {
 
                 {detail.id === "shopify" && (
                   <div className="pt-2 border-t space-y-3">
-                    <ShopifyRiskMapping workspaceId={wsId} />
+                    <ShopifyRecipes workspaceId={wsId} userId={user?.id} />
+                    <details className="text-sm"><summary className="cursor-pointer text-muted-foreground text-xs">Advanced: customer trust scoring</summary><ShopifyRiskMapping workspaceId={wsId} /></details>
                   </div>
                 )}
               </div>

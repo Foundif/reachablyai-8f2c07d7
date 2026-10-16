@@ -11,6 +11,14 @@ const json = (b: unknown, s = 200) =>
 /** Reads "a.b.0.c" style paths out of an arbitrary JSON payload. */
 function pick(payload: any, path?: string | null): any {
   if (!path) return undefined;
+  // "a.b|c.d" = first non-empty of several paths (e.g. Shopify phone fallbacks)
+  if (String(path).includes('|')) {
+    for (const p of String(path).split('|')) {
+      const v = pick(payload, p.trim());
+      if (v !== undefined && v !== null && String(v).trim()) return v;
+    }
+    return undefined;
+  }
   return String(path).split('.').reduce((acc: any, key) => {
     if (acc === null || acc === undefined) return undefined;
     return acc[key];
