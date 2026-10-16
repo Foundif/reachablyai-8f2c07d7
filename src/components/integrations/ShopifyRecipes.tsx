@@ -38,7 +38,7 @@ export const SHOPIFY_RECIPES = [
     title: 'Abandoned cart recovery', event: 'Checkout update',
     sample: 'Hey {{1}}, you left items in your cart! Complete your order here: {{2}}',
     variables: { '1': 'customer.first_name', '2': 'abandoned_checkout_url' },
-    conditions: [{ field: 'completed_at', op: 'not_equals', value: '' }].map(c => ({ ...c, op: 'equals' })),
+    conditions: [{ field: 'completed_at', op: 'equals', value: '' }],
   },
 ];
 
