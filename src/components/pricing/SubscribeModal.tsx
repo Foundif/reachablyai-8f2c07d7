@@ -1,3 +1,4 @@
+import { clearWorkspacePlanCache } from '@/hooks/useWorkspacePlan';
 import { useState } from 'react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -79,7 +80,8 @@ const SubscribeModal = ({
             });
             if (vErr || v?.error) throw new Error(v?.error || vErr?.message || 'Verify failed');
             setStep('success');
-            toast.success(`Subscribed to ${plan.name}!`);
+            clearWorkspacePlanCache();
+          toast.success(`Subscribed to ${plan.name}!`);
           } catch (e: any) {
             toast.error(e.message || 'Verification failed');
           }
