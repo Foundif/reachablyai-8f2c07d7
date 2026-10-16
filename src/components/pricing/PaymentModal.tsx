@@ -1,3 +1,4 @@
+import { clearWorkspacePlanCache } from '@/hooks/useWorkspacePlan';
 import { useState, useEffect } from 'react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -105,6 +106,7 @@ const PaymentModal = ({ open, onOpenChange, plan, formattedPrice, billingPeriod,
         theme: { color: '#6366f1' },
         handler: () => {
           setStep('success');
+          clearWorkspacePlanCache();
           toast.success('Payment successful! Your plan will activate shortly.');
         },
         modal: { ondismiss: () => setRzpLoading(false) },
