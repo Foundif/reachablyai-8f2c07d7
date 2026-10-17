@@ -194,7 +194,6 @@ const Profile = () => {
         <SectionCard
           title="Security"
           rows={[
-            { icon: FileText, label: 'Audit Logs', sub: 'See every account action', onClick: () => navigate('/audit') },
             { icon: Shield, label: 'Change password', sub: 'Update your login password', onClick: () => setPasswordModalOpen(true) },
           ]}
         />

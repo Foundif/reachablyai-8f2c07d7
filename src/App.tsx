@@ -25,8 +25,6 @@ const AdminLogin = lazy(() => import("./pages/AdminLogin"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const TeamManagement = lazy(() => import("./pages/TeamManagement"));
-const RolesPermissions = lazy(() => import("./pages/RolesPermissions"));
-const AuditLogs = lazy(() => import("./pages/AuditLogs"));
 const Accounting = lazy(() => import("./pages/Accounting"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
@@ -127,8 +125,8 @@ const App = () => (
                 <Route path="/shop-info" element={<ProtectedRoute><ShopInfo /></ProtectedRoute>} />
                 <Route path="/guide" element={<ProtectedRoute><Guide /></ProtectedRoute>} />
                 <Route path="/team" element={<ProtectedRoute><TeamManagement /></ProtectedRoute>} />
-                <Route path="/roles" element={<ProtectedRoute><RolesPermissions /></ProtectedRoute>} />
-                <Route path="/audit" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
+                <Route path="/roles" element={<Navigate to="/team" replace />} />
+                <Route path="/audit" element={<Navigate to="/profile" replace />} />
 
                 {/* Legacy redirects */}
                 <Route path="/messages" element={<Navigate to="/inbox" replace />} />

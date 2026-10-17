@@ -61,6 +61,7 @@ type Provider = {
   tagline: string;
   blurb: string;
   free?: boolean;
+  comingSoon?: boolean;
   docs?: string;
   fields: Field[];
   capabilities: string[];
@@ -255,6 +256,7 @@ const PROVIDERS: Provider[] = [
     tagline: "Send Order updates to your customer on WhatsApp for better experience.",
     blurb: "Push shipment and tracking updates straight to your customers on WhatsApp.",
     docs: "https://apidocs.shiprocket.in/",
+    comingSoon: true,
     fields: [
       { key: "email", label: "Shiprocket email", placeholder: "you@company.com" },
       { key: "password", label: "Shiprocket password", placeholder: "••••••••", secret: true },
@@ -596,9 +598,10 @@ const Integrations = () => {
               <h2 className="text-lg font-semibold">Available Integrations</h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {PROVIDERS.map((p) => (
-                  <Card key={p.id} className="p-4 space-y-3 hover-lift cursor-pointer" onClick={() => setDetail(p)}>
+                  <Card key={p.id} className={`p-4 space-y-3 ${p.comingSoon ? "opacity-60 cursor-not-allowed" : "hover-lift cursor-pointer"}`} onClick={() => !p.comingSoon && setDetail(p)}>
                     <div className="flex items-center gap-2">
                       <Logo provider={p} />
+                      {p.comingSoon && <Badge variant="secondary">Coming soon</Badge>}
                       {p.free && (
                         <Badge variant="outline" className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30">
                           Free
