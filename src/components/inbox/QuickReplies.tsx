@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Zap, Plus, Trash2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export type QuickReply = { id: string; shortcut: string; text: string };
 
@@ -14,17 +16,39 @@ const DEFAULTS: QuickReply[] = [
   { id: 'd4', shortcut: 'pay', text: 'You can pay the advance using the payment link we share. Thank you!' },
 ];
 
-const key = (ws: string | null) => `reachably.quickReplies.${ws || 'default'}`;
+const isUuid = (s: string) => /^[0-9a-f-]{36}$/i.test(s);
 
+/** Team-wide quick replies stored per workspace in the database. */
 export const useQuickReplies = (ws: string | null) => {
   const [items, setItems] = useState<QuickReply[]>(DEFAULTS);
+  const [seeded, setSeeded] = useState(false);
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(key(ws));
-      setItems(raw ? JSON.parse(raw) : DEFAULTS);
-    } catch { setItems(DEFAULTS); }
+    if (!ws) return;
+    let cancel = false;
+    (supabase as any).from('quick_replies').select('id, shortcut, text').eq('workspace_id', ws).order('created_at')
+      .then(({ data }: any) => {
+        if (cancel) return;
+        if (data && data.length) { setItems(data); setSeeded(true); } else { setItems(DEFAULTS); setSeeded(false); }
+      });
+    return () => { cancel = true; };
   }, [ws]);
-  const save = (next: QuickReply[]) => { setItems(next); localStorage.setItem(key(ws), JSON.stringify(next)); };
+
+  const save = async (next: QuickReply[]) => {
+    const prev = items;
+    setItems(next);
+    if (!ws) return;
+    const db = (supabase as any).from('quick_replies');
+    // First edit: persist the defaults the user kept so the team shares them.
+    const toInsert = (seeded ? next.filter(n => !prev.some(p => p.id === n.id)) : next)
+      .map(n => ({ id: isUuid(n.id) ? n.id : crypto.randomUUID(), workspace_id: ws, shortcut: n.shortcut, text: n.text }));
+    const removed = seeded ? prev.filter(p => !next.some(n => n.id === p.id)).map(p => p.id) : [];
+    if (removed.length) await db.delete().in('id', removed);
+    if (toInsert.length) {
+      const { data, error } = await (supabase as any).from('quick_replies').insert(toInsert).select('id, shortcut, text');
+      if (error) { toast.error('Could not save quick reply'); setItems(prev); return; }
+      if (!seeded) { setItems(data); setSeeded(true); }
+    }
+  };
   return { items, save };
 };
 
