@@ -127,8 +127,8 @@ const App = () => (
                 <Route path="/shop-info" element={<ProtectedRoute><ShopInfo /></ProtectedRoute>} />
                 <Route path="/guide" element={<ProtectedRoute><Guide /></ProtectedRoute>} />
                 <Route path="/team" element={<ProtectedRoute><TeamManagement /></ProtectedRoute>} />
-                <Route path="/roles" element={<ProtectedRoute><RolesPermissions /></ProtectedRoute>} />
-                <Route path="/audit" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
+                <Route path="/roles" element={<Navigate to="/team" replace />} />
+                <Route path="/audit" element={<Navigate to="/profile" replace />} />
 
                 {/* Legacy redirects */}
                 <Route path="/messages" element={<Navigate to="/inbox" replace />} />

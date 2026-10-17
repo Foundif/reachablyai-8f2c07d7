@@ -55,7 +55,7 @@ const Automations = () => {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     name: '',
-    trigger_type: 'new_lead' as TriggerType,
+    trigger_type: 'keyword_match' as TriggerType,
     trigger_value: '',
     action_type: 'send_template' as ActionType,
     template_id: '',
@@ -121,7 +121,7 @@ const Automations = () => {
     if (error) return toast.error(error.message);
     toast.success('Automation created');
     setOpen(false);
-    setForm({ name: '', trigger_type: 'new_lead', trigger_value: '', action_type: 'send_template', template_id: '', action_value: '', flow_row_id: '', cta: '' });
+    setForm({ name: '', trigger_type: 'keyword_match', trigger_value: '', action_type: 'send_template', template_id: '', action_value: '', flow_row_id: '', cta: '' });
     load();
   };
 
@@ -160,7 +160,9 @@ const Automations = () => {
                   <Select value={form.trigger_type} onValueChange={(v: TriggerType) => setForm({ ...form, trigger_type: v, trigger_value: '' })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {Object.entries(TRIGGER_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                      {Object.entries(TRIGGER_LABELS).map(([k, v]) => (
+                        <SelectItem key={k} value={k} disabled={k !== 'keyword_match'}>{v}{k !== 'keyword_match' ? ' (coming soon)' : ''}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   {['tag_added', 'keyword_match'].includes(form.trigger_type) && (
