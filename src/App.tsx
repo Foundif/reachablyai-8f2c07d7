@@ -25,8 +25,6 @@ const AdminLogin = lazy(() => import("./pages/AdminLogin"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const TeamManagement = lazy(() => import("./pages/TeamManagement"));
-const RolesPermissions = lazy(() => import("./pages/RolesPermissions"));
-const AuditLogs = lazy(() => import("./pages/AuditLogs"));
 const Accounting = lazy(() => import("./pages/Accounting"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
