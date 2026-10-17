@@ -73,13 +73,24 @@ Deno.serve(async (req) => {
           for (const k of Object.keys(answers)) if (keys.some((x) => k.toLowerCase().includes(x))) return answers[k];
           return '';
         };
-        const name = answers.full_name || find('name') || 'Meta lead';
-        const phone = normalizePhone(answers.phone_number || find('phone', 'mobile', 'whatsapp'), s.country_code || '91');
-        const email = answers.email || find('email') || null;
-        const city = answers.city || find('city') || '';
+        // Owner-defined mapping: question → contact field or tag
+        const norm = (x: string) => x.toLowerCase().replace(/[^a-z0-9]+/g, '');
+        const mapped: Record<string, string> = {};
+        const mappedTags: string[] = [];
+        for (const m of (Array.isArray(s.field_map) ? s.field_map : [])) {
+          const key = Object.keys(answers).find((k) => norm(k) === norm(m.question || ''));
+          const val = key ? answers[key] : '';
+          if (!val) continue;
+          if (m.target === 'tag') mappedTags.push(...val.split(',').map((t: string) => t.trim()).filter(Boolean));
+          else mapped[m.target] = val;
+        }
+        const name = mapped.name || answers.full_name || find('name') || 'Meta lead';
+        const phone = normalizePhone(mapped.phone || answers.phone_number || find('phone', 'mobile', 'whatsapp'), s.country_code || '91');
+        const email = mapped.email || answers.email || find('email') || null;
+        const city = mapped.city || answers.city || find('city') || '';
         const campaign = lead.campaign_name || '';
         const formName = s.form_names?.[v.form_id] || lead.form_id || v.form_id || '';
-        const tags = ['meta_ads', campaign && `campaign:${campaign}`, lead.ad_name && `ad:${lead.ad_name}`, city && `city:${city}`].filter(Boolean);
+        const tags = ['meta_ads', campaign && `campaign:${campaign}`, lead.ad_name && `ad:${lead.ad_name}`, city && `city:${city}`, ...mappedTags].filter(Boolean);
         const notes = Object.entries(answers).map(([k, val]) => `${k.replace(/_/g, ' ')}: ${val}`).join('\n')
           + `\n—\nCampaign: ${campaign || '-'} | Ad set: ${lead.adset_name || '-'} | Ad: ${lead.ad_name || '-'} | Form: ${formName}`;
 
