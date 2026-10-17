@@ -1525,6 +1525,33 @@ export type Database = {
         }
         Relationships: []
       }
+      quick_replies: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          shortcut: string
+          text: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          shortcut: string
+          text: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          shortcut?: string
+          text?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       record_payments: {
         Row: {
           amount: number
