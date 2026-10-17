@@ -36,6 +36,13 @@
       "when": 1791796267205,
       "tag": "0004_create_services_catalog",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792219536615,
+      "tag": "0005_quick_replies",
+      "breakpoints": true
     }
   ]
 }
