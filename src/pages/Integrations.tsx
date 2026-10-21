@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
 import { Card } from "@/components/ui/card";
@@ -302,6 +302,8 @@ const Integrations = () => {
   const [rows, setRows] = useState<Row[]>([]);
   const [hooks, setHooks] = useState<WebhookRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const loadRequest = useRef(0);
   const [active, setActive] = useState<Provider | null>(null);
   const [detail, setDetail] = useState<Provider | null>(null);
   const [form, setForm] = useState<Record<string, string>>({});
@@ -345,33 +347,60 @@ const Integrations = () => {
     else toast.success(`Sent ${(data as any)?.synced ?? 0} records to your sheet`);
   };
 
-  const load = async () => {
-    if (!user) return;
-    setLoading(true);
-    const id = await resolveWorkspaceId(user.id, profile);
-    setWsId(id);
-    if (!id) {
+  const load = useCallback(async () => {
+    const request = ++loadRequest.current;
+    if (!user) {
+      setWsId(null);
+      setRows([]);
+      setHooks([]);
       setLoading(false);
       return;
     }
-    const [{ data }, { data: wh }] = await Promise.all([
-      supabase
-        .from("integrations" as any)
-        .select("*")
-        .eq("workspace_id", id),
-      supabase
-        .from("webhook_endpoints" as any)
-        .select("id,name,token,active,last_received_at,template_id")
-        .eq("workspace_id", id)
-        .order("created_at", { ascending: false }),
-    ]);
-    setRows(((data as any[]) || []) as Row[]);
-    setHooks(((wh as any[]) || []) as WebhookRow[]);
-    setLoading(false);
-  };
+    setLoading(true);
+    setLoadError(null);
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const result = await Promise.race([
+        (async () => {
+          const id = await resolveWorkspaceId(user.id, profile);
+          if (!id) throw new Error("No workspace is available. Please sign in again or finish workspace setup.");
+          const [integrations, webhooks] = await Promise.all([
+            supabase.from("integrations" as any).select("*").eq("workspace_id", id).abortSignal(controller.signal),
+            supabase.from("webhook_endpoints" as any)
+              .select("id,name,token,active,last_received_at,template_id")
+              .eq("workspace_id", id).order("created_at", { ascending: false }).abortSignal(controller.signal),
+          ]);
+          if (integrations.error) throw new Error(integrations.error.message);
+          if (webhooks.error) throw new Error(webhooks.error.message);
+          return { id, integrations: integrations.data, webhooks: webhooks.data };
+        })(),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => {
+            reject(new Error("The connection took too long. Please try again."));
+            controller.abort();
+          }, 8000);
+        }),
+      ]);
+      if (request !== loadRequest.current) return;
+      setWsId(result.id);
+      setRows((result.integrations || []) as unknown as Row[]);
+      setHooks((result.webhooks || []) as unknown as WebhookRow[]);
+    } catch (error) {
+      if (request !== loadRequest.current) return;
+      setWsId(null);
+      setRows([]);
+      setHooks([]);
+      setLoadError(error instanceof Error ? error.message : "Could not load integrations. Please try again.");
+    } finally {
+      clearTimeout(timer);
+      if (request === loadRequest.current) setLoading(false);
+    }
+  }, [user?.id, profile?.active_workspace_id]);
   useEffect(() => {
-    load();
-  }, [user, profile]);
+    void load();
+    return () => { ++loadRequest.current; };
+  }, [load]);
 
   const connected = useMemo(() => new Map(rows.map((r) => [r.provider, r])), [rows]);
 
@@ -461,6 +490,12 @@ const Integrations = () => {
           <div className="p-10 text-center text-muted-foreground">
             <Loader2 className="w-5 h-5 animate-spin mx-auto" />
           </div>
+        ) : loadError ? (
+          <div role="alert" className="space-y-3 py-8">
+            <p className="font-medium">Could not load integrations</p>
+            <p className="text-sm text-muted-foreground">{loadError}</p>
+            <Button variant="outline" onClick={() => void load()}><RefreshCw className="w-4 h-4" />Try again</Button>
+          </div>
         ) : (
           <>
             {hooks.length > 0 && (
@@ -530,7 +565,8 @@ const Integrations = () => {
                 <h2 className="text-lg font-semibold">My Integrations</h2>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {myIntegrations.map((p) => {
-                    const row = connected.get(p.id)!;
+                    const row = connected.get(p.id);
+                    if (!row) return null;
                     return (
                       <Card key={p.id} className="p-4 space-y-3 hover-lift">
                         <div className="flex items-start justify-between gap-3">
