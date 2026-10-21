@@ -297,6 +297,7 @@ const Logo = ({ provider, className = "w-10 h-10" }: { provider: Provider; class
 
 const Integrations = () => {
   const { user, profile } = useAuth();
+  const activeWorkspaceId = (profile as { active_workspace_id?: string } | null)?.active_workspace_id;
   const navigate = useNavigate();
   const [wsId, setWsId] = useState<string | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
@@ -396,7 +397,7 @@ const Integrations = () => {
       clearTimeout(timer);
       if (request === loadRequest.current) setLoading(false);
     }
-  }, [user?.id, profile?.active_workspace_id]);
+  }, [user?.id, activeWorkspaceId]);
   useEffect(() => {
     void load();
     return () => { ++loadRequest.current; };
