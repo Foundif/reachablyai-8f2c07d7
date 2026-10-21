@@ -297,6 +297,7 @@ const Logo = ({ provider, className = "w-10 h-10" }: { provider: Provider; class
 
 const Integrations = () => {
   const { user, profile } = useAuth();
+  const userId = user?.id;
   const activeWorkspaceId = (profile as { active_workspace_id?: string } | null)?.active_workspace_id;
   const navigate = useNavigate();
   const [wsId, setWsId] = useState<string | null>(null);
@@ -350,7 +351,7 @@ const Integrations = () => {
 
   const load = useCallback(async () => {
     const request = ++loadRequest.current;
-    if (!user) {
+    if (!userId) {
       setWsId(null);
       setRows([]);
       setHooks([]);
@@ -364,7 +365,7 @@ const Integrations = () => {
     try {
       const result = await Promise.race([
         (async () => {
-          const id = await resolveWorkspaceId(user.id, profile);
+          const id = await resolveWorkspaceId(userId, { active_workspace_id: activeWorkspaceId });
           if (!id) throw new Error("No workspace is available. Please sign in again or finish workspace setup.");
           const [integrations, webhooks] = await Promise.all([
             supabase.from("integrations" as any).select("*").eq("workspace_id", id).abortSignal(controller.signal),
@@ -397,7 +398,7 @@ const Integrations = () => {
       clearTimeout(timer);
       if (request === loadRequest.current) setLoading(false);
     }
-  }, [user?.id, activeWorkspaceId]);
+  }, [userId, activeWorkspaceId]);
   useEffect(() => {
     void load();
     return () => { ++loadRequest.current; };
