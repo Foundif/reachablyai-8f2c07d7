@@ -43,6 +43,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import ShopifyRiskMapping from "@/components/integrations/ShopifyRiskMapping";
 import ShopifyRecipes from "@/components/integrations/ShopifyRecipes";
+import { LeadFieldMapping } from "@/components/integrations/LeadFieldMapping";
 import webhookIcon from "@/assets/webhook-icon.png";
 
 const razorpayLogo =
@@ -747,13 +748,18 @@ const Integrations = () => {
                       in the last 24 hours. For guaranteed delivery, add an approved alert template ID (variables: 1 =
                       name, 2 = phone, 3 = campaign).
                     </p>
-                    {connected.get("meta_lead_ads") && (
+                    {(() => {
+                      const integration = connected.get("meta_lead_ads");
+                      if (!integration) return null;
+                      return (
                       <LeadFieldMapping
-                        integrationId={connected.get("meta_lead_ads")!.id}
-                        settings={connected.get("meta_lead_ads")!.settings || {}}
+                        key={integration.id}
+                        integrationId={integration.id}
+                        settings={integration.settings || {}}
                         onSaved={load}
                       />
-                    )}
+                      );
+                    })()}
                     <div className="border-t pt-3 space-y-2">
                       <p className="text-xs font-medium">Daily ad report</p>
                       <p className="text-[11px] text-muted-foreground">

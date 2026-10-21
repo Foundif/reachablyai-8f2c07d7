@@ -1,5 +1,10 @@
 # Roadmap
 
+## Current functionality audit
+- [ ] Audit unfinished core flows and recent integration changes
+- [ ] Restore the broken Integrations page and verify the related mapping flow
+- [ ] Run checks and report remaining work and live-test blockers
+
 - [x] Fix current Flow Studio build issues
 - [x] Complete general-purpose form creation and preview
 - [x] Verify generic CRM submission handling
