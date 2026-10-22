@@ -1,5 +1,14 @@
 # Roadmap
 
+## Launch readiness — 22 October 2026
+- [ ] Audit current routes, CRM, Meta workflows, credentials and pricing
+- [ ] Complete workspace client management and Meta asset/destination mapping
+- [ ] Complete configurable scheduled reports and truthful delivery/run status
+- [ ] Harden instant lead delivery and add labelled backup reconciliation
+- [ ] Add public Reachably landing page, actual pricing and sourced competitor comparison
+- [ ] Verify tests, automatic compilation and mobile/desktop flows; document live-setup blockers
+- [ ] Keep publishing and live schedule activation pending explicit authorization
+
 ## Current functionality audit
 - [x] Audit unfinished core flows and recent integration changes (see functionality-audit.md)
 - [x] Restore the broken Integrations page and verify loading/mapping regressions with interaction tests
