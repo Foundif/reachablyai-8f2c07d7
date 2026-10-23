@@ -43,6 +43,13 @@
       "when": 1792219536615,
       "tag": "0005_quick_replies",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792774546569,
+      "tag": "0006_meta_reporting_clients_and_runs",
+      "breakpoints": true
     }
   ]
 }

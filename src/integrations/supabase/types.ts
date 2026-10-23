@@ -1307,6 +1307,240 @@ export type Database = {
           },
         ]
       }
+      meta_client_credentials: {
+        Row: {
+          client_id: string
+          expires_at: string | null
+          page_token: string | null
+          updated_at: string
+          user_token: string | null
+        }
+        Insert: {
+          client_id: string
+          expires_at?: string | null
+          page_token?: string | null
+          updated_at?: string
+          user_token?: string | null
+        }
+        Update: {
+          client_id?: string
+          expires_at?: string | null
+          page_token?: string | null
+          updated_at?: string
+          user_token?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_client_credentials_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "meta_reporting_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_oauth_states: {
+        Row: {
+          client_id: string
+          expires_at: string
+          id: string
+          redirect_uri: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          expires_at?: string
+          id?: string
+          redirect_uri: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          expires_at?: string
+          id?: string
+          redirect_uri?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_oauth_states_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "meta_reporting_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_reporting_clients: {
+        Row: {
+          ad_account_id: string
+          archived_at: string | null
+          cadence: string
+          connection_status: string
+          created_at: string
+          destination: string
+          form_ids: string[]
+          id: string
+          kpis: string[]
+          last_error: string | null
+          lead_enabled: boolean
+          lead_template_id: string | null
+          monthday: number
+          name: string
+          next_report_at: string | null
+          page_id: string
+          reconciliation_at: string | null
+          report_enabled: boolean
+          report_template_id: string | null
+          report_time: string
+          timezone: string
+          updated_at: string
+          weekday: number
+          workspace_id: string
+        }
+        Insert: {
+          ad_account_id?: string
+          archived_at?: string | null
+          cadence?: string
+          connection_status?: string
+          created_at?: string
+          destination?: string
+          form_ids?: string[]
+          id?: string
+          kpis?: string[]
+          last_error?: string | null
+          lead_enabled?: boolean
+          lead_template_id?: string | null
+          monthday?: number
+          name: string
+          next_report_at?: string | null
+          page_id?: string
+          reconciliation_at?: string | null
+          report_enabled?: boolean
+          report_template_id?: string | null
+          report_time?: string
+          timezone?: string
+          updated_at?: string
+          weekday?: number
+          workspace_id: string
+        }
+        Update: {
+          ad_account_id?: string
+          archived_at?: string | null
+          cadence?: string
+          connection_status?: string
+          created_at?: string
+          destination?: string
+          form_ids?: string[]
+          id?: string
+          kpis?: string[]
+          last_error?: string | null
+          lead_enabled?: boolean
+          lead_template_id?: string | null
+          monthday?: number
+          name?: string
+          next_report_at?: string | null
+          page_id?: string
+          reconciliation_at?: string | null
+          report_enabled?: boolean
+          report_template_id?: string | null
+          report_time?: string
+          timezone?: string
+          updated_at?: string
+          weekday?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_reporting_clients_lead_template_id_fkey"
+            columns: ["lead_template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_reporting_clients_report_template_id_fkey"
+            columns: ["report_template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_reporting_clients_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_workflow_runs: {
+        Row: {
+          client_id: string
+          completed_at: string | null
+          created_at: string
+          dedupe_key: string
+          error: string | null
+          id: string
+          kind: string
+          lead_id: string | null
+          message_id: string | null
+          metrics: Json
+          status: string
+          workspace_id: string
+        }
+        Insert: {
+          client_id: string
+          completed_at?: string | null
+          created_at?: string
+          dedupe_key: string
+          error?: string | null
+          id?: string
+          kind: string
+          lead_id?: string | null
+          message_id?: string | null
+          metrics?: Json
+          status?: string
+          workspace_id: string
+        }
+        Update: {
+          client_id?: string
+          completed_at?: string | null
+          created_at?: string
+          dedupe_key?: string
+          error?: string | null
+          id?: string
+          kind?: string
+          lead_id?: string | null
+          message_id?: string | null
+          metrics?: Json
+          status?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_workflow_runs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "meta_reporting_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_workflow_runs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_workflow_runs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plan_limits: {
         Row: {
           max_clients: number
@@ -2610,6 +2844,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_meta_workflow: {
+        Args: { _client: string; _key: string; _kind: string }
+        Returns: string
+      }
       current_workspace_id: { Args: never; Returns: string }
       ensure_personal_workspace: {
         Args: { _email: string; _uid: string }
