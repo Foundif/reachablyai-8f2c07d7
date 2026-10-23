@@ -1,0 +1,53 @@
+import {corsHeaders} from 'npm:@supabase/supabase-js@2/cors';
+import {createClient} from 'https://esm.sh/@supabase/supabase-js@2';
+import {z} from 'https://esm.sh/zod@3';
+import {validateClient,nextReport} from '../_shared/metaWorkflowRules.ts';
+import {graph,graphPages,clientTokens,runReport,processClientLead} from '../_shared/metaWorkflows.ts';
+const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...corsHeaders,'Content-Type':'application/json'}});
+const RequestSchema=z.object({action:z.enum(['list','save','archive','connect','finish','discover','verify','subscribe','report','reconcile','scheduler']),workspace_id:z.string().uuid().optional(),client_id:z.string().uuid().optional(),state:z.string().uuid().optional(),code:z.string().max(4096).optional(),redirect_uri:z.string().url().optional(),client:z.record(z.unknown()).optional()});
+Deno.serve(async req=>{
+ if(req.method==='OPTIONS') return new Response('ok',{headers:corsHeaders});if(req.method!=='POST') return json({error:'Method not allowed'},405);
+ try {
+  const parsed=RequestSchema.safeParse(await req.json());if(!parsed.success) return json({error:'Invalid request'},400);const b=parsed.data;
+  const url=Deno.env.get('SUPABASE_URL'),key=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');if(!url||!key) throw new Error('Backend configuration unavailable');const admin=createClient(url,key);
+  if(b.action==='scheduler') {const secret=Deno.env.get('DIGEST_CRON_SECRET');if(!secret||req.headers.get('x-cron-secret')!==secret) return json({error:'Scheduler is not authorized or configured'},401);
+   const {data,error}=await admin.from('meta_reporting_clients').select('*').eq('report_enabled',true).is('archived_at',null).lte('next_report_at',new Date().toISOString()).order('next_report_at').limit(20);if(error) throw error;
+   const results=[];for(const c of data||[]) results.push({client_id:c.id,...await runReport(admin,c,true)});return json({results});
+  }
+  const {data:auth,error:authError}=await admin.auth.getUser((req.headers.get('Authorization')||'').replace(/^Bearer /,''));if(authError||!auth.user) return json({error:'Sign in to continue'},401);
+  let c:any=null;if(b.client_id){const result=await admin.from('meta_reporting_clients').select('*').eq('id',b.client_id).maybeSingle();if(result.error) throw result.error;c=result.data;if(!c) return json({error:'Client not found'},404);}
+  const workspace=c?.workspace_id||b.workspace_id;if(!workspace) return json({error:'Workspace is required'},400);
+  const {data:allowed,error:permissionError}=await admin.rpc('is_workspace_admin',{_ws:workspace,_uid:auth.user.id});if(permissionError||!allowed) return json({error:'Only workspace owners and administrators can manage Meta clients'},403);
+  if(b.action==='list') {const [clients,templates,runs]=await Promise.all([admin.from('meta_reporting_clients').select('*').eq('workspace_id',workspace).order('created_at',{ascending:false}),admin.from('templates').select('id,name,status,body,variables').eq('workspace_id',workspace),admin.from('meta_workflow_runs').select('*').eq('workspace_id',workspace).order('created_at',{ascending:false}).limit(50)]);for(const r of [clients,templates,runs]) if(r.error) throw r.error;return json({clients:clients.data,templates:templates.data,runs:runs.data,scheduler_configured:!!Deno.env.get('DIGEST_CRON_SECRET'),scheduler_active:false});}
+  if(b.action==='save') {const fields=['name','destination','ad_account_id','page_id','form_ids','kpis','cadence','report_time','timezone','weekday','monthday','report_enabled','lead_enabled','report_template_id','lead_template_id'];const payload:any={};for(const f of fields) if(b.client && f in b.client) payload[f]=b.client[f];validateClient(payload);
+   if(payload.report_enabled && (!payload.report_template_id||!payload.destination||!payload.ad_account_id)) throw new Error('Reports require an ad account, destination and approved template');if(payload.lead_enabled && (!payload.page_id||!payload.destination||!payload.lead_template_id)) throw new Error('Lead alerts require a Page, destination and approved template');
+   for(const id of [payload.report_template_id,payload.lead_template_id].filter(Boolean)){const {data:tpl}=await admin.from('templates').select('id,status').eq('workspace_id',workspace).eq('id',id).maybeSingle();if(!tpl||tpl.status.toLowerCase()!=='approved') throw new Error('Template is not approved in this workspace');}
+   const assetChanged=c && (c.ad_account_id!==payload.ad_account_id || c.page_id!==payload.page_id);payload.next_report_at=payload.report_enabled?nextReport(payload):null;payload.updated_at=new Date().toISOString();if(assetChanged) payload.connection_status='setup_required';
+   const result=c?await admin.from('meta_reporting_clients').update(payload).eq('id',c.id).select('*').single():await admin.from('meta_reporting_clients').insert({...payload,workspace_id:workspace}).select('*').single();if(result.error) throw result.error;return json({client:result.data});}
+  if(!c) return json({error:'Select a client'},400);
+  if(b.action==='archive'){const {error}=await admin.from('meta_reporting_clients').update({archived_at:c.archived_at?null:new Date().toISOString(),report_enabled:false,lead_enabled:false,next_report_at:null}).eq('id',c.id);if(error) throw error;return json({ok:true});}
+  if(c.archived_at) throw new Error('Restore the archived client before running workflows');
+  if(b.action==='connect') {const appId=Deno.env.get('META_APP_ID');if(!appId||!Deno.env.get('META_APP_SECRET')) throw new Error('Meta app configuration is missing');if(!b.redirect_uri) throw new Error('Callback URL required');
+   const origin=req.headers.get('origin');const redirect=new URL(b.redirect_uri);if(!origin||redirect.origin!==origin||redirect.pathname!=='/meta/callback') throw new Error('Callback must match this app origin');
+   const result=await admin.from('meta_oauth_states').insert({client_id:c.id,user_id:auth.user.id,redirect_uri:b.redirect_uri}).select('id').single();if(result.error) throw result.error;
+   const url=new URL('https://www.facebook.com/v21.0/dialog/oauth');Object.entries({client_id:appId,redirect_uri:b.redirect_uri,state:result.data.id,response_type:'code',scope:'ads_read,pages_show_list,pages_read_engagement,pages_manage_ads,leads_retrieval,pages_manage_metadata'}).forEach(([k,v])=>url.searchParams.set(k,v));return json({url:url.toString()});}
+  if(b.action==='finish') {if(!b.state||!b.code) throw new Error('Meta authorization code/state missing');const state=await admin.from('meta_oauth_states').delete().eq('id',b.state).eq('user_id',auth.user.id).eq('client_id',c.id).gt('expires_at',new Date().toISOString()).select('*').maybeSingle();if(state.error||!state.data) throw new Error('Authorization expired or already used. Reconnect.');
+   const token=await graph('oauth/access_token','unused',{client_id:Deno.env.get('META_APP_ID')||'',client_secret:Deno.env.get('META_APP_SECRET')||'',redirect_uri:state.data.redirect_uri,code:b.code});if(!token.access_token) throw new Error('Meta did not return authorization');
+   const result=await admin.from('meta_client_credentials').upsert({client_id:c.id,user_token:token.access_token,expires_at:token.expires_in?new Date(Date.now()+token.expires_in*1000).toISOString():null,page_token:null});if(result.error) throw result.error;return json({ok:true});}
+  const tokens=await clientTokens(admin,c);
+  if(b.action==='discover') {const accounts=await graphPages('me/adaccounts',tokens.user,{fields:'id,name,account_id'});const pages=await graphPages('me/accounts',tokens.user,{fields:'id,name,access_token,tasks'});const selected=pages.find((p:any)=>p.id===c.page_id);let forms=[];let form_error=null;
+   if(selected?.access_token){const stored=await admin.from('meta_client_credentials').upsert({client_id:c.id,user_token:tokens.user,page_token:selected.access_token});if(stored.error) throw stored.error;try{forms=await graphPages(`${c.page_id}/leadgen_forms`,selected.access_token,{fields:'id,name,status'});}catch(e){form_error=(e as Error).message;}}
+   return json({accounts:accounts.map((a:any)=>({id:a.account_id,name:a.name})),pages:pages.map((p:any)=>({id:p.id,name:p.name})),forms,form_error});}
+  if(b.action==='verify') {const permissions=await graph('me/permissions',tokens.user);let ads=false,page=false;const granted=(permissions.data||[]).filter((p:any)=>p.status==='granted').map((p:any)=>p.permission);
+   if(c.ad_account_id){await graph(`act_${c.ad_account_id}`,tokens.user,{fields:'id,name'});ads=true;}if(c.page_id){await graph(c.page_id,tokens.page,{fields:'id,name'});page=true;}
+   const subscriptions=page?await graph(`${c.page_id}/subscribed_apps`,tokens.page,{fields:'id,subscribed_fields'}):{data:[]};const subscribed=subscriptions.data?.some((a:any)=>a.id===Deno.env.get('META_APP_ID')&&a.subscribed_fields?.includes('leadgen'))||false;
+   const status=ads||page?'api_verified':'setup_required';await admin.from('meta_reporting_clients').update({connection_status:status,last_error:null}).eq('id',c.id);return json({status,ads,page,subscribed,granted,delivery_verified:false});}
+  if(b.action==='subscribe'){if(!c.page_id) throw new Error('Select a Page');const result=await graph(`${c.page_id}/subscribed_apps`,tokens.page,{subscribed_fields:'leadgen'},'POST');if(!result.success) throw new Error('Meta did not confirm Page subscription');return json({ok:true});}
+  if(b.action==='report') return json(await runReport(admin,c));
+  if(b.action==='reconcile') {if(!c.lead_enabled) throw new Error('Enable lead routing before checking missed leads');if(!c.form_ids.length) throw new Error('Select specific Meta forms for backup reconciliation');
+   const since=c.reconciliation_at||new Date(Date.now()-7*86400000).toISOString();const checkpoint=new Date().toISOString();let checked=0,accepted=0,failed=0;const failures=[];
+   for(const form of c.form_ids){const leads=await graphPages(`${form}/leads`,tokens.page,{fields:'id,field_data,created_time,form_id,campaign_name,ad_name,adset_name',filtering:JSON.stringify([{field:'time_created',operator:'GREATER_THAN',value:Math.floor(Date.parse(since)/1000)}])},5);for(const lead of leads){checked++;const result=await processClientLead(admin,c,lead.id,{...lead,form_id:form});if(result.status==='accepted') accepted++;if(result.status==='failed'){failed++;failures.push(result.error);}}}
+   if(!failed){const update=await admin.from('meta_reporting_clients').update({reconciliation_at:checkpoint}).eq('id',c.id);if(update.error) throw update.error;}return json({checked,accepted,failed,failures,checkpoint_advanced:!failed});}
+  return json({error:'Unknown action'},400);
+ }catch(e){return json({error:(e as Error).message},400);}
+});
