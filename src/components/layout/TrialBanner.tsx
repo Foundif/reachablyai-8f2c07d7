@@ -1,23 +1,31 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, ArrowRight } from "lucide-react";
+import { Sparkles, ArrowRight, X } from "lucide-react";
 import { useTrial } from "@/hooks/useTrial";
 import { useAuth } from "@/hooks/useAuth";
 
 /**
- * Curved floating dark green announcement & trial banner (matching TurboDev aesthetic).
+ * Announcement & trial banner matching TurboDev:
+ * Flush to the top edge (flat on top) and curved ONLY at the bottom (rounded-b-2xl).
  */
 const TrialBanner = () => {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const { isTrialing, isExpired, daysLeft } = useTrial();
+  const [dismissed, setDismissed] = useState(false);
 
+  if (dismissed) return null;
   if ((profile as any)?.is_staff) return null;
   if (!isTrialing && !isExpired) return null;
 
   return (
-    <div className="w-full px-3 sm:px-6 pt-2 pb-1 bg-background z-50">
-      <div className="max-w-7xl mx-auto bg-gradient-to-r from-[#022c22] via-[#064e3b] to-[#022c22] border border-emerald-500/40 text-emerald-50 py-1.5 px-4 rounded-full shadow-md flex items-center justify-between text-xs font-medium gap-3 flex-wrap sm:flex-nowrap">
-        <div className="flex items-center gap-2.5 flex-wrap flex-1 justify-center sm:justify-start">
+    <aside
+      aria-label="Announcement banner"
+      className="w-full bg-gradient-to-r from-[#022c22] via-[#064e3b] to-[#022c22] border-b border-emerald-500/40 text-emerald-50 py-2 px-4 sm:px-6 rounded-b-2xl shadow-md z-50 transition-all"
+    >
+      <div className="max-w-7xl mx-auto flex items-center justify-between text-xs font-medium gap-3">
+        {/* Left / Center: Badge + Trial info */}
+        <div className="flex items-center gap-2.5 flex-1 justify-center sm:justify-start flex-wrap">
           <span className="inline-flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase">
             <Sparkles className="w-3 h-3 text-emerald-300 animate-pulse" />
             {isTrialing ? "Free Trial" : "Trial Expired"}
@@ -34,14 +42,15 @@ const TrialBanner = () => {
               </>
             ) : (
               <>
-                Your Reachably free trial has <strong className="text-white">expired</strong>. Renew to keep automations
-                active.
+                Your Reachably free trial has <strong className="text-white font-semibold">expired</strong>. Renew to
+                keep automations active.
               </>
             )}
           </span>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0 mx-auto sm:mx-0">
+        {/* Right: CTA Button & Dismiss X */}
+        <div className="flex items-center gap-3 shrink-0">
           <button
             type="button"
             onClick={() => navigate("/pricing")}
@@ -59,9 +68,18 @@ const TrialBanner = () => {
           >
             Free consultation
           </a>
+
+          <button
+            type="button"
+            onClick={() => setDismissed(true)}
+            aria-label="Dismiss banner"
+            className="p-1 rounded-full hover:bg-emerald-900/60 text-emerald-300/80 hover:text-white transition-colors cursor-pointer ml-1"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
-    </div>
+    </aside>
   );
 };
 
