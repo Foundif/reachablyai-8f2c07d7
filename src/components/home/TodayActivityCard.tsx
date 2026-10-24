@@ -32,10 +32,11 @@ const TodayActivityCard = ({ wsId, credits, creditsPack, aiReplies }: Props) => 
   const today = new Date().toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
 
   return (
-    <section className="rounded-2xl border bg-card p-5 md:p-6 space-y-6">
+    <section className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(280px,0.45fr)] gap-6 lg:gap-8">
+      <div className="space-y-6 min-w-0">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Today</h2>
+          <h2 className="sr-only">Today</h2>
           <p className="mt-4 text-sm text-muted-foreground">Open chats</p>
           <p className="text-4xl font-semibold leading-tight tabular-nums">{openChats}</p>
           <p className="text-sm text-muted-foreground">Chats with customer messages today</p>
