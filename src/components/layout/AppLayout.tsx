@@ -18,18 +18,24 @@ interface AppLayoutProps {
 const AppLayout = ({ children, fullBleed = false }: AppLayoutProps) => {
   useGlobalAlerts();
   return (
-    <div className="relative flex min-h-screen w-full">
-      <AppSidebar />
+    <div className="relative min-h-screen w-full flex flex-col bg-background">
+      {/* Full-width announcement / trial bar running edge-to-edge across the screen */}
+      <TrialBanner />
 
-      <main className="relative flex-1 min-w-0 min-h-screen pb-28 md:pb-0 overflow-x-clip flex flex-col">
-        <TrialBanner />
-        <MobileHeader />
-        {!fullBleed && <TopBar />}
-        <div className={fullBleed ? "relative flex-1 w-full min-h-0" : "relative max-w-[1600px] mx-auto flex-1 w-full"}>
-          <SubscriptionGate>{children}</SubscriptionGate>
-        </div>
-        {!fullBleed && <AppFooter />}
-      </main>
+      <div className="relative flex flex-1 w-full min-h-0">
+        <AppSidebar />
+
+        <main className="relative flex-1 min-w-0 min-h-screen pb-28 md:pb-0 overflow-x-clip flex flex-col">
+          <MobileHeader />
+          {!fullBleed && <TopBar />}
+          <div
+            className={fullBleed ? "relative flex-1 w-full min-h-0" : "relative max-w-[1600px] mx-auto flex-1 w-full"}
+          >
+            <SubscriptionGate>{children}</SubscriptionGate>
+          </div>
+          {!fullBleed && <AppFooter />}
+        </main>
+      </div>
 
       <MobileNav />
       <FeedbackWidget />
