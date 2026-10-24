@@ -1,10 +1,10 @@
-import { useNavigate } from 'react-router-dom';
-import { Info } from 'lucide-react';
-import { useTrial } from '@/hooks/useTrial';
-import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from "react-router-dom";
+import { Sparkles, ArrowRight } from "lucide-react";
+import { useTrial } from "@/hooks/useTrial";
+import { useAuth } from "@/hooks/useAuth";
 
 /**
- * Slim yellow notice bar shown while the 7-day free trial is running.
+ * Full-width futuristic announcement & trial bar inspired by TurboDev.
  */
 const TrialBanner = () => {
   const navigate = useNavigate();
@@ -15,18 +15,46 @@ const TrialBanner = () => {
   if (!isTrialing && !isExpired) return null;
 
   return (
-    <div className="w-full bg-[#fdf6d8] dark:bg-yellow-500/15 border-b border-yellow-500/40 text-[11px] sm:text-xs text-yellow-900 dark:text-yellow-100 px-3 py-1.5 text-center">
-      <span className="inline-flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5">
-        <Info className="w-3.5 h-3.5 shrink-0" />
-        {isTrialing ? (
-          <span>Your Reachably free trial will expire in <strong>{daysLeft} {daysLeft === 1 ? 'day' : 'days'}</strong>.</span>
-        ) : (
-          <span>Your Reachably free trial has <strong>expired</strong>.</span>
-        )}
-        <button onClick={() => navigate('/pricing')} className="underline font-medium">I'm ready to upgrade</button>
-        <span className="opacity-50">|</span>
-        <a href="mailto:foundifinnovations@gmail.com?subject=Reachably%20consultation" className="underline font-medium">Book a free consultation</a>
-      </span>
+    <div className="w-full bg-[#5b38e0] text-white py-1.5 px-4 text-xs font-medium flex items-center justify-center relative z-50 border-b border-white/10 shadow-sm">
+      <div className="flex items-center gap-2 flex-wrap justify-center">
+        <span className="inline-flex items-center gap-1.5 bg-white/15 px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide">
+          <Sparkles className="w-3 h-3 text-yellow-300 animate-pulse" />
+          {isTrialing ? "FREE TRIAL" : "TRIAL EXPIRED"}
+        </span>
+
+        <span>
+          {isTrialing ? (
+            <>
+              Your Reachably 7-day free trial has{" "}
+              <strong>
+                {daysLeft} {daysLeft === 1 ? "day" : "days"} remaining
+              </strong>
+              .
+            </>
+          ) : (
+            <>
+              Your Reachably free trial has <strong>expired</strong>. Renew your plan to continue.
+            </>
+          )}
+        </span>
+
+        <button
+          onClick={() => navigate("/pricing")}
+          className="inline-flex items-center gap-1 underline underline-offset-2 hover:text-white/80 font-semibold cursor-pointer ml-1"
+        >
+          {isTrialing ? "I'm ready to upgrade" : "Renew now"}
+          <ArrowRight className="w-3 h-3" />
+        </button>
+
+        <span className="opacity-40 hidden sm:inline">|</span>
+
+        <a
+          href="mailto:foundifinnovations@gmail.com?subject=Reachably%20Consultation"
+          className="text-white/80 hover:text-white underline underline-offset-2 text-[11px] hidden sm:inline"
+        >
+          Book free consultation
+        </a>
+      </div>
     </div>
   );
 };
