@@ -17,11 +17,12 @@ interface AppLayoutProps {
 const AppLayout = ({ children, fullBleed = false }: AppLayoutProps) => {
   useGlobalAlerts();
   return (
-    <div className="relative min-h-screen w-full flex flex-col bg-background">
-      {/* Full-width curved dark-green announcement / trial bar */}
+    <div className="relative min-h-screen w-full flex flex-col bg-[#022c22]">
+      {/* 1. Flat top announcement banner */}
       <TrialBanner />
 
-      <div className="relative flex flex-1 w-full min-h-0">
+      {/* 2. Workspace container curved downward with rounded top corners */}
+      <div className="relative flex flex-1 w-full min-h-0 bg-background rounded-t-2xl sm:rounded-t-3xl overflow-hidden shadow-2xl border-t border-border/40">
         <AppSidebar />
 
         <main className="relative flex-1 min-w-0 min-h-screen pb-28 md:pb-0 overflow-x-clip flex flex-col">
