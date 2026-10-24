@@ -37,7 +37,7 @@ const TodayActivityCard = ({ wsId, credits, creditsPack, aiReplies }: Props) => 
         <div>
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Today</h2>
           <p className="mt-4 text-sm text-muted-foreground">Open chats</p>
-          <p className="text-4xl font-bold leading-tight">{openChats}</p>
+          <p className="text-4xl font-semibold leading-tight tabular-nums">{openChats}</p>
           <p className="text-sm text-muted-foreground">Chats with customer messages today</p>
         </div>
         <p className="text-sm text-muted-foreground text-right shrink-0">{today}<br /><span className="text-foreground">Today</span></p>
@@ -48,34 +48,35 @@ const TodayActivityCard = ({ wsId, credits, creditsPack, aiReplies }: Props) => 
           <AreaChart data={hours} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
             <defs>
               <linearGradient id="todayFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.25} />
+                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
                 <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <XAxis dataKey="h" tickLine={false} axisLine={false} interval={5} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
+            <XAxis dataKey="h" tickLine={false} axisLine={false} interval={2} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
             <Tooltip contentStyle={{ background: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }} formatter={(v: any) => [v, 'Messages']} />
             <Area type="monotone" dataKey="v" stroke="hsl(var(--primary))" strokeWidth={2.5} fill="url(#todayFill)" />
           </AreaChart>
         </ResponsiveContainer>
       </div>
+      </div>
 
-      <div>
+      <div className="lg:border-l lg:pl-8 pt-2 lg:pt-14">
         <p className="font-semibold mb-2">Wallet</p>
-        <button onClick={() => navigate('/pricing')} className="w-full flex items-center justify-between py-3 border-b text-left">
+        <button onClick={() => navigate('/pricing')} className="group w-full flex items-center justify-between py-4 border-b text-left">
           <span>
-            <span className="block text-sm text-muted-foreground">Messages used this month</span>
-            <span className="block text-2xl font-bold">{credits.toLocaleString('en-IN')} <span className="text-sm font-normal text-muted-foreground">/ {creditsPack.toLocaleString('en-IN')}</span></span>
-            <span className="block text-sm text-primary">View usage & plan</span>
+            <span className="block text-sm text-muted-foreground">Message credits</span>
+            <span className="block text-2xl font-semibold mt-1 tabular-nums">{Math.max(0, creditsPack - credits).toLocaleString('en-IN')} <span className="text-sm font-normal text-muted-foreground">left of {creditsPack.toLocaleString('en-IN')}</span></span>
+            <span className="block text-sm text-muted-foreground mt-1 group-hover:text-primary">View usage & top up</span>
           </span>
-          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          <ChevronRight className="w-4 h-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
         </button>
-        <button onClick={() => navigate('/chatbots')} className="w-full flex items-center justify-between py-3 text-left">
+        <button onClick={() => navigate('/chatbots')} className="group w-full flex items-center justify-between py-4 text-left">
           <span>
             <span className="block text-sm text-muted-foreground">AI replies this month</span>
-            <span className="block text-2xl font-bold">{aiReplies.toLocaleString('en-IN')}</span>
-            <span className="block text-sm text-primary">Open AI chatbots</span>
+            <span className="block text-2xl font-semibold mt-1 tabular-nums">{aiReplies.toLocaleString('en-IN')}</span>
+            <span className="block text-sm text-muted-foreground mt-1 group-hover:text-primary">View usage & top up</span>
           </span>
-          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          <ChevronRight className="w-4 h-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
         </button>
       </div>
     </section>
