@@ -49,8 +49,14 @@ const Auth = () => {
       } else {
         const { error } = await signUp(email, password, fullName);
         if (error) throw error;
-        toast.success('Account created! Check your email to verify your account.');
-        navigate('/onboarding');
+        // Accounts are confirmed instantly; make sure a session exists, then start onboarding.
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) {
+          const { error: e2 } = await signIn(email, password);
+          if (e2) throw e2;
+        }
+        toast.success('Welcome to Reachably! Let’s set up your workspace.');
+        navigate('/');
       }
     } catch (error: any) {
       toast.error(error.message || 'Authentication failed');
