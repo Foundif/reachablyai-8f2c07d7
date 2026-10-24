@@ -1,23 +1,40 @@
-import { useEffect, useState } from 'react';
-import AppLayout from '@/components/layout/AppLayout';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { toast } from 'sonner';
-import { Settings, ShieldCheck, ShieldAlert, Copy, Bug, RefreshCw, CheckCircle2, XCircle, MinusCircle, Inbox as InboxIcon, Facebook, Zap, Unplug, Plus, Smartphone, Crown } from 'lucide-react';
-import { META_APP_ID, META_CONFIG_ID } from '@/lib/metaConfig';
-import { loadFacebookSdk } from '@/lib/facebookSdk';
-import WhatsAppBusinessProfile from '@/components/settings/WhatsAppBusinessProfile';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useNavigate } from 'react-router-dom';
-import { limitsFor, planById } from '@/lib/plans';
+import { useEffect, useState } from "react";
+import AppLayout from "@/components/layout/AppLayout";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+import {
+  Settings,
+  ShieldCheck,
+  ShieldAlert,
+  Copy,
+  Bug,
+  RefreshCw,
+  CheckCircle2,
+  XCircle,
+  MinusCircle,
+  Inbox as InboxIcon,
+  Facebook,
+  Zap,
+  Unplug,
+  Plus,
+  Smartphone,
+  Crown,
+} from "lucide-react";
+import { META_APP_ID, META_CONFIG_ID } from "@/lib/metaConfig";
+import { loadFacebookSdk } from "@/lib/facebookSdk";
+import WhatsAppBusinessProfile from "@/components/settings/WhatsAppBusinessProfile";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useNavigate } from "react-router-dom";
+import { limitsFor, planById } from "@/lib/plans";
 
-import { resolveWorkspaceId } from '@/lib/workspace';
+import { resolveWorkspaceId } from "@/lib/workspace";
 
 interface Creds {
   id: string;
@@ -31,7 +48,7 @@ interface Creds {
   verified: boolean;
   verified_at: string | null;
   last_error: string | null;
-  connection_type: 'manual' | 'embedded' | null;
+  connection_type: "manual" | "embedded" | null;
   connected_at: string | null;
   status: string | null;
   profile_picture_url?: string | null;
@@ -55,12 +72,12 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
  * through the API by design, so we always request the connection columns explicitly.
  */
 const CRED_COLUMNS =
-  'id,workspace_id,phone_number_id,waba_id,business_phone,label,is_primary,verified,verified_at,' +
-  'status,connection_type,connected_at,last_error,verified_name,quality_rating,messaging_limit,' +
-  'profile_picture_url,profile_address,profile_description,profile_email,profile_vertical,' +
-  'profile_websites,profile_about,profile_synced_at,created_at,updated_at';
+  "id,workspace_id,phone_number_id,waba_id,business_phone,label,is_primary,verified,verified_at," +
+  "status,connection_type,connected_at,last_error,verified_name,quality_rating,messaging_limit," +
+  "profile_picture_url,profile_address,profile_description,profile_email,profile_vertical," +
+  "profile_websites,profile_about,profile_synced_at,created_at,updated_at";
 
-const mask = (s: string | null) => s && s.length > 6 ? `••••${s.slice(-4)}` : (s || '');
+const mask = (s: string | null) => (s && s.length > 6 ? `••••${s.slice(-4)}` : s || "");
 
 const WhatsAppSettings = () => {
   const { user, profile } = useAuth();
@@ -69,19 +86,19 @@ const WhatsAppSettings = () => {
   const [connections, setConnections] = useState<Creds[]>([]);
   const [creds, setCreds] = useState<Creds | null>(null);
   const [numberLimit, setNumberLimit] = useState(1);
-  const [planName, setPlanName] = useState('Free trial');
+  const [planName, setPlanName] = useState("Free trial");
   const [addOpen, setAddOpen] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [form, setForm] = useState({
-    phone_number_id: '',
-    waba_id: '',
-    business_phone: '',
-    access_token: '',
-    app_secret: '',
-    webhook_verify_token: '',
+    phone_number_id: "",
+    waba_id: "",
+    business_phone: "",
+    access_token: "",
+    app_secret: "",
+    webhook_verify_token: "",
   });
   const [showToken, setShowToken] = useState(false);
   const [embedLoading, setEmbedLoading] = useState(false);
@@ -94,25 +111,27 @@ const WhatsAppSettings = () => {
     const onMsg = (event: MessageEvent) => {
       if (!/facebook\.com$/.test(new URL(event.origin).hostname)) return;
       try {
-        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-        if (data?.type === 'WA_EMBEDDED_SIGNUP' && data?.event === 'FINISH') {
+        const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+        if (data?.type === "WA_EMBEDDED_SIGNUP" && data?.event === "FINISH") {
           setSessionInfo({ waba_id: data.data?.waba_id, phone_number_id: data.data?.phone_number_id });
         }
-      } catch { /* not JSON — ignore */ }
+      } catch {
+        /* not JSON — ignore */
+      }
     };
-    window.addEventListener('message', onMsg);
-    return () => window.removeEventListener('message', onMsg);
+    window.addEventListener("message", onMsg);
+    return () => window.removeEventListener("message", onMsg);
   }, []);
 
   const finishEmbedded = async (code: string, info: { waba_id?: string; phone_number_id?: string }) => {
-    const { data, error } = await supabase.functions.invoke('whatsapp-embedded-connect', {
+    const { data, error } = await supabase.functions.invoke("whatsapp-embedded-connect", {
       body: { code, ...info },
     });
     setEmbedLoading(false);
     if (error || (data as any)?.error) {
-      return toast.error((data as any)?.error || error?.message || 'Connection failed');
+      return toast.error((data as any)?.error || error?.message || "Connection failed");
     }
-    toast.success(`Connected ${(data as any)?.phone || 'WhatsApp'}`);
+    toast.success(`Connected ${(data as any)?.phone || "WhatsApp"}`);
     load();
   };
 
@@ -121,52 +140,57 @@ const WhatsAppSettings = () => {
     setEmbedLoading(true);
     try {
       const FB = await loadFacebookSdk();
-      FB.login((response: any) => {
-        const code = response?.authResponse?.code;
-        if (!code) {
-          setEmbedLoading(false);
-          return toast.error('Facebook sign-in was cancelled.');
-        }
-        finishEmbedded(code, sessionInfo);
-      }, {
-        config_id: META_CONFIG_ID,
-        response_type: 'code',
-        override_default_response_type: true,
-        extras: {
-          setup: {},
-          featureType: 'whatsapp_business_app_onboarding',
-          sessionInfoVersion: '3',
+      FB.login(
+        (response: any) => {
+          const code = response?.authResponse?.code;
+          if (!code) {
+            setEmbedLoading(false);
+            return toast.error("Facebook sign-in was cancelled.");
+          }
+          finishEmbedded(code, sessionInfo);
         },
-      });
+        {
+          config_id: META_CONFIG_ID,
+          response_type: "code",
+          override_default_response_type: true,
+          extras: {
+            setup: {},
+            featureType: "whatsapp_business_app_onboarding",
+            sessionInfoVersion: "3",
+          },
+        },
+      );
     } catch (e: any) {
       // SDK blocked (extension / strict browser) — fall back to a full redirect
-      toast.message('Opening Facebook in a new window…');
+      toast.message("Opening Facebook in a new window…");
       const redirect_uri = `${window.location.origin}/whatsapp/callback`;
-      const extras = encodeURIComponent(JSON.stringify({ setup: {}, featureType: 'whatsapp_business_app_onboarding', sessionInfoVersion: '3' }));
+      const extras = encodeURIComponent(
+        JSON.stringify({ setup: {}, featureType: "whatsapp_business_app_onboarding", sessionInfoVersion: "3" }),
+      );
       const url =
-        `https://www.facebook.com/${'v20.0'}/dialog/oauth` +
+        `https://www.facebook.com/${"v20.0"}/dialog/oauth` +
         `?client_id=${encodeURIComponent(META_APP_ID)}` +
         `&config_id=${encodeURIComponent(META_CONFIG_ID)}` +
         `&redirect_uri=${encodeURIComponent(redirect_uri)}` +
         `&response_type=code&override_default_response_type=true` +
         `&extras=${extras}`;
-      window.open(url, '_blank', 'noopener,noreferrer');
+      window.open(url, "_blank", "noopener,noreferrer");
       setEmbedLoading(false);
     }
   };
 
-
   const disconnect = async () => {
     if (!wsId) return;
-    if (!confirm('Disconnect WhatsApp? Incoming messages will stop until you reconnect.')) return;
+    if (!confirm("Disconnect WhatsApp? Incoming messages will stop until you reconnect.")) return;
     setDisconnecting(true);
     if (!creds?.id) return;
-    const { error } = await supabase.from('whatsapp_credentials' as any)
-      .update({ status: 'disconnected', verified: false, access_token: null })
-      .eq('id', creds.id);
+    const { error } = await supabase
+      .from("whatsapp_credentials" as any)
+      .update({ status: "disconnected", verified: false, access_token: null })
+      .eq("id", creds.id);
     setDisconnecting(false);
     if (error) return toast.error(error.message);
-    toast.success('Disconnected');
+    toast.success("Disconnected");
     load();
   };
 
@@ -175,10 +199,22 @@ const WhatsAppSettings = () => {
     setLoading(true);
     const id = await resolveWorkspaceId(user.id, profile);
     setWsId(id);
-    if (!id) { setLoading(false); return; }
+    if (!id) {
+      setLoading(false);
+      return;
+    }
     const [{ data }, { data: workspace }] = await Promise.all([
-      supabase.from('whatsapp_credentials' as any).select(CRED_COLUMNS).eq('workspace_id', id).order('is_primary', { ascending: false }).order('created_at'),
-      supabase.from('workspaces' as any).select('plan_id, extra_numbers').eq('id', id).maybeSingle(),
+      supabase
+        .from("whatsapp_credentials" as any)
+        .select(CRED_COLUMNS)
+        .eq("workspace_id", id)
+        .order("is_primary", { ascending: false })
+        .order("created_at"),
+      supabase
+        .from("workspaces" as any)
+        .select("plan_id, extra_numbers")
+        .eq("id", id)
+        .maybeSingle(),
     ]);
     const rows = (data as any as Creds[]) || [];
     setConnections(rows);
@@ -186,44 +222,60 @@ const WhatsAppSettings = () => {
     const c = current;
     setCreds(c);
     const selectedPlan = planById((workspace as any)?.plan_id);
-    setPlanName(selectedPlan?.name || 'Free trial');
+    setPlanName(selectedPlan?.name || "Free trial");
     setNumberLimit(limitsFor((workspace as any)?.plan_id).numbers + Number((workspace as any)?.extra_numbers || 0));
     if (c) {
       setForm({
-        phone_number_id: c.phone_number_id || '',
-        waba_id: c.waba_id || '',
-        business_phone: c.business_phone || '',
-        access_token: '',
-        app_secret: '',
-        webhook_verify_token: '',
+        phone_number_id: c.phone_number_id || "",
+        waba_id: c.waba_id || "",
+        business_phone: c.business_phone || "",
+        access_token: "",
+        app_secret: "",
+        webhook_verify_token: "",
       });
     }
     setLoading(false);
   };
-  useEffect(() => { load(); }, [user, profile]);
+  useEffect(() => {
+    load();
+  }, [user, profile]);
 
   // Secrets are never sent to the browser, so we infer "already saved" from the connection state.
-  const credsSaved = !!(creds && (creds.verified || creds.connected_at || String(creds.status || '').toLowerCase() === 'connected'));
+  const credsSaved = !!(
+    creds &&
+    (creds.verified || creds.connected_at || String(creds.status || "").toLowerCase() === "connected")
+  );
 
   const selectConnection = (connection: Creds) => {
     setCreds(connection);
     setForm({
-      phone_number_id: connection.phone_number_id || '', waba_id: connection.waba_id || '',
-      business_phone: connection.business_phone || '', access_token: '', app_secret: '',
-      webhook_verify_token: '',
+      phone_number_id: connection.phone_number_id || "",
+      waba_id: connection.waba_id || "",
+      business_phone: connection.business_phone || "",
+      access_token: "",
+      app_secret: "",
+      webhook_verify_token: "",
     });
   };
 
   const beginAddNumber = () => {
     if (connections.length >= numberLimit) return setUpgradeOpen(true);
     setCreds(null);
-    setForm({ phone_number_id: '', waba_id: '', business_phone: '', access_token: '', app_secret: '', webhook_verify_token: '' });
+    setForm({
+      phone_number_id: "",
+      waba_id: "",
+      business_phone: "",
+      access_token: "",
+      app_secret: "",
+      webhook_verify_token: "",
+    });
     setAddOpen(true);
   };
 
   const save = async () => {
     if (!wsId) return;
-    if (!form.phone_number_id.trim() || !form.waba_id.trim()) return toast.error('Phone Number ID and WABA ID required');
+    if (!form.phone_number_id.trim() || !form.waba_id.trim())
+      return toast.error("Phone Number ID and WABA ID required");
     setSaving(true);
     const payload: any = {
       workspace_id: wsId,
@@ -232,48 +284,65 @@ const WhatsAppSettings = () => {
       business_phone: form.business_phone.trim() || null,
       webhook_verify_token: form.webhook_verify_token.trim() || null,
       verified: false,
-      connection_type: 'manual',
+      connection_type: "manual",
     };
     if (form.access_token.trim()) payload.access_token = form.access_token.trim();
     if (form.app_secret.trim()) payload.app_secret = form.app_secret.trim();
 
     const query = creds?.id
-      ? supabase.from('whatsapp_credentials' as any).update(payload).eq('id', creds.id)
-      : supabase.from('whatsapp_credentials' as any).insert({ ...payload, label: form.business_phone.trim() || `WhatsApp ${connections.length + 1}`, is_primary: connections.length === 0 });
+      ? supabase
+          .from("whatsapp_credentials" as any)
+          .update(payload)
+          .eq("id", creds.id)
+      : supabase
+          .from("whatsapp_credentials" as any)
+          .insert({
+            ...payload,
+            label: form.business_phone.trim() || `WhatsApp ${connections.length + 1}`,
+            is_primary: connections.length === 0,
+          });
     const { error } = await query;
     setSaving(false);
     if (error) return toast.error(error.message);
-    toast.success('Saved. Test the connection to verify.');
+    toast.success("Saved. Test the connection to verify.");
     setAddOpen(false);
     load();
   };
 
   const test = async () => {
     setTesting(true);
-    const { data, error } = await supabase.functions.invoke('whatsapp-verify', { body: { workspace_id: wsId, credential_id: creds?.id } });
+    const { data, error } = await supabase.functions.invoke("whatsapp-verify", {
+      body: { workspace_id: wsId, credential_id: creds?.id },
+    });
     setTesting(false);
     if (error) return toast.error(error.message);
-    if ((data as any)?.verified) toast.success('Connection verified with Meta Cloud API');
-    else toast.error((data as any)?.error || 'Verification failed');
+    if ((data as any)?.verified) toast.success("Connection verified with Meta Cloud API");
+    else toast.error((data as any)?.error || "Verification failed");
     load();
   };
 
   const [repairing, setRepairing] = useState(false);
   const repairWebhook = async () => {
     setRepairing(true);
-    const { data, error } = await supabase.functions.invoke('meta-webhook-check', { body: { workspace_id: wsId, credential_id: creds?.id, repair: true } });
+    const { data, error } = await supabase.functions.invoke("meta-webhook-check", {
+      body: { workspace_id: wsId, credential_id: creds?.id, repair: true },
+    });
     setRepairing(false);
     if (error) return toast.error(error.message);
     const d = data as any;
     if (d?.error) return toast.error(d.error);
-    if (d?.healthy) toast.success('Webhook delivery is active — send a WhatsApp message to test.');
-    else toast.warning('Repaired what we could. Check the debug panel after sending a message.', {
-      description: `App webhook: ${d?.app_webhook_ok ? 'ok' : 'fixed'} · WABA subscribed: ${d?.waba_subscribed ? 'yes' : 'fixed'} · Number: ${d?.phone_number?.status || 'unknown'}`,
-    });
+    if (d?.healthy) toast.success("Webhook delivery is active — send a WhatsApp message to test.");
+    else
+      toast.warning("Repaired what we could. Check the debug panel after sending a message.", {
+        description: `App webhook: ${d?.app_webhook_ok ? "ok" : "fixed"} · WABA subscribed: ${d?.waba_subscribed ? "yes" : "fixed"} · Number: ${d?.phone_number?.status || "unknown"}`,
+      });
   };
 
   const webhookUrl = `${SUPABASE_URL}/functions/v1/whatsapp-webhook`;
-  const copy = (s: string) => { navigator.clipboard.writeText(s); toast.success('Copied'); };
+  const copy = (s: string) => {
+    navigator.clipboard.writeText(s);
+    toast.success("Copied");
+  };
 
   return (
     <AppLayout>
@@ -282,9 +351,7 @@ const WhatsAppSettings = () => {
           <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
             <Settings className="w-6 h-6" /> WhatsApp Cloud API
           </h1>
-          <p className="text-muted-foreground text-sm">
-            Connect and manage your Meta WhatsApp Business Cloud account.
-          </p>
+          <p className="text-muted-foreground text-sm">Connect and manage your Meta WhatsApp Business Cloud account.</p>
         </div>
 
         {/* 1. CONNECT WHATSAPP FIRST (Quick Connect / Manual Setup) */}
@@ -296,10 +363,10 @@ const WhatsAppSettings = () => {
                 Choose how you want to link your WhatsApp Business account.
               </p>
             </div>
-            <Tabs defaultValue={creds?.connection_type === 'manual' ? 'manual' : 'embedded'} className="w-full">
+            <Tabs defaultValue={creds?.connection_type === "manual" ? "manual" : "embedded"} className="w-full">
               <TabsList className="grid grid-cols-2 w-full">
                 <TabsTrigger value="embedded" className="gap-1">
-                  <Zap className="w-3.5 h-3.5" /> Quick Connect{' '}
+                  <Zap className="w-3.5 h-3.5" /> Quick Connect{" "}
                   <Badge className="ml-1 text-[9px] bg-emerald-500/15 text-emerald-600 border-emerald-500/30">
                     Recommended
                   </Badge>
@@ -316,7 +383,8 @@ const WhatsAppSettings = () => {
                     <div className="flex-1">
                       <div className="font-medium text-sm">Quick Connect via Facebook</div>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        Sign in with the Facebook account that owns your WhatsApp Business. We'll auto-fetch your Phone Number ID, WABA ID, and access token in one click.
+                        Sign in with the Facebook account that owns your WhatsApp Business. We'll auto-fetch your Phone
+                        Number ID, WABA ID, and access token in one click.
                       </p>
                     </div>
                   </div>
@@ -326,7 +394,7 @@ const WhatsAppSettings = () => {
                     className="w-full gap-2 bg-[#1877F2] hover:bg-[#1877F2]/90 text-white cursor-pointer"
                   >
                     <Facebook className="w-4 h-4" />
-                    {embedLoading ? 'Waiting for Facebook…' : 'Continue with Facebook'}
+                    {embedLoading ? "Waiting for Facebook…" : "Continue with Facebook"}
                   </Button>
                   <p className="text-[11px] text-muted-foreground">
                     Requires a Meta Business account with a verified WhatsApp Business number.
@@ -365,25 +433,24 @@ const WhatsAppSettings = () => {
                   </div>
                   <div>
                     <Label>
-                      Access Token{' '}
+                      Access Token{" "}
                       {credsSaved && <span className="text-xs text-muted-foreground">(saved — hidden)</span>}
                     </Label>
                     <div className="flex gap-2">
                       <Input
-                        type={showToken ? 'text' : 'password'}
+                        type={showToken ? "text" : "password"}
                         value={form.access_token}
                         onChange={(e) => setForm({ ...form, access_token: e.target.value })}
                         placeholder="Leave blank to keep existing"
                       />
                       <Button type="button" variant="outline" onClick={() => setShowToken((s) => !s)}>
-                        {showToken ? 'Hide' : 'Show'}
+                        {showToken ? "Hide" : "Show"}
                       </Button>
                     </div>
                   </div>
                   <div className="md:col-span-2">
                     <Label>
-                      App Secret{' '}
-                      {credsSaved && <span className="text-xs text-muted-foreground">(saved — hidden)</span>}
+                      App Secret {credsSaved && <span className="text-xs text-muted-foreground">(saved — hidden)</span>}
                     </Label>
                     <Input
                       type="password"
@@ -403,10 +470,10 @@ const WhatsAppSettings = () => {
                 </div>
                 <div className="flex gap-2 pt-2">
                   <Button onClick={save} disabled={saving}>
-                    {saving ? 'Saving…' : 'Save'}
+                    {saving ? "Saving…" : "Save"}
                   </Button>
                   <Button variant="outline" onClick={test} disabled={testing || !creds?.id}>
-                    {testing ? 'Testing…' : 'Test Connection'}
+                    {testing ? "Testing…" : "Test Connection"}
                   </Button>
                 </div>
               </TabsContent>
@@ -435,7 +502,7 @@ const WhatsAppSettings = () => {
                   type="button"
                   onClick={() => selectConnection(connection)}
                   className={`flex min-w-0 items-center gap-3 rounded-xl border p-3 text-left transition-colors cursor-pointer ${
-                    creds?.id === connection.id ? 'border-primary bg-primary/5' : 'hover:bg-muted/40'
+                    creds?.id === connection.id ? "border-primary bg-primary/5" : "hover:bg-muted/40"
                   }`}
                 >
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
@@ -443,13 +510,13 @@ const WhatsAppSettings = () => {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">
-                      {connection.label || connection.business_phone || 'WhatsApp number'}
+                      {connection.label || connection.business_phone || "WhatsApp number"}
                     </span>
                     <span className="block truncate text-xs text-muted-foreground">
                       {connection.business_phone || connection.phone_number_id}
                     </span>
                   </span>
-                  {(connection.status === 'connected' || connection.verified) && (
+                  {(connection.status === "connected" || connection.verified) && (
                     <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
                   )}
                 </button>
@@ -472,7 +539,7 @@ const WhatsAppSettings = () => {
                 <div>
                   <div className="font-semibold flex items-center gap-2 text-sm">
                     Connection status:
-                    {creds?.status === 'connected' || creds?.verified ? (
+                    {creds?.status === "connected" || creds?.verified ? (
                       <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30 gap-1">
                         <ShieldCheck className="w-3 h-3" /> Connected
                       </Badge>
@@ -483,7 +550,7 @@ const WhatsAppSettings = () => {
                     )}
                     {creds?.connection_type && (
                       <Badge variant="outline" className="gap-1 text-[10px] uppercase">
-                        {creds.connection_type === 'embedded' ? (
+                        {creds.connection_type === "embedded" ? (
                           <>
                             <Facebook className="w-3 h-3" /> Embedded
                           </>
@@ -504,14 +571,26 @@ const WhatsAppSettings = () => {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {(creds?.status === 'connected' || creds?.verified) && (
-                    <Button variant="outline" size="sm" onClick={repairWebhook} disabled={repairing} className="gap-1 text-xs">
-                      {repairing ? 'Checking…' : 'Repair webhook'}
+                  {(creds?.status === "connected" || creds?.verified) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={repairWebhook}
+                      disabled={repairing}
+                      className="gap-1 text-xs"
+                    >
+                      {repairing ? "Checking…" : "Repair webhook"}
                     </Button>
                   )}
-                  {(creds?.status === 'connected' || creds?.verified) && (
-                    <Button variant="outline" size="sm" onClick={disconnect} disabled={disconnecting} className="gap-1 text-xs text-destructive hover:bg-destructive/10">
-                      <Unplug className="w-3.5 h-3.5" /> {disconnecting ? 'Disconnecting…' : 'Disconnect'}
+                  {(creds?.status === "connected" || creds?.verified) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={disconnect}
+                      disabled={disconnecting}
+                      className="gap-1 text-xs text-destructive hover:bg-destructive/10"
+                    >
+                      <Unplug className="w-3.5 h-3.5" /> {disconnecting ? "Disconnecting…" : "Disconnect"}
                     </Button>
                   )}
                 </div>
@@ -524,16 +603,16 @@ const WhatsAppSettings = () => {
               <WhatsAppBusinessProfile
                 workspaceId={wsId}
                 credentialId={creds?.id}
-                connected={creds?.status === 'connected' || Boolean(creds?.verified)}
-                fallbackName={creds?.verified_name || profile?.store_name || 'Business'}
+                connected={creds?.status === "connected" || Boolean(creds?.verified)}
+                fallbackName={creds?.verified_name || profile?.store_name || "Business"}
                 cachedProfile={{
-                  profile_picture_url: creds?.profile_picture_url || '',
-                  address: creds?.profile_address || '',
-                  description: creds?.profile_description || '',
-                  email: creds?.profile_email || '',
-                  vertical: creds?.profile_vertical || 'OTHER',
-                  websites: creds?.profile_websites?.length ? creds.profile_websites : [''],
-                  about: creds?.profile_about || '',
+                  profile_picture_url: creds?.profile_picture_url || "",
+                  address: creds?.profile_address || "",
+                  description: creds?.profile_description || "",
+                  email: creds?.profile_email || "",
+                  vertical: creds?.profile_vertical || "OTHER",
+                  websites: creds?.profile_websites?.length ? creds.profile_websites : [""],
+                  about: creds?.profile_about || "",
                 }}
               />
             )}
@@ -547,62 +626,64 @@ const WhatsAppSettings = () => {
             <Label className="text-xs">Callback URL</Label>
             <div className="flex gap-2">
               <Input readOnly value={webhookUrl} />
-              <Button variant="outline" size="icon" onClick={() => copy(webhookUrl)}><Copy className="w-4 h-4" /></Button>
+              <Button variant="outline" size="icon" onClick={() => copy(webhookUrl)}>
+                <Copy className="w-4 h-4" />
+              </Button>
             </div>
           </div>
           <div>
             <Label className="text-xs">Verify Token</Label>
             <div className="flex gap-2">
-              <Input readOnly value={form.webhook_verify_token || '(kept private — re-enter above to change)'} />
-              <Button variant="outline" size="icon" onClick={() => copy(form.webhook_verify_token)} disabled={!form.webhook_verify_token}><Copy className="w-4 h-4" /></Button>
+              <Input readOnly value={form.webhook_verify_token || "(kept private — re-enter above to change)"} />
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => copy(form.webhook_verify_token)}
+                disabled={!form.webhook_verify_token}
+              >
+                <Copy className="w-4 h-4" />
+              </Button>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">Subscribe to <code>messages</code> and <code>message_status</code> fields on your WhatsApp app in Meta Developer Console.</p>
+          <p className="text-xs text-muted-foreground">
+            Subscribe to <code>messages</code> and <code>message_status</code> fields on your WhatsApp app in Meta
+            Developer Console.
+          </p>
           <WebhookTestButton phoneNumberId={form.phone_number_id} webhookUrl={webhookUrl} />
         </Card>
 
         {wsId && creds && <DebugPanel workspaceId={wsId} phoneNumberId={form.phone_number_id} />}
-      </div>
-
-
-
-
-        <Card className="p-6 space-y-3">
-          <div className="font-semibold">Webhook configuration (paste into Meta)</div>
-          <div>
-            <Label className="text-xs">Callback URL</Label>
-            <div className="flex gap-2">
-              <Input readOnly value={webhookUrl} />
-              <Button variant="outline" size="icon" onClick={() => copy(webhookUrl)}><Copy className="w-4 h-4" /></Button>
-            </div>
-          </div>
-          <div>
-            <Label className="text-xs">Verify Token</Label>
-            <div className="flex gap-2">
-              <Input readOnly value={form.webhook_verify_token || '(kept private — re-enter above to change)'} />
-              <Button variant="outline" size="icon" onClick={() => copy(form.webhook_verify_token)} disabled={!form.webhook_verify_token}><Copy className="w-4 h-4" /></Button>
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground">Subscribe to <code>messages</code> and <code>message_status</code> fields on your WhatsApp app in Meta Developer Console.</p>
-          <WebhookTestButton phoneNumberId={form.phone_number_id} webhookUrl={webhookUrl} />
-        </Card>
-
-        {wsId && creds && <DebugPanel workspaceId={wsId} phoneNumberId={form.phone_number_id} />}
-        
       </div>
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="w-[calc(100%-1.5rem)] sm:max-w-md">
-          <DialogHeader><DialogTitle>Add another WhatsApp number</DialogTitle><DialogDescription>Choose Quick Connect or Manual Setup in the connection section after closing this window.</DialogDescription></DialogHeader>
-          <div className="rounded-md border bg-muted/30 p-4 text-sm">Your {planName} plan includes {numberLimit} WhatsApp {numberLimit === 1 ? 'number' : 'numbers'}. The new connection will be managed separately in this list.</div>
+          <DialogHeader>
+            <DialogTitle>Add another WhatsApp number</DialogTitle>
+            <DialogDescription>
+              Choose Quick Connect or Manual Setup in the connection section after closing this window.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-md border bg-muted/30 p-4 text-sm">
+            Your {planName} plan includes {numberLimit} WhatsApp {numberLimit === 1 ? "number" : "numbers"}. The new
+            connection will be managed separately in this list.
+          </div>
           <Button onClick={() => setAddOpen(false)}>Continue to connection setup</Button>
         </DialogContent>
       </Dialog>
       <Dialog open={upgradeOpen} onOpenChange={setUpgradeOpen}>
         <DialogContent className="w-[calc(100%-1.5rem)] sm:max-w-md">
-          <DialogHeader><DialogTitle className="flex items-center gap-2"><Crown className="h-5 w-5" /> Add more WhatsApp numbers</DialogTitle><DialogDescription>You have used all {numberLimit} number slots included in {planName}.</DialogDescription></DialogHeader>
-          <div className="rounded-md border bg-muted/30 p-4 text-sm">Upgrade your plan to connect and manage more WhatsApp numbers in one Reachably workspace.</div>
-          <Button onClick={() => navigate('/pricing')}>View upgrade plans</Button>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Crown className="h-5 w-5" /> Add more WhatsApp numbers
+            </DialogTitle>
+            <DialogDescription>
+              You have used all {numberLimit} number slots included in {planName}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-md border bg-muted/30 p-4 text-sm">
+            Upgrade your plan to connect and manage more WhatsApp numbers in one Reachably workspace.
+          </div>
+          <Button onClick={() => navigate("/pricing")}>View upgrade plans</Button>
         </DialogContent>
       </Dialog>
     </AppLayout>
@@ -612,9 +693,15 @@ const WhatsAppSettings = () => {
 export default WhatsAppSettings;
 
 interface DebugEvent {
-  id: string; event_type: string | null; status: string | null;
-  from_phone: string | null; summary: string | null; error: string | null;
-  phone_number_id: string | null; created_at: string; payload: any;
+  id: string;
+  event_type: string | null;
+  status: string | null;
+  from_phone: string | null;
+  summary: string | null;
+  error: string | null;
+  phone_number_id: string | null;
+  created_at: string;
+  payload: any;
 }
 
 const DebugPanel = ({ workspaceId, phoneNumberId }: { workspaceId: string; phoneNumberId: string }) => {
@@ -628,29 +715,41 @@ const DebugPanel = ({ workspaceId, phoneNumberId }: { workspaceId: string; phone
     const orFilter = phoneNumberId
       ? `workspace_id.eq.${workspaceId},and(workspace_id.is.null,phone_number_id.eq.${phoneNumberId})`
       : `workspace_id.eq.${workspaceId}`;
-    const { data } = await supabase.from('wa_webhook_events' as any)
-      .select('*').or(orFilter).order('created_at', { ascending: false }).limit(50);
+    const { data } = await supabase
+      .from("wa_webhook_events" as any)
+      .select("*")
+      .or(orFilter)
+      .order("created_at", { ascending: false })
+      .limit(50);
     setEvents((data as any) || []);
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [workspaceId, phoneNumberId]);
+  useEffect(() => {
+    load();
+  }, [workspaceId, phoneNumberId]);
 
   useEffect(() => {
     const ch = supabase
       .channel(`webhook-debug-${workspaceId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'wa_webhook_events' }, () => load())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "wa_webhook_events" }, () => load())
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      supabase.removeChannel(ch);
+    };
   }, [workspaceId, phoneNumberId]);
 
-  const okCount = events.filter(e => e.status === 'ok').length;
-  const errCount = events.filter(e => e.status === 'error').length;
+  const okCount = events.filter((e) => e.status === "ok").length;
+  const errCount = events.filter((e) => e.status === "error").length;
 
   const StatusIcon = ({ s }: { s: string | null }) =>
-    s === 'ok' ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> :
-    s === 'error' ? <XCircle className="w-4 h-4 text-red-500" /> :
-    <MinusCircle className="w-4 h-4 text-muted-foreground" />;
+    s === "ok" ? (
+      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+    ) : s === "error" ? (
+      <XCircle className="w-4 h-4 text-red-500" />
+    ) : (
+      <MinusCircle className="w-4 h-4 text-muted-foreground" />
+    );
 
   return (
     <Card className="p-6 space-y-4">
@@ -659,14 +758,16 @@ const DebugPanel = ({ workspaceId, phoneNumberId }: { workspaceId: string; phone
           <Bug className="w-5 h-5 text-primary" />
           <div>
             <div className="font-semibold">Webhook Debug Panel</div>
-            <div className="text-xs text-muted-foreground">Live feed of every inbound event Meta sends to your webhook.</div>
+            <div className="text-xs text-muted-foreground">
+              Live feed of every inbound event Meta sends to your webhook.
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30">{okCount} ok</Badge>
           <Badge className="bg-red-500/15 text-red-600 border-red-500/30">{errCount} failed</Badge>
           <Button variant="outline" size="sm" onClick={load} disabled={loading} className="gap-1">
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
           </Button>
         </div>
       </div>
@@ -674,25 +775,39 @@ const DebugPanel = ({ workspaceId, phoneNumberId }: { workspaceId: string; phone
       {events.length === 0 ? (
         <div className="text-sm text-muted-foreground p-6 text-center border border-dashed rounded-lg">
           <InboxIcon className="w-8 h-8 mx-auto mb-2 opacity-40" />
-          No webhook events yet. Send a "Hi" from any WhatsApp to your business number and it should appear here within a second.<br />
-          If nothing appears, Meta isn't reaching this URL — check the Callback URL and Verify Token above, and make sure you subscribed to <code>messages</code> in Meta.
+          No webhook events yet. Send a "Hi" from any WhatsApp to your business number and it should appear here within
+          a second.
+          <br />
+          If nothing appears, Meta isn't reaching this URL — check the Callback URL and Verify Token above, and make
+          sure you subscribed to <code>messages</code> in Meta.
         </div>
       ) : (
         <div className="border rounded-lg divide-y max-h-[500px] overflow-y-auto">
-          {events.map(e => (
+          {events.map((e) => (
             <div key={e.id} className="p-3 text-sm">
               <div className="flex items-start gap-2">
                 <StatusIcon s={e.status} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant="outline" className="text-[10px] uppercase">{e.event_type}</Badge>
+                    <Badge variant="outline" className="text-[10px] uppercase">
+                      {e.event_type}
+                    </Badge>
                     {e.from_phone && <span className="text-xs font-mono text-muted-foreground">{e.from_phone}</span>}
-                    <span className="text-[11px] text-muted-foreground ml-auto">{new Date(e.created_at).toLocaleString()}</span>
+                    <span className="text-[11px] text-muted-foreground ml-auto">
+                      {new Date(e.created_at).toLocaleString()}
+                    </span>
                   </div>
                   <div className="mt-1">{e.summary}</div>
-                  {e.error && <div className="mt-1 text-xs text-red-600 bg-red-500/10 rounded px-2 py-1"><b>Reason:</b> {e.error}</div>}
-                  <button onClick={() => setShowRaw(showRaw === e.id ? null : e.id)} className="mt-1 text-[11px] text-primary underline">
-                    {showRaw === e.id ? 'Hide' : 'Show'} raw payload
+                  {e.error && (
+                    <div className="mt-1 text-xs text-red-600 bg-red-500/10 rounded px-2 py-1">
+                      <b>Reason:</b> {e.error}
+                    </div>
+                  )}
+                  <button
+                    onClick={() => setShowRaw(showRaw === e.id ? null : e.id)}
+                    className="mt-1 text-[11px] text-primary underline"
+                  >
+                    {showRaw === e.id ? "Hide" : "Show"} raw payload
                   </button>
                   {showRaw === e.id && (
                     <pre className="mt-2 p-2 bg-muted/50 rounded text-[10px] overflow-x-auto max-h-60">
@@ -712,30 +827,46 @@ const DebugPanel = ({ workspaceId, phoneNumberId }: { workspaceId: string; phone
 const WebhookTestButton = ({ phoneNumberId, webhookUrl }: { phoneNumberId: string; webhookUrl: string }) => {
   const [sending, setSending] = useState(false);
   const send = async () => {
-    if (!phoneNumberId) return toast.error('Save your Phone Number ID first (Manual tab) or connect via Facebook.');
+    if (!phoneNumberId) return toast.error("Save your Phone Number ID first (Manual tab) or connect via Facebook.");
     setSending(true);
-    const testFrom = '919999900000';
+    const testFrom = "919999900000";
     const msgId = `wamid.TEST_${Date.now()}`;
     const payload = {
-      object: 'whatsapp_business_account',
-      entry: [{
-        id: 'TEST',
-        changes: [{
-          field: 'messages',
-          value: {
-            messaging_product: 'whatsapp',
-            metadata: { display_phone_number: 'test', phone_number_id: phoneNumberId },
-            contacts: [{ profile: { name: 'Webhook Test' }, wa_id: testFrom }],
-            messages: [{ from: testFrom, id: msgId, timestamp: `${Math.floor(Date.now()/1000)}`, type: 'text', text: { body: `🧪 Webhook test at ${new Date().toLocaleTimeString()}` } }],
-          },
-        }],
-      }],
+      object: "whatsapp_business_account",
+      entry: [
+        {
+          id: "TEST",
+          changes: [
+            {
+              field: "messages",
+              value: {
+                messaging_product: "whatsapp",
+                metadata: { display_phone_number: "test", phone_number_id: phoneNumberId },
+                contacts: [{ profile: { name: "Webhook Test" }, wa_id: testFrom }],
+                messages: [
+                  {
+                    from: testFrom,
+                    id: msgId,
+                    timestamp: `${Math.floor(Date.now() / 1000)}`,
+                    type: "text",
+                    text: { body: `🧪 Webhook test at ${new Date().toLocaleTimeString()}` },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
     };
     try {
-      const r = await fetch(webhookUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const r = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
       const t = await r.text();
-      if (!r.ok) toast.error(`Webhook returned ${r.status}: ${t.slice(0,120)}`);
-      else toast.success('Test payload delivered. Check the debug panel and Inbox.');
+      if (!r.ok) toast.error(`Webhook returned ${r.status}: ${t.slice(0, 120)}`);
+      else toast.success("Test payload delivered. Check the debug panel and Inbox.");
     } catch (e: any) {
       toast.error(`Failed to reach webhook: ${e?.message || e}`);
     } finally {
@@ -745,10 +876,11 @@ const WebhookTestButton = ({ phoneNumberId, webhookUrl }: { phoneNumberId: strin
   return (
     <div className="pt-2 border-t">
       <Button variant="outline" size="sm" onClick={send} disabled={sending} className="gap-2">
-        <Bug className="w-3.5 h-3.5" /> {sending ? 'Sending test…' : 'Send test webhook event'}
+        <Bug className="w-3.5 h-3.5" /> {sending ? "Sending test…" : "Send test webhook event"}
       </Button>
       <p className="text-[11px] text-muted-foreground mt-1">
-        Simulates a Meta inbound message hitting your webhook. If this appears in the Inbox but real customer messages don't, the problem is in Meta's webhook subscription (not payments — inbound receipts are free).
+        Simulates a Meta inbound message hitting your webhook. If this appears in the Inbox but real customer messages
+        don't, the problem is in Meta's webhook subscription (not payments — inbound receipts are free).
       </p>
     </div>
   );
