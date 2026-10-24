@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 /**
  * Announcement & trial banner matching TurboDev:
- * Flush to the top edge (flat on top) and curved ONLY at the bottom (rounded-b-2xl).
+ * Flat top strip across the very top of the window.
  */
 const TrialBanner = () => {
   const navigate = useNavigate();
@@ -21,7 +21,7 @@ const TrialBanner = () => {
   return (
     <aside
       aria-label="Announcement banner"
-      className="w-full bg-gradient-to-r from-[#022c22] via-[#064e3b] to-[#022c22] border-b border-emerald-500/40 text-emerald-50 py-2 px-4 sm:px-6 rounded-b-2xl shadow-md z-50 transition-all"
+      className="w-full bg-gradient-to-r from-[#022c22] via-[#064e3b] to-[#022c22] border-b border-emerald-500/30 text-emerald-50 py-2 px-4 sm:px-6 z-50 transition-all shrink-0"
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between text-xs font-medium gap-3">
         {/* Left / Center: Badge + Trial info */}
