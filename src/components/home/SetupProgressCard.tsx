@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, ChevronDown, Minus, ArrowRight, Loader2 } from "lucide-react";
+import { Check, ChevronDown, Minus, ArrowRight, Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -57,6 +57,18 @@ const SetupProgressCard = ({ wsId, checks }: Props) => {
       setReady(true);
     })();
   }, [wsId]);
+
+  // Alert users automatically: when WhatsApp is not connected, open the setup card immediately on load
+  useEffect(() => {
+    if (!ready) return;
+    if (!checks.whatsapp) {
+      const seen = sessionStorage.getItem(`setup_auto_opened_${wsId}`);
+      if (!seen) {
+        setOpen(true);
+        sessionStorage.setItem(`setup_auto_opened_${wsId}`, "true");
+      }
+    }
+  }, [ready, checks.whatsapp, wsId]);
 
   const steps = [
     { key: "whatsapp", label: "WhatsApp Connected", done: checks.whatsapp, to: "/whatsapp-settings" },
@@ -118,25 +130,39 @@ const SetupProgressCard = ({ wsId, checks }: Props) => {
 
   return (
     <>
-      {/* TurboDev Top-Right Header Pill */}
+      {/* TurboDev Header Pill with Attention Badge when WhatsApp is disconnected */}
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border bg-card hover:bg-muted/50 shadow-sm transition-all text-sm font-medium shrink-0 cursor-pointer"
+        className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border shadow-sm transition-all text-sm font-medium shrink-0 cursor-pointer ${
+          !checks.whatsapp
+            ? "border-amber-500/50 bg-amber-500/10 text-amber-950 dark:text-amber-200 ring-2 ring-amber-500/20 animate-pulse"
+            : "bg-card hover:bg-muted/50 border-border text-foreground"
+        }`}
         aria-label="Workspace setup progress"
       >
         {isComplete ? (
           <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-primary-foreground shrink-0 shadow-sm">
             <Check className="w-3 h-3 stroke-[3]" />
           </div>
+        ) : !checks.whatsapp ? (
+          <div className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0">
+            <AlertCircle className="w-3.5 h-3.5 stroke-[2.5]" />
+          </div>
         ) : (
           <div className="w-5 h-5 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">
             {doneCount}/{steps.length}
           </div>
         )}
-        <span className="text-xs md:text-sm text-foreground font-medium">
-          {isComplete ? "Setup completed" : `Setup ${doneCount}/${steps.length}`}
+
+        <span className="text-xs md:text-sm font-medium">
+          {isComplete
+            ? "Setup completed"
+            : !checks.whatsapp
+              ? "Connect WhatsApp"
+              : `Setup ${doneCount}/${steps.length}`}
         </span>
+
         <ChevronDown
           className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`}
         />
@@ -147,13 +173,22 @@ const SetupProgressCard = ({ wsId, checks }: Props) => {
         <Card className="fixed z-50 right-4 sm:right-6 bottom-6 w-[340px] max-w-[calc(100vw-2rem)] bg-card rounded-2xl shadow-2xl border p-0 overflow-hidden animate-in fade-in slide-in-from-bottom-3 duration-200">
           {/* Card Header */}
           <div className="flex items-center gap-3 p-4 border-b bg-card">
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground shrink-0 shadow-sm">
-              <Check className="w-4 h-4 stroke-[3]" />
+            <div
+              className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm ${
+                isComplete ? "bg-primary text-primary-foreground" : "bg-amber-500 text-white"
+              }`}
+            >
+              {isComplete ? <Check className="w-4 h-4 stroke-[3]" /> : <AlertCircle className="w-4 h-4 stroke-[2.5]" />}
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-sm text-foreground leading-tight">Workspace setup</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {doneCount}/{steps.length} complete {isComplete ? "· All done" : `· ${steps.length - doneCount} left`}
+                {doneCount}/{steps.length} complete{" "}
+                {!checks.whatsapp
+                  ? "· Connect WhatsApp first"
+                  : isComplete
+                    ? "· All done"
+                    : `· ${steps.length - doneCount} left`}
               </p>
             </div>
             <button
@@ -168,36 +203,58 @@ const SetupProgressCard = ({ wsId, checks }: Props) => {
 
           {/* List of 5 items */}
           <div className="p-3 space-y-1">
-            {steps.map((step) => (
-              <button
-                key={step.key}
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  navigate(step.to);
-                }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-muted/60 transition-colors group cursor-pointer"
-              >
-                {step.done ? (
-                  <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-primary-foreground shrink-0">
-                    <Check className="w-3 h-3 stroke-[3]" />
-                  </div>
-                ) : (
-                  <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 group-hover:border-primary shrink-0 transition-colors" />
-                )}
-                <span
-                  className={`text-sm flex-1 ${step.done ? "font-medium text-foreground" : "text-muted-foreground group-hover:text-foreground"}`}
+            {steps.map((step) => {
+              const isUrgent = step.key === "whatsapp" && !step.done;
+              return (
+                <button
+                  key={step.key}
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    navigate(step.to);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors group cursor-pointer ${
+                    isUrgent ? "bg-amber-500/10 hover:bg-amber-500/15 border border-amber-500/30" : "hover:bg-muted/60"
+                  }`}
                 >
-                  {step.label}
-                </span>
-                {!step.done && (
-                  <ArrowRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                )}
-              </button>
-            ))}
+                  {step.done ? (
+                    <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-primary-foreground shrink-0">
+                      <Check className="w-3 h-3 stroke-[3]" />
+                    </div>
+                  ) : isUrgent ? (
+                    <div className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0 animate-pulse">
+                      <AlertCircle className="w-3 h-3 stroke-[2.5]" />
+                    </div>
+                  ) : (
+                    <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 group-hover:border-primary shrink-0 transition-colors" />
+                  )}
+
+                  <span
+                    className={`text-sm flex-1 ${
+                      step.done
+                        ? "font-medium text-foreground"
+                        : isUrgent
+                          ? "font-semibold text-amber-950 dark:text-amber-200"
+                          : "text-muted-foreground group-hover:text-foreground"
+                    }`}
+                  >
+                    {step.label}{" "}
+                    {isUrgent && (
+                      <span className="text-[11px] font-normal text-amber-600 dark:text-amber-400 block">
+                        Required for sending
+                      </span>
+                    )}
+                  </span>
+
+                  {!step.done && (
+                    <ArrowRight className="w-3.5 h-3.5 text-muted-foreground opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                  )}
+                </button>
+              );
+            })}
           </div>
 
-          {/* Optional Done-for-you onboarding footer */}
+          {/* Done-for-you onboarding footer */}
           {!isComplete && (
             <div className="m-3 mt-0 rounded-xl border bg-muted/30 p-3 flex items-center justify-between gap-2">
               <div className="min-w-0 flex-1">
