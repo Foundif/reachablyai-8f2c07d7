@@ -23,7 +23,6 @@ import {
 } from "lucide-react";
 
 import { resolveWorkspaceId } from "@/lib/workspace";
-import ConnectWhatsAppCard from "@/components/home/ConnectWhatsAppCard";
 import SetupProgressCard from "@/components/home/SetupProgressCard";
 import TodayActivityCard from "@/components/home/TodayActivityCard";
 import OverviewGrid from "@/components/home/OverviewGrid";
@@ -355,10 +354,6 @@ const Dashboard = () => {
             </Button>
           </div>
         </div>
-
-        {!loading && !stats.waConnected && (
-          <ConnectWhatsAppCard connected={stats.waConnected} onConnected={() => wsId && loadStats(wsId)} />
-        )}
 
         <TodayActivityCard
           wsId={wsId}
