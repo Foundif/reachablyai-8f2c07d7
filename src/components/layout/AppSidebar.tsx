@@ -1,139 +1,128 @@
-import { useState } from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { LifeBuoy } from 'lucide-react';
 import { MODULE_GROUPS } from '@/lib/modules';
 import { useAuth } from '@/hooks/useAuth';
 import { BrandMark } from '@/components/Brand';
 import { useInboxUnreadCount } from '@/hooks/useInboxUnreadCount';
-import TrialCard from './TrialCard';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Legacy export for any older imports
 export const MENU_GROUPS = MODULE_GROUPS;
 
+const PIN_KEY = 'reachably.sidebar.pinned';
+
+/** Custom pin glyph: a docked panel with a magnetic dot — filled when pinned, hollow when floating. */
+const DockIcon = ({ pinned }: { pinned: boolean }) => (
+  <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
+    <rect x="3" y="4" width="18" height="16" rx="4" />
+    <path d="M9 4v16" />
+    <circle cx="15" cy="12" r="2.4" className="transition-all duration-300" fill={pinned ? 'currentColor' : 'none'} />
+    {!pinned && <path d="M12.6 9.6 17.4 14.4" />}
+  </svg>
+);
+
 const AppSidebar = () => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [pinned, setPinned] = useState(() => localStorage.getItem(PIN_KEY) !== '0');
+  const [hover, setHover] = useState(false);
   const { pathname } = useLocation();
-  const navigate = useNavigate();
   const { profile, canAccess } = useAuth();
   const inboxUnread = useInboxUnreadCount();
   const storeName = profile?.store_name?.trim() || 'My Workspace';
-  const tagline = (profile as any)?.tagline || 'WhatsApp Cloud';
+  const userName = profile?.full_name?.trim() || 'You';
+
+  useEffect(() => { localStorage.setItem(PIN_KEY, pinned ? '1' : '0'); }, [pinned]);
+
+  const open = pinned || hover;
 
   return (
     <aside
-      className={cn(
-        'hidden md:flex flex-col sticky top-0 h-screen z-40 transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]',
-        collapsed ? 'w-[76px]' : 'w-[260px]',
-      )}
+      className={cn('hidden md:block sticky top-0 h-screen z-40 shrink-0 transition-[width] duration-300 ease-out', pinned ? 'w-[248px]' : 'w-[72px]')}
     >
-      <div className="relative m-3 h-[calc(100vh-1.5rem)] flex flex-col glass-elevated glass-sheen overflow-hidden">
-        {/* Ambient aurora */}
-        <div className="pointer-events-none absolute -top-24 -left-16 h-64 w-64 rounded-full bg-foreground/10 blur-3xl animate-aurora" />
-        <div className="pointer-events-none absolute -bottom-24 -right-10 h-56 w-56 rounded-full bg-foreground/5 blur-3xl animate-aurora" style={{ animationDelay: '4s' }} />
-
-        {/* Brand — wordmark when expanded, icon when collapsed */}
-        <div className="relative flex items-center justify-center px-4 pt-5 pb-4">
-          {collapsed ? (
-            <BrandMark size={44} className="shrink-0" />
-          ) : (
-            <BrandMark variant="wordmark" fullWidth className="max-h-16 px-2" />
-          )}
+      <div
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        className={cn(
+          'absolute inset-y-0 left-0 flex flex-col border-r bg-card transition-[width,box-shadow] duration-300 ease-out overflow-hidden',
+          open ? 'w-[248px]' : 'w-[72px]',
+          !pinned && hover && 'shadow-2xl',
+        )}
+      >
+        <div className="flex items-center gap-2 px-4 h-16 shrink-0">
+          <BrandMark size={32} className="shrink-0" />
+          <span className={cn('font-semibold text-[17px] truncate transition-opacity', open ? 'opacity-100' : 'opacity-0')}>Reachably</span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => setPinned(p => !p)}
+                aria-label={pinned ? 'Unpin sidebar' : 'Pin sidebar'}
+                className={cn('ml-auto rounded-lg p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all', open ? 'opacity-100' : 'opacity-0 pointer-events-none')}
+              >
+                <DockIcon pinned={pinned} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">{pinned ? 'Unpin sidebar' : 'Pin sidebar'}</TooltipContent>
+          </Tooltip>
         </div>
 
-
-        <div className="mx-3 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-
-        {/* Nav */}
-        <nav className="relative flex-1 px-2 py-3 overflow-y-auto custom-scrollbar">
-          {MODULE_GROUPS.map((group) => {
+        <nav className="flex-1 px-3 py-2 overflow-y-auto overflow-x-hidden custom-scrollbar">
+          {MODULE_GROUPS.map((group, gi) => {
             const items = group.items.filter((i) => canAccess(i.to));
             if (items.length === 0) return null;
             return (
-            <div key={group.label} className="mb-3">
-              {!collapsed && (
-                <div className="px-3 pt-2 pb-1.5">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/80">{group.label}</span>
+              <div key={group.label}>
+                {gi > 0 && <div className="h-px mx-2 my-3 bg-border" />}
+                <div className="space-y-0.5">
+                  {items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = item.to === '/' ? pathname === '/' : pathname.startsWith(item.to);
+                    const badge = item.to === '/inbox' ? inboxUnread : 0;
+                    return (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        title={!open ? item.label : undefined}
+                        className={cn(
+                          'group relative flex items-center gap-3 h-10 rounded-lg px-3 text-sm transition-colors',
+                          isActive ? 'bg-primary/10 text-primary font-medium' : 'text-foreground/80 hover:bg-muted hover:text-foreground',
+                        )}
+                      >
+                        {isActive && <span className="absolute -left-3 top-2 bottom-2 w-[3px] rounded-r-full bg-primary" />}
+                        <Icon className="w-[18px] h-[18px] shrink-0" />
+                        <span className={cn('truncate transition-opacity', open ? 'opacity-100' : 'opacity-0')}>{item.label}</span>
+                        {badge > 0 && (
+                          <span className={cn(
+                            'ml-auto min-w-[22px] h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center',
+                            !open && 'absolute right-1 top-0.5 min-w-[16px] h-4 px-1',
+                          )}>
+                            {badge > 99 ? '99+' : badge}
+                          </span>
+                        )}
+                        {open && item.status === 'soon' && <span className="ml-auto text-[10px] text-primary">Soon</span>}
+                      </NavLink>
+                    );
+                  })}
                 </div>
-              )}
-              {collapsed && <div className="h-px mx-2 my-2 bg-border/50" />}
-              <div className="space-y-0.5">
-                {items.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = pathname === item.to;
-                  const badge = item.to === '/inbox' ? inboxUnread : 0;
-                  return (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      title={collapsed ? item.label : undefined}
-                      className={cn(
-                        'group relative flex items-center gap-3 rounded-xl transition-all duration-300',
-                        collapsed ? 'justify-center p-2 mx-1' : 'px-2.5 py-2',
-                        !isActive && 'hover:bg-white/[0.04]',
-                      )}
-                    >
-                      {isActive && !collapsed && (
-                        <>
-                          <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/20 via-secondary/15 to-transparent ring-1 ring-primary/30" />
-                          <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-r-full bg-gradient-to-b from-primary to-secondary shadow-[0_0_12px_hsl(211_100%_52%)]" />
-                        </>
-                      )}
-                      <div className={cn(
-                        'relative w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-300 shrink-0',
-                        isActive
-                          ? 'bg-foreground text-background shadow-[0_4px_16px_-4px_hsl(var(--foreground)/0.4)]'
-                          : 'text-muted-foreground group-hover:text-foreground',
-                      )}>
-                        <Icon className="w-[18px] h-[18px]" />
-                      </div>
-                      {!collapsed && (
-                        <span className={cn(
-                          'relative font-medium text-[13px] truncate',
-                          isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground',
-                        )}>
-                          {item.label}
-                        </span>
-                      )}
-                      {!collapsed && item.status === 'soon' && (
-                        <span className="relative ml-auto text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-accent/15 text-accent border border-accent/20">
-                          Soon
-                        </span>
-                      )}
-                      {badge > 0 && (
-                        <span className={cn(
-                          'relative ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center',
-                          collapsed && 'absolute right-0.5 top-0.5 ml-0',
-                        )}>
-                          {badge > 99 ? '99+' : badge}
-                        </span>
-                      )}
-                    </NavLink>
-                  );
-                })}
               </div>
-            </div>
             );
           })}
         </nav>
 
-        {/* Upgrade CTA */}
-        {!collapsed && (
-          <div className="relative mx-3 mb-2 mt-1">
-            <TrialCard />
-          </div>
-        )}
-
-        {/* Collapse */}
-        <div className="relative p-2 border-t border-white/5">
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-all"
-          >
-            {collapsed ? <ChevronsRight className="w-4 h-4" /> : (
-              <><ChevronsLeft className="w-4 h-4" /><span className="text-xs font-medium">Collapse</span></>
-            )}
-          </button>
+        <div className="px-3 pb-3 space-y-1 border-t pt-3">
+          <NavLink to="/guide" className="flex items-center gap-3 h-10 rounded-lg px-3 text-sm text-foreground/80 hover:bg-muted">
+            <LifeBuoy className="w-[18px] h-[18px] shrink-0" />
+            <span className={cn('transition-opacity', open ? 'opacity-100' : 'opacity-0')}>Help</span>
+          </NavLink>
+          <NavLink to="/profile" className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-muted">
+            <span className="h-8 w-8 shrink-0 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center">
+              {userName.slice(0, 1).toUpperCase()}
+            </span>
+            <span className={cn('min-w-0 transition-opacity', open ? 'opacity-100' : 'opacity-0')}>
+              <span className="block text-sm font-medium truncate">{userName}</span>
+              <span className="block text-xs text-muted-foreground truncate">{storeName}</span>
+            </span>
+          </NavLink>
         </div>
       </div>
     </aside>
