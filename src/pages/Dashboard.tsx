@@ -15,7 +15,7 @@ import { resolveWorkspaceId } from '@/lib/workspace';
 import ConnectWhatsAppCard from '@/components/home/ConnectWhatsAppCard';
 import SetupProgressCard from '@/components/home/SetupProgressCard';
 import TodayActivityCard from '@/components/home/TodayActivityCard';
-import OverviewCharts from '@/components/home/OverviewCharts';
+import OverviewGrid from '@/components/home/OverviewGrid';
 
 const QuickCard = ({ icon: Icon, title, desc, cta, to, navigate, tint }: any) => (
   <button
@@ -188,22 +188,47 @@ const Dashboard = () => {
 
   return (
     <AppLayout>
-      <div className="p-4 md:p-8 space-y-5 max-w-6xl mx-auto">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">
-            Hey {firstName || 'there'} 👋
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">Here's your WhatsApp growth desk for today.</p>
+      <div className="p-4 md:p-8 space-y-10 max-w-[1500px] mx-auto">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl md:text-[28px] font-semibold tracking-tight">Today</h1>
+            <p className="text-muted-foreground text-sm mt-0.5">Hey {firstName || 'there'}, here's what's happening on WhatsApp.</p>
+          </div>
         </div>
+
+        {!loading && !stats.waConnected && (
+          <ConnectWhatsAppCard connected={stats.waConnected} onConnected={() => wsId && loadStats(wsId)} />
+        )}
 
         <TodayActivityCard wsId={wsId} credits={stats.msgCredits} creditsPack={stats.msgCreditsPack} aiReplies={stats.aiRepliesMonth} />
 
-        <OverviewCharts wsId={wsId} />
+        <OverviewGrid wsId={wsId} />
 
-        {/* WhatsApp coexistence connection */}
-        <ConnectWhatsAppCard connected={stats.waConnected} onConnected={() => wsId && loadStats(wsId)} />
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold">Recent campaigns</h2>
+          <div className="rounded-2xl border bg-card p-4 md:p-6">
+            {recentCampaigns.length === 0 ? (
+              <div className="h-40 rounded-xl border border-dashed flex flex-col items-center justify-center gap-3">
+                <span className="rounded-md bg-muted px-3 py-1.5 text-sm text-muted-foreground">No data</span>
+                <Button size="sm" variant="outline" onClick={() => navigate('/campaigns')}><Send className="w-3.5 h-3.5 mr-1.5" />New broadcast</Button>
+              </div>
+            ) : (
+              <div className="divide-y">
+                {recentCampaigns.map((c: any) => (
+                  <button key={c.id} onClick={() => navigate('/campaigns')} className="w-full flex items-center justify-between gap-3 py-3 text-left hover:bg-muted/40 rounded-lg px-2 transition-colors">
+                    <span className="min-w-0">
+                      <span className="block font-medium truncate">{c.name}</span>
+                      <span className="block text-xs text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</span>
+                    </span>
+                    <span className="text-sm text-muted-foreground tabular-nums">{c.sent_count || 0} sent · {c.delivered_count || 0} delivered</span>
+                    <span className="text-xs rounded-md bg-muted px-2 py-1 capitalize">{c.status}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
 
-        {/* Setup progress + done-for-you onboarding */}
         <SetupProgressCard
           wsId={wsId}
           checks={{
@@ -214,71 +239,6 @@ const Dashboard = () => {
             automation: stats.automationsActive > 0 || stats.botsActive > 0,
           }}
         />
-
-        {/* Quick actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
-          <QuickCard icon={Contact} title="Contacts" desc="Import, scrape or add leads." cta="Open Contacts" to="/leads" navigate={navigate} tint="bg-foreground" />
-          <QuickCard icon={Send} title="Broadcasts" desc="Send campaigns & track delivery." cta="Open Broadcasts" to="/campaigns" navigate={navigate} tint="bg-foreground" />
-          <QuickCard icon={Inbox} title="Chat Inbox" desc="Reply with your team in real time." cta="Open Inbox" to="/inbox" navigate={navigate} tint="bg-foreground" />
-        </div>
-
-        {/* KPI grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-          <ModuleTile icon={Contact} label="Contacts" value={stats.leadsTotal} hint={`${stats.leadsNew} new this week`} gradient="bg-foreground" to="/leads" navigate={navigate} />
-          <ModuleTile icon={Inbox} label="Inbox" value={stats.inboxUnread} hint={`${stats.inboxConversations} chats · ${stats.messagesToday} today`} gradient="bg-foreground" to="/inbox" navigate={navigate} />
-          <ModuleTile icon={Megaphone} label="Campaigns" value={stats.campaignsMonth} hint={`${stats.messagesSent} sent this month`} gradient="bg-foreground" to="/campaigns" navigate={navigate} />
-          <ModuleTile icon={Workflow} label="Automation" value={stats.automationsActive} hint="Active flows" gradient="bg-foreground" to="/automation" navigate={navigate} />
-        </div>
-
-        {/* Bookings & money */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-          <ModuleTile icon={ClipboardList} label="Bookings today" value={stats.recordsToday} hint="New records created today" gradient="bg-foreground" to="/bookings" navigate={navigate} />
-          <ModuleTile icon={Clock} label="Pending payments" value={stats.pendingPayments} hint={`₹${stats.pendingAmount.toLocaleString('en-IN')} outstanding`} gradient="bg-foreground" to="/bookings" navigate={navigate} />
-          <ModuleTile icon={IndianRupee} label="Revenue this month" value={`₹${stats.revenueMonth.toLocaleString('en-IN')}`} hint="Collected from bookings" gradient="bg-foreground" to="/accounting" navigate={navigate} />
-        </div>
-
-        {/* Credits */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
-          <Card className="p-4 flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-muted"><Wallet className="w-4 h-4" /></div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs text-muted-foreground">Messages this month</p>
-              {(() => {
-                const pct = Math.max(0, Math.min(100, Math.round((stats.msgCredits / stats.msgCreditsPack) * 100)));
-                return (
-                  <>
-                    <p className="text-2xl font-bold leading-tight">
-                      {stats.msgCredits.toLocaleString('en-IN')} / {stats.msgCreditsPack.toLocaleString('en-IN')}
-                    </p>
-                    <div className="mt-1.5 h-1.5 rounded-full bg-muted overflow-hidden">
-                      <div className={`h-full rounded-full ${pct > 90 ? 'bg-destructive' : 'bg-foreground'}`} style={{ width: `${pct}%` }} />
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-            <Button size="sm" onClick={() => navigate('/pricing')}>Plan</Button>
-          </Card>
-          <Card className="p-4 flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-muted"><Sparkles className="w-4 h-4" /></div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs text-muted-foreground">AI replies this month</p>
-              <p className="text-2xl font-bold leading-tight">{stats.aiRepliesMonth.toLocaleString('en-IN')}</p>
-            </div>
-            <Button size="sm" variant="outline" onClick={() => navigate('/chatbots')}>Bots</Button>
-          </Card>
-        </div>
-
-        {/* Import contacts */}
-        <Card className="p-4 flex flex-wrap items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-muted"><Upload className="w-4 h-4" /></div>
-          <div className="min-w-0 flex-1">
-            <p className="font-medium text-sm">Import contacts via Excel or CSV</p>
-            <p className="text-xs text-muted-foreground">Bring your existing lists in and start conversations without manual effort.</p>
-          </div>
-          <Button size="sm" onClick={() => navigate('/leads')}>Import contacts</Button>
-        </Card>
-
       </div>
     </AppLayout>
   );
