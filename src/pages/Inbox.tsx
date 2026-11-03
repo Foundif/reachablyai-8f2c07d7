@@ -572,7 +572,7 @@ const Inbox = () => {
                           <span>
                             {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                           </span>
-                          {isOut && <MessageTicks status={m.status} />}
+                          <MessageTicks status={m.status} outbound={isOut} />
                         </div>
                       </div>
                     );
@@ -614,11 +614,14 @@ const Inbox = () => {
 
       <TemplatePickerSheet
         open={templatePickerOpen}
-        onOpenChange={setTemplatePickerOpen}
+        onClose={() => setTemplatePickerOpen(false)}
         templates={templates}
-        recipientName={selected?.contact_name || "Customer"}
-        recipientPhone={selected?.contact_phone || ""}
-        onSelectTemplate={handleTemplateSend}
+        contactName={selected?.contact_name || "Customer"}
+        onSend={(tplId) => {
+          const tpl = templates.find((t) => t.id === tplId);
+          if (tpl) handleTemplateSend(tpl, tpl.body || "");
+        }}
+        sending={sending}
       />
     </AppLayout>
   );
