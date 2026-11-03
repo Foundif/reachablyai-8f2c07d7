@@ -1,8 +1,16 @@
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from "@/hooks/useAuth";
 
 const PAID_STATUSES = new Set([
-  'active', 'plus', 'scale', 'supreme',
-  'starter', 'growth', 'business', 'pro', 'professional', 'enterprise',
+  "active",
+  "plus",
+  "scale",
+  "supreme",
+  "starter",
+  "growth",
+  "business",
+  "pro",
+  "professional",
+  "enterprise",
 ]);
 
 export interface TrialState {
@@ -24,13 +32,20 @@ export const useTrial = (): TrialState => {
   const p = profile as any;
 
   const isStaff = !!p?.is_staff;
-  const isSubscribed = isStaff || PAID_STATUSES.has(p?.subscription_status || '');
+  const isSubscribed = isStaff || PAID_STATUSES.has(p?.subscription_status || "");
 
-  const endsAt = p?.trial_end_date ? new Date(p.trial_end_date) : null;
-  const msLeft = endsAt ? endsAt.getTime() - Date.now() : 0;
+  // If trial_end_date is in profile, use it. Otherwise, default brand new users to 7 days from profile creation.
+  const hasEndDate = !!p?.trial_end_date;
+  const endsAt = hasEndDate
+    ? new Date(p.trial_end_date)
+    : p?.created_at
+      ? new Date(new Date(p.created_at).getTime() + 7 * 86_400_000)
+      : new Date(Date.now() + 7 * 86_400_000);
 
-  const isTrialing = !isSubscribed && !!endsAt && msLeft > 0;
-  const isExpired = !isSubscribed && !!endsAt && msLeft <= 0;
+  const msLeft = endsAt.getTime() - Date.now();
+
+  const isTrialing = !isSubscribed && msLeft > 0;
+  const isExpired = !isSubscribed && msLeft <= 0;
 
   return {
     isSubscribed,
