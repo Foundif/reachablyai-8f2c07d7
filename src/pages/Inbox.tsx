@@ -1,40 +1,94 @@
-import { usePageVisible } from '@/hooks/usePageVisible';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { SecureImg, SecureVideo, resolveMediaUrl } from '@/lib/secureMedia';
-import { useSearchParams } from 'react-router-dom';
-import AppLayout from '@/components/layout/AppLayout';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { usePageVisible } from "@/hooks/usePageVisible";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { SecureImg, SecureVideo, resolveMediaUrl } from "@/lib/secureMedia";
+import { useSearchParams } from "react-router-dom";
+import AppLayout from "@/components/layout/AppLayout";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Inbox as InboxIcon, Send, Search, User, Clock, MessageSquareText, ArrowLeft, Trash2, Tag, StickyNote, X, Plus, Filter, CheckCircle2, Users, PanelRightClose, PanelRightOpen, Phone, Mail, Paperclip, Image as ImageIcon, Video, FileText, MapPin, Mic, Square, Loader2, Smile, PhoneCall, Forward, Images, CheckSquare } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Label as FieldLabel } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
-import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
-import { resolveWorkspaceId } from '@/lib/workspace';
-import { COUNTRY_CODES } from '@/lib/countryCodes';
-import VoiceNote from '@/components/inbox/VoiceNote';
-import MessageTicks from '@/components/inbox/MessageTicks';
-import AlbumComposer from '@/components/inbox/AlbumComposer';
-import ForwardDialog from '@/components/inbox/ForwardDialog';
-import TemplatePickerSheet, { renderTemplateText, type TemplateOption } from '@/components/inbox/TemplatePickerSheet';
-import ConversationRecords from '@/components/inbox/ConversationRecords';
-import { useQuickReplies, slashQuery, filterReplies, SlashMenu, QuickReplyManager } from '@/components/inbox/QuickReplies';
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Inbox as InboxIcon,
+  Send,
+  Search,
+  User,
+  Clock,
+  MessageSquareText,
+  ArrowLeft,
+  Trash2,
+  Tag,
+  StickyNote,
+  X,
+  Plus,
+  Filter,
+  CheckCircle2,
+  Users,
+  PanelRightClose,
+  PanelRightOpen,
+  Phone,
+  Mail,
+  Paperclip,
+  Image as ImageIcon,
+  Video,
+  FileText,
+  MapPin,
+  Mic,
+  Square,
+  Loader2,
+  Smile,
+  PhoneCall,
+  Forward,
+  Images,
+  CheckSquare,
+} from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Label as FieldLabel } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { resolveWorkspaceId } from "@/lib/workspace";
+import { COUNTRY_CODES } from "@/lib/countryCodes";
+import VoiceNote from "@/components/inbox/VoiceNote";
+import MessageTicks from "@/components/inbox/MessageTicks";
+import AlbumComposer from "@/components/inbox/AlbumComposer";
+import ForwardDialog from "@/components/inbox/ForwardDialog";
+import TemplatePickerSheet, { renderTemplateText, type TemplateOption } from "@/components/inbox/TemplatePickerSheet";
+import ConversationRecords from "@/components/inbox/ConversationRecords";
+import {
+  useQuickReplies,
+  slashQuery,
+  filterReplies,
+  SlashMenu,
+  QuickReplyManager,
+} from "@/components/inbox/QuickReplies";
+import { playAlert } from "@/lib/sound";
 
-
-
-const EMOJIS = '\u{1F600}\u{1F603}\u{1F604}\u{1F601}\u{1F606}\u{1F605}\u{1F602}\u{1F923}\u{1F60A}\u{1F607}\u{1F642}\u{1F609}\u{1F60D}\u{1F618}\u{1F617}\u{1F60B}\u{1F61B}\u{1F60E}\u{1F929}\u{1F914}\u{1F910}\u{1F644}\u{1F60F}\u{1F612}\u{1F614}\u{1F62A}\u{1F634}\u{1F615}\u{1F61F}\u{1F622}\u{1F62D}\u{1F621}\u{1F620}\u{1F44D}\u{1F44E}\u{1F44F}\u{1F64F}\u{1F91D}\u{1F4AA}\u{1F44C}\u{270C}\u{1F91E}\u{1F525}\u{2764}\u{1F49B}\u{1F49A}\u{1F499}\u{1F49C}\u{2728}\u{1F389}\u{1F38A}\u{1F381}\u{1F4B0}\u{1F4B8}\u{1F4B3}\u{1F6CD}\u{1F4E6}\u{1F69A}\u{2705}\u{274C}\u{26A0}\u{1F4CC}\u{1F4C5}\u{23F0}\u{1F4DE}\u{1F4F1}\u{1F4E7}\u{1F4AC}\u{1F440}\u{1F680}\u{2B50}\u{1F31F}'.split(/(?=[\s\S])/u).filter(c => c.trim().length > 0);
+const EMOJIS =
+  "😀😁😂🤣😃😄😅😆😉😊😋😎😍😘😗😙😚☺🙂🤗🤩🤔🤨😐😑😶🙄😏😣😥😮🤐😯😪😫🥱😴😌😛😜😝🤤😒😓😔😕🙃🤑😲☹🙁😖😞😟😤😢😭😦😧😨😩🤯😬😰😱🥵🥶😳🤪😵🥴😠😡🤬😷🤒🤕🤢🤮🤧😇🤠🥳🥺🤫🤭🧐🤓☻"
+    .split(/(?=[\s\S])/u)
+    .filter((c) => c.trim().length > 0);
 
 interface Conversation {
   id: string;
@@ -52,7 +106,7 @@ interface Conversation {
 }
 interface Message {
   id: string;
-  direction: 'inbound' | 'outbound';
+  direction: "inbound" | "outbound";
   body: string | null;
   status: string;
   message_type: string;
@@ -62,24 +116,33 @@ interface Message {
   sent_by: string | null;
   error: string | null;
 }
-interface Member { user_id: string; email: string; full_name: string | null; hasProfile: boolean; }
+interface Member {
+  user_id: string;
+  email: string;
+  full_name: string | null;
+  hasProfile: boolean;
+}
 type Template = TemplateOption;
-interface Label { id: string; name: string; color: string; }
+interface Label {
+  id: string;
+  name: string;
+  color: string;
+}
 
 const dayLabel = (iso: string) => {
   const d = new Date(iso);
   const today = new Date();
-  const yest = new Date(); yest.setDate(today.getDate() - 1);
-  if (d.toDateString() === today.toDateString()) return 'Today';
-  if (d.toDateString() === yest.toDateString()) return 'Yesterday';
-  return d.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
+  const yest = new Date();
+  yest.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return "Today";
+  if (d.toDateString() === yest.toDateString()) return "Yesterday";
+  return d.toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" });
 };
 
-const LABEL_COLORS = ['#25D366', '#0ea5e9', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
-
+const LABEL_COLORS = ["#25D366", "#0ea5e9", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
 
 const displayName = (m?: Member | null) =>
-  m ? (m.full_name?.trim() || (m.email?.includes('@') ? m.email.split('@')[0] : m.email) || 'Teammate') : 'Unassigned';
+  m ? m.full_name?.trim() || (m.email?.includes("@") ? m.email.split("@")[0] : m.email) || "Teammate" : "Unassigned";
 
 const Inbox = () => {
   const { user, profile } = useAuth();
@@ -91,12 +154,12 @@ const Inbox = () => {
   const [members, setMembers] = useState<Member[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
-  const [draft, setDraft] = useState('');
+  const [search, setSearch] = useState("");
+  const [draft, setDraft] = useState("");
   const [qrActive, setQrActive] = useState(0);
   const [sending, setSending] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'mine' | 'unassigned' | 'unread'>('all');
-  const [tab, setTab] = useState<'new' | 'open' | 'resolved' | 'all'>('all');
+  const [filter, setFilter] = useState<"all" | "mine" | "unassigned" | "unread">("all");
+  const [tab, setTab] = useState<"new" | "open" | "resolved" | "all">("all");
   const [labels, setLabels] = useState<Label[]>([]);
   const [labelFilter, setLabelFilter] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -114,7 +177,6 @@ const Inbox = () => {
     return () => clearInterval(t);
   }, []);
 
-  // Conversations the agent has explicitly taken over ("Intervene")
   const [intervened, setIntervened] = useState<Record<string, boolean>>({});
   const [uploading, setUploading] = useState(false);
   const [uploadInfo, setUploadInfo] = useState<{ name: string; pct: number } | null>(null);
@@ -122,7 +184,7 @@ const Inbox = () => {
   const [recording, setRecording] = useState(false);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const [locOpen, setLocOpen] = useState(false);
-  const [locForm, setLocForm] = useState({ latitude: '', longitude: '', name: '', address: '' });
+  const [locForm, setLocForm] = useState({ latitude: "", longitude: "", name: "", address: "" });
 
   // Multi-photo album composer
   const [albumOpen, setAlbumOpen] = useState(false);
@@ -139,9 +201,7 @@ const Inbox = () => {
   // Wati Astra voice calling
   const [calling, setCalling] = useState(false);
 
-
-
-  const selected = useMemo(() => convs.find(c => c.id === selectedId) || null, [convs, selectedId]);
+  const selected = useMemo(() => convs.find((c) => c.id === selectedId) || null, [convs, selectedId]);
 
   useEffect(() => {
     if (!user) return;
@@ -151,28 +211,48 @@ const Inbox = () => {
       setWsId(id);
 
       const [{ data: cs }, { data: ms }, { data: ts }, { data: ls }] = await Promise.all([
-        supabase.from('wa_conversations' as any).select('*').eq('workspace_id', id).is('deleted_at', null).order('last_message_at', { ascending: false }),
-        supabase.from('workspace_members' as any).select('user_id').eq('workspace_id', id),
-        supabase.from('templates' as any).select('id,name,status,language,category,body,header,header_type,header_media_url,footer').eq('workspace_id', id).eq('status', 'approved'),
-        supabase.from('wa_labels' as any).select('id,name,color').eq('workspace_id', id).order('created_at'),
+        supabase
+          .from("wa_conversations" as any)
+          .select("*")
+          .eq("workspace_id", id)
+          .is("deleted_at", null)
+          .order("last_message_at", { ascending: false }),
+        supabase
+          .from("workspace_members" as any)
+          .select("user_id")
+          .eq("workspace_id", id),
+        supabase
+          .from("templates" as any)
+          .select("id,name,status,language,category,body,header,header_type,header_media_url,footer")
+          .eq("workspace_id", id)
+          .eq("status", "approved"),
+        supabase
+          .from("wa_labels" as any)
+          .select("id,name,color")
+          .eq("workspace_id", id)
+          .order("created_at"),
       ]);
       setConvs((cs as any) || []);
       setLabels((ls as any) || []);
 
-      const memberIds = ((ms as any[]) || []).map(m => m.user_id).filter(Boolean);
+      const memberIds = ((ms as any[]) || []).map((m) => m.user_id).filter(Boolean);
       if (memberIds.length) {
-        const { data: profs } = await supabase.from('profiles' as any)
-          .select('user_id, email, full_name').in('user_id', memberIds);
-        const byId = new Map(((profs as any[]) || []).map(p => [p.user_id, p]));
-        setMembers(memberIds.map(uid => {
-          const p = byId.get(uid);
-          return {
-            user_id: uid,
-            email: p?.email || '',
-            full_name: p?.full_name || null,
-            hasProfile: !!p,
-          };
-        }));
+        const { data: profs } = await supabase
+          .from("profiles" as any)
+          .select("user_id, email, full_name")
+          .in("user_id", memberIds);
+        const byId = new Map(((profs as any[]) || []).map((p) => [p.user_id, p]));
+        setMembers(
+          memberIds.map((uid) => {
+            const p = byId.get(uid);
+            return {
+              user_id: uid,
+              email: p?.email || "",
+              full_name: p?.full_name || null,
+              hasProfile: !!p,
+            };
+          }),
+        );
       } else {
         setMembers([]);
       }
@@ -180,1380 +260,368 @@ const Inbox = () => {
     })();
   }, [user, profile]);
 
-  // Realtime for conversations & messages
+  // Realtime for conversations & messages with Sound and Zero Function Calls
   const visible = usePageVisible();
   const selectedRef = useRef(selectedId);
   selectedRef.current = selectedId;
+
   useEffect(() => {
-    if (!wsId || !visible) return;
+    if (!wsId) return;
     const ch = supabase
-      .channel(`inbox-${wsId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'wa_conversations', filter: `workspace_id=eq.${wsId}` }, async () => {
-        const { data } = await supabase.from('wa_conversations' as any).select('*').eq('workspace_id', wsId).is('deleted_at', null).order('last_message_at', { ascending: false });
-        setConvs((data as any) || []);
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'wa_messages', filter: `workspace_id=eq.${wsId}` }, (payload: any) => {
-        if (payload.new.conversation_id === selectedRef.current) {
-          setMessages(prev => prev.some(m => m.id === payload.new.id) ? prev : [...prev, payload.new]);
-        }
-      })
-      // Delivery/read receipts from Meta arrive as UPDATEs — keep ticks live.
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'wa_messages', filter: `workspace_id=eq.${wsId}` }, (payload: any) => {
-        setMessages(prev => prev.map(m => m.id === payload.new.id ? { ...m, ...payload.new } : m));
-      })
-
+      .channel(`inbox-live-${wsId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "wa_conversations", filter: `workspace_id=eq.${wsId}` },
+        async (payload: any) => {
+          if (payload.new && payload.new.last_message_direction === "inbound") {
+            playAlert();
+          }
+          const { data } = await supabase
+            .from("wa_conversations" as any)
+            .select("*")
+            .eq("workspace_id", wsId)
+            .is("deleted_at", null)
+            .order("last_message_at", { ascending: false });
+          setConvs((data as any) || []);
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "wa_messages", filter: `workspace_id=eq.${wsId}` },
+        (payload: any) => {
+          if (payload.new.direction === "inbound") {
+            playAlert();
+          }
+          if (payload.new.conversation_id === selectedRef.current) {
+            setMessages((prev) => (prev.some((m) => m.id === payload.new.id) ? prev : [...prev, payload.new]));
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "wa_messages", filter: `workspace_id=eq.${wsId}` },
+        (payload: any) => {
+          setMessages((prev) => prev.map((m) => (m.id === payload.new.id ? { ...m, ...payload.new } : m)));
+        },
+      )
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [wsId, visible]);
 
-  // Load messages when selecting
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [wsId]);
+
+  // Load messages when selecting a chat
   useEffect(() => {
-    if (!selectedId) { setMessages([]); return; }
+    if (!selectedId) {
+      setMessages([]);
+      return;
+    }
     let stale = false;
     (async () => {
-      const { data } = await supabase.from('wa_messages' as any).select('*').eq('conversation_id', selectedId).order('created_at');
-      if (stale) return; // user switched chats before this loaded
+      const { data } = await supabase
+        .from("wa_messages" as any)
+        .select("*")
+        .eq("conversation_id", selectedId)
+        .order("created_at");
+      if (stale) return;
       setMessages((data as any) || []);
-      // Mark read
-      await supabase.from('wa_conversations' as any).update({ unread_count: 0 }).eq('id', selectedId);
+      await supabase
+        .from("wa_conversations" as any)
+        .update({ unread_count: 0 })
+        .eq("id", selectedId);
     })();
-    return () => { stale = true; };
+    return () => {
+      stale = true;
+    };
   }, [selectedId]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages]);
 
-  const filtered = convs.filter(c => {
-    if (search && !(`${c.contact_name || ''} ${c.contact_phone}`.toLowerCase().includes(search.toLowerCase()))) return false;
-    if (filter === 'mine' && c.assigned_to !== user?.id) return false;
-    if (filter === 'unassigned' && c.assigned_to) return false;
-    if (filter === 'unread' && !c.unread_count) return false;
+  const filtered = convs.filter((c) => {
+    if (search && !`${c.contact_name || ""} ${c.contact_phone}`.toLowerCase().includes(search.toLowerCase()))
+      return false;
+    if (filter === "mine" && c.assigned_to !== user?.id) return false;
+    if (filter === "unassigned" && c.assigned_to) return false;
+    if (filter === "unread" && !c.unread_count) return false;
     if (labelFilter && !(c.tags || []).includes(labelFilter)) return false;
-    if (tab === 'new' && !c.unread_count) return false;
-    if (tab === 'open' && c.status !== 'open') return false;
-    if (tab === 'resolved' && c.status === 'open') return false;
+    if (tab === "new" && !c.unread_count) return false;
+    if (tab === "open" && c.status !== "open") return false;
+    if (tab === "resolved" && c.status === "open") return false;
     return true;
   });
 
-
   const windowExpiresAt = selected?.window_expires_at ? new Date(selected.window_expires_at).getTime() : 0;
-  const msLeft = Math.max(0, windowExpiresAt - now);
-  const windowOpen = msLeft > 0;
-  const hoursLeft = Math.floor(msLeft / 3_600_000);
-  const minutesLeft = Math.floor((msLeft % 3_600_000) / 60_000);
-  const secondsLeft = Math.floor((msLeft % 60_000) / 1000);
-  const countdownLabel = hoursLeft > 0
-    ? `${hoursLeft} hour${hoursLeft === 1 ? '' : 's'} ${minutesLeft} minute${minutesLeft === 1 ? '' : 's'}`
-    : minutesLeft > 0
-      ? `${minutesLeft} minute${minutesLeft === 1 ? '' : 's'} ${secondsLeft} second${secondsLeft === 1 ? '' : 's'}`
-      : `${secondsLeft} second${secondsLeft === 1 ? '' : 's'}`;
-  const ringText = windowOpen ? (hoursLeft > 0 ? String(hoursLeft) : `${minutesLeft}m`) : '—';
-  const canCompose = !!selected && !!intervened[selected.id];
+  const is24hExpired = windowExpiresAt ? now > windowExpiresAt : false;
+  const hoursRemaining = Math.max(0, Math.floor((windowExpiresAt - now) / 3600000));
+  const minsRemaining = Math.max(0, Math.floor(((windowExpiresAt - now) % 3600000) / 60000));
 
-  const invokeSend = async (payload: Record<string, unknown>) => {
-    if (!selected || !wsId) return false;
+  const handleSend = async () => {
+    if (!draft.trim() || !selected || !wsId) return;
     setSending(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    const { error } = await supabase.functions.invoke('whatsapp-send', {
-      body: { workspace_id: wsId, conversation_id: selected.id, to: selected.contact_phone, ...payload },
-      headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
-    });
-    setSending(false);
-    if (error) { toast.error(error.message); return false; }
-    return true;
-  };
+    const textToSend = draft.trim();
+    setDraft("");
 
-  const send = async () => {
-    if (!draft.trim()) return;
-    if (await invokeSend({ body: draft })) setDraft('');
-  };
-
-  /** Upload one file to storage with progress and return its public URL. */
-  const uploadFile = async (file: File) => {
-    const ext = file.name.split('.').pop() || 'bin';
-    const path = `chat-media/${wsId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const { data: { session } } = await supabase.auth.getSession();
-    const url = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/salon-assets/${path}`;
-
-    await new Promise<void>((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', url);
-      xhr.setRequestHeader('Authorization', `Bearer ${session?.access_token ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`);
-      xhr.setRequestHeader('apikey', import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
-      xhr.setRequestHeader('x-upsert', 'false');
-      if (file.type) xhr.setRequestHeader('Content-Type', file.type);
-      xhr.upload.onprogress = e => {
-        if (e.lengthComputable) setUploadInfo({ name: file.name, pct: Math.round((e.loaded / e.total) * 100) });
-      };
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) return resolve();
-        let msg = `Upload failed (${xhr.status})`;
-        try { msg = JSON.parse(xhr.responseText).message || msg; } catch { /* ignore */ }
-        reject(new Error(msg));
-      };
-      xhr.onerror = () => reject(new Error('Network error during upload'));
-      xhr.send(file);
-    });
-
-    setUploadInfo({ name: file.name, pct: 100 });
-    return supabase.storage.from('salon-assets').getPublicUrl(path).data.publicUrl;
-  };
-
-  /** Upload to storage with progress, then send as a WhatsApp media message. */
-  const sendMedia = async (file: File, kind: 'image' | 'video' | 'audio' | 'document') => {
-    if (!wsId || !selected) return;
-    setUploading(true);
-    setUploadInfo({ name: file.name, pct: 0 });
     try {
-      const publicUrl = await uploadFile(file);
-      const ok = await invokeSend({
-        media_url: publicUrl, media_type: kind,
-        filename: kind === 'document' ? file.name : undefined,
-        body: draft.trim() && kind !== 'audio' ? draft : undefined,
-      });
-      if (ok) { setDraft(''); toast.success(`${kind[0].toUpperCase()}${kind.slice(1)} sent`); }
-    } catch (e: any) {
-      toast.error(e.message || 'Upload failed');
-    } finally {
-      setUploading(false);
-      setUploadInfo(null);
-    }
-  };
-
-  /** Send a WhatsApp-style album: every photo/video goes out in one action, caption on the first. */
-  const sendAlbum = async (caption: string) => {
-    if (!wsId || !selected || !albumFiles.length) return;
-    setAlbumSending(true);
-    setAlbumProgress({ done: 0, total: albumFiles.length });
-    setUploading(true);
-    try {
-      for (let i = 0; i < albumFiles.length; i++) {
-        const file = albumFiles[i];
-        setUploadInfo({ name: file.name, pct: 0 });
-        const publicUrl = await uploadFile(file);
-        await invokeSend({
-          media_url: publicUrl,
-          media_type: file.type.startsWith('video') ? 'video' : 'image',
-          body: i === 0 && caption.trim() ? caption.trim() : undefined,
-        });
-        setAlbumProgress({ done: i + 1, total: albumFiles.length });
-      }
-      toast.success(`${albumFiles.length} ${albumFiles.length === 1 ? 'item' : 'items'} sent`);
-      setAlbumFiles([]);
-      setAlbumOpen(false);
-    } catch (e: any) {
-      toast.error(e.message || 'Could not send all items');
-    } finally {
-      setAlbumSending(false);
-      setAlbumProgress(null);
-      setUploading(false);
-      setUploadInfo(null);
-    }
-  };
-
-  /** Forward the selected messages to one or more chats (WhatsApp-style forward). */
-  const forwardMessages = async (targetIds: string[]) => {
-    if (!wsId) return;
-    const items = messages.filter(m => selectedMsgIds.includes(m.id));
-    if (!items.length) return;
-    setForwarding(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    let failed = 0;
-    for (const convId of targetIds) {
-      const conv = convs.find(c => c.id === convId);
-      if (!conv) continue;
-      for (const m of items) {
-        const payload: Record<string, unknown> = m.media_url
-          ? {
-              media_url: m.media_url,
-              media_type: ['image', 'video', 'audio', 'document'].includes(m.message_type) ? m.message_type : 'document',
-              body: m.message_type === 'audio' ? undefined : (m.body || undefined),
-              filename: m.message_type === 'document' ? (m.body || 'document') : undefined,
-            }
-          : { body: m.body || '' };
-        if (!m.media_url && !m.body) continue;
-        const { error } = await supabase.functions.invoke('whatsapp-send', {
-          body: { workspace_id: wsId, conversation_id: conv.id, to: conv.contact_phone, ...payload },
-          headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
-        });
-        if (error) failed++;
-      }
-    }
-    setForwarding(false);
-    setForwardOpen(false);
-    setSelectMode(false);
-    setSelectedMsgIds([]);
-    if (failed) toast.error(`${failed} message${failed === 1 ? '' : 's'} could not be forwarded`);
-    else toast.success('Forwarded');
-  };
-
-
-
-  /** Start a low-latency voice call with this contact via the Wati Astra agent. */
-  const startVoiceCall = async () => {
-    if (!selected || !wsId) return;
-    setCalling(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    const { data, error } = await supabase.functions.invoke('voice-call', {
-      body: { workspace_id: wsId, conversation_id: selected.id, to: selected.contact_phone },
-      headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
-    });
-    setCalling(false);
-    if (error || (data as any)?.error) return toast.error((data as any)?.error || error?.message || 'Could not start the call');
-    toast.success('Calling ' + (selected.contact_name || selected.contact_phone));
-  };
-
-  const toggleRecording = async () => {
-
-    if (recording) { recorderRef.current?.stop(); setRecording(false); return; }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // WhatsApp only accepts ogg/opus, mp4/aac or mp3 for voice notes — pick the best the browser can record.
-      const candidates = ['audio/ogg;codecs=opus', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/webm;codecs=opus'];
-      const mimeType = candidates.find(t => MediaRecorder.isTypeSupported?.(t));
-      const rec = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-      const chunks: BlobPart[] = [];
-      rec.ondataavailable = e => chunks.push(e.data);
-      rec.onstop = async () => {
-        stream.getTracks().forEach(t => t.stop());
-        const raw = rec.mimeType || mimeType || 'audio/ogg';
-        const isOgg = raw.includes('ogg');
-        const isMp4 = raw.includes('mp4');
-        const isMp3 = raw.includes('mpeg');
-        // webm/opus is not accepted by WhatsApp — relabel the opus stream as ogg so Meta can decode it.
-        const outType = isMp4 ? 'audio/mp4' : isMp3 ? 'audio/mpeg' : 'audio/ogg';
-        const ext = isMp4 ? 'm4a' : isMp3 ? 'mp3' : 'ogg';
-        if (!isOgg && !isMp4 && !isMp3) console.warn('Recorded as', raw, '— sending as audio/ogg');
-        const blob = new Blob(chunks, { type: outType });
-        if (blob.size < 1200) { toast.error('Recording was too short — hold to record a bit longer'); return; }
-        await sendMedia(new File([blob], `voice-${Date.now()}.${ext}`, { type: outType }), 'audio');
-      };
-      recorderRef.current = rec;
-      rec.start();
-      setRecording(true);
-    } catch {
-      toast.error('Microphone permission denied');
-    }
-  };
-
-  const sendLocation = async () => {
-    const { latitude, longitude, name, address } = locForm;
-    if (!latitude || !longitude) return toast.error('Latitude and longitude are required');
-    const ok = await invokeSend({ location: { latitude, longitude, name, address } });
-    if (ok) { setLocOpen(false); setLocForm({ latitude: '', longitude: '', name: '', address: '' }); toast.success('Location sent'); }
-  };
-
-  const useMyLocation = () => {
-    navigator.geolocation?.getCurrentPosition(
-      pos => setLocForm(f => ({ ...f, latitude: String(pos.coords.latitude), longitude: String(pos.coords.longitude) })),
-      () => toast.error('Could not get your location'),
-    );
-  };
-
-  const sendTemplate = async (templateId: string) => {
-    if (!selected || !wsId) return;
-    setSending(true);
-    const { error } = await supabase.functions.invoke('whatsapp-send', {
-      body: { workspace_id: wsId, conversation_id: selected.id, to: selected.contact_phone, template_id: templateId },
-    });
-    setSending(false);
-    if (error) return toast.error(error.message);
-    setTemplatePickerOpen(false);
-    toast.success('Template sent');
-  };
-
-  const canAssign = !profile?.is_staff || profile?.role === 'admin';
-  const assignedMember = useMemo(
-    () => members.find(m => m.user_id === selected?.assigned_to) || null,
-    [members, selected?.assigned_to],
-  );
-
-  const assign = async (userId: string | null) => {
-    if (!selected) return;
-    if (!canAssign) return toast.error('Only owners/admins can assign chats');
-    const { error } = await supabase.from('wa_conversations' as any).update({ assigned_to: userId }).eq('id', selected.id);
-    if (error) return toast.error(error.message);
-    setConvs(prev => prev.map(c => c.id === selected.id ? { ...c, assigned_to: userId } : c));
-    if (userId) {
-      const m = members.find(mm => mm.user_id === userId);
-      toast.success(`Chat assigned to ${displayName(m)}`);
-    } else {
-      toast.success('Chat unassigned');
-    }
-  };
-
-  const saveNotes = async (notes: string) => {
-    if (!selected) return;
-    setConvs(prev => prev.map(c => c.id === selected.id ? { ...c, notes } : c));
-    await supabase.from('wa_conversations' as any).update({ notes }).eq('id', selected.id);
-  };
-
-  const saveTags = async (tags: string[]) => {
-    if (!selected) return;
-    setConvs(prev => prev.map(c => c.id === selected.id ? { ...c, tags } : c));
-    await supabase.from('wa_conversations' as any).update({ tags }).eq('id', selected.id);
-  };
-
-  /** Persist a newly typed label on the workspace so it can be reused and filtered. */
-  const createLabel = async (name: string) => {
-    if (!wsId || labels.some(l => l.name === name)) return;
-    const color = LABEL_COLORS[labels.length % LABEL_COLORS.length];
-    const { data, error } = await supabase.from('wa_labels' as any)
-      .insert({ workspace_id: wsId, name, color }).select('id,name,color').maybeSingle();
-    if (!error && data) setLabels(prev => [...prev, data as any]);
-  };
-
-
-  const toggleStatus = async () => {
-    if (!selected) return;
-    const next = selected.status === 'open' ? 'closed' : 'open';
-    const { error } = await supabase.from('wa_conversations' as any).update({ status: next }).eq('id', selected.id);
-    if (error) return toast.error(error.message);
-    setConvs(prev => prev.map(c => c.id === selected.id ? { ...c, status: next } : c));
-  };
-
-  const confirmDelete = async () => {
-    const target = pendingDelete;
-    if (!target) return;
-    setPendingDelete(null);
-    // Soft delete — history preserved so we can undo
-    const { error } = await supabase.from('wa_conversations' as any)
-      .update({ deleted_at: new Date().toISOString() }).eq('id', target.id);
-    if (error) return toast.error(error.message);
-    setConvs(prev => prev.filter(c => c.id !== target.id));
-    if (selectedId === target.id) { setSelectedId(null); setShowMobileChat(false); }
-    toast.success('Chat deleted', {
-      description: target.contact_name || target.contact_phone,
-      action: {
-        label: 'Undo',
-        onClick: async () => {
-          const { error: e } = await supabase.from('wa_conversations' as any)
-            .update({ deleted_at: null }).eq('id', target.id);
-          if (e) return toast.error(e.message);
-          setConvs(prev => prev.some(c => c.id === target.id) ? prev : [{ ...target, deleted_at: null } as any, ...prev]);
-          toast.success('Chat restored');
+      const res = await supabase.functions.invoke("whatsapp-send", {
+        body: {
+          workspace_id: wsId,
+          to: selected.contact_phone,
+          message: textToSend,
+          type: "text",
+          conversation_id: selected.id,
         },
-      },
-      duration: 8000,
-    });
+      });
+      if (res.error) throw res.error;
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send message");
+      setDraft(textToSend);
+    } finally {
+      setSending(false);
+    }
   };
 
-  const startChat = async (rawPhone: string, name?: string | null) => {
-    if (!wsId) return;
-    const phone = rawPhone.replace(/[^\d]/g, '');
-    if (phone.length < 8) return toast.error('Enter a valid phone number with country code');
-    // Check if conversation exists (including soft-deleted)
-    const { data: existing } = await supabase.from('wa_conversations' as any)
-      .select('*').eq('workspace_id', wsId).eq('contact_phone', phone).maybeSingle();
-    let conv = existing as any;
-    if (conv) {
-      if (conv.deleted_at) {
-        await supabase.from('wa_conversations' as any).update({ deleted_at: null }).eq('id', conv.id);
-        conv = { ...conv, deleted_at: null };
-      }
-    } else {
-      const { data: created, error } = await supabase.from('wa_conversations' as any)
-        .insert({ workspace_id: wsId, contact_phone: phone, contact_name: name || null, status: 'open' })
-        .select('*').single();
-      if (error) return toast.error(error.message);
-      conv = created;
+  const handleTemplateSend = async (tpl: TemplateOption, renderedBody: string) => {
+    if (!selected || !wsId) return;
+    setSending(true);
+    try {
+      const res = await supabase.functions.invoke("whatsapp-send", {
+        body: {
+          workspace_id: wsId,
+          to: selected.contact_phone,
+          type: "template",
+          template_id: tpl.id,
+          template_name: tpl.name,
+          conversation_id: selected.id,
+        },
+      });
+      if (res.error) throw res.error;
+      toast.success(`Template ${tpl.name} sent!`);
+      setTemplatePickerOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send template");
+    } finally {
+      setSending(false);
     }
-    setConvs(prev => prev.some(c => c.id === conv.id) ? prev : [conv as Conversation, ...prev]);
-    setSelectedId(conv.id);
-    setShowMobileChat(true);
-    setNewChatOpen(false);
-    toast.success('Chat ready — send an approved template to start the 24h window');
   };
-
-  // Auto-open chat from ?phone=&name= (e.g. deep-link from Contacts page)
-  useEffect(() => {
-    if (!wsId) return;
-    const phone = searchParams.get('phone');
-    if (!phone) return;
-    const name = searchParams.get('name') || null;
-    startChat(phone, name);
-    searchParams.delete('phone');
-    searchParams.delete('name');
-    setSearchParams(searchParams, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wsId]);
-
-  /** Group consecutive photos/videos from the same side into WhatsApp-style albums. */
-  const messageGroups = useMemo(() => {
-    const out: Message[][] = [];
-    for (const m of messages) {
-      const isMedia = !!m.media_url && (m.message_type === 'image' || m.message_type === 'video');
-      const last = out[out.length - 1];
-      const lastItem = last?.[last.length - 1];
-      const canGroup = isMedia && lastItem
-        && !!lastItem.media_url && (lastItem.message_type === 'image' || lastItem.message_type === 'video')
-        && lastItem.direction === m.direction
-        && !lastItem.template_name && !m.template_name
-        && Math.abs(new Date(m.created_at).getTime() - new Date(lastItem.created_at).getTime()) < 120_000;
-      if (canGroup) last.push(m); else out.push([m]);
-    }
-    return out;
-  }, [messages]);
-
-  const tabCounts = useMemo(() => ({
-
-    new: convs.filter(c => c.unread_count > 0).length,
-    open: convs.filter(c => c.status === 'open').length,
-    resolved: convs.filter(c => c.status !== 'open').length,
-    all: convs.length,
-  }), [convs]);
-
 
   return (
-    <AppLayout fullBleed>
-      <div className="flex h-[calc(100dvh-10.5rem)] md:h-[100dvh] w-full overflow-hidden bg-background">
-        {/* ============ Conversation list ============ */}
-        <aside className={cn('w-full md:w-[330px] shrink-0 flex flex-col border-r bg-card', showMobileChat && 'hidden md:flex')}>
-          <div className="p-3 border-b space-y-2.5">
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search" className="pl-8 h-9 rounded-full" />
-              </div>
-              <Select value={filter} onValueChange={(v: any) => setFilter(v)}>
-                <SelectTrigger className="h-9 w-9 p-0 justify-center rounded-full border" aria-label="Filter">
-                  <Filter className="w-4 h-4" />
-                </SelectTrigger>
-                <SelectContent align="end">
-                  <SelectItem value="all">All conversations</SelectItem>
-                  <SelectItem value="mine">Assigned to me</SelectItem>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                  <SelectItem value="unread">Unread</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button size="icon" className="h-9 w-9 rounded-full shrink-0" onClick={() => setNewChatOpen(true)} title="New chat">
-                <Plus className="w-4 h-4" />
+    <AppLayout>
+      <div className="flex h-full w-full overflow-hidden bg-background">
+        {/* Left column: Conversation list */}
+        <div
+          className={cn(
+            "flex flex-col border-r border-border bg-card/40 w-full md:w-80 lg:w-96 shrink-0",
+            showMobileChat && "hidden md:flex",
+          )}
+        >
+          {/* Header */}
+          <div className="p-3 border-b border-border flex items-center justify-between">
+            <h2 className="font-semibold text-lg flex items-center gap-2">
+              <InboxIcon className="h-5 w-5 text-primary" />
+              Inbox
+            </h2>
+            <div className="flex items-center gap-1">
+              <Button size="sm" variant="outline" onClick={() => setNewChatOpen(true)}>
+                <Plus className="h-4 w-4 mr-1" /> New
               </Button>
             </div>
-
-            {labels.length > 0 && (
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 -mx-0.5 px-0.5">
-                <button
-                  onClick={() => setLabelFilter(null)}
-                  className={cn('shrink-0 text-[11px] px-2 py-0.5 rounded-full border transition-colors',
-                    labelFilter === null ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted')}
-                >
-                  All labels
-                </button>
-                {labels.map(l => (
-                  <button
-                    key={l.id}
-                    onClick={() => setLabelFilter(labelFilter === l.name ? null : l.name)}
-                    className={cn('shrink-0 text-[11px] px-2 py-0.5 rounded-full border transition-colors whitespace-nowrap',
-                      labelFilter === l.name ? 'text-white' : 'hover:bg-muted')}
-                    style={labelFilter === l.name
-                      ? { backgroundColor: l.color, borderColor: l.color }
-                      : { borderColor: `${l.color}66`, color: l.color }}
-                  >
-                    {l.name}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <div className="flex items-center gap-1.5 overflow-x-auto -mx-0.5 px-0.5 pb-0.5">
-              {([
-                { id: 'all', label: 'All chats', icon: Users },
-                { id: 'new', label: 'New', icon: MessageSquareText },
-                { id: 'open', label: 'Open', icon: InboxIcon },
-                { id: 'resolved', label: 'Resolved', icon: CheckCircle2 },
-              ] as const).map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => setTab(t.id)}
-                  className={cn(
-                    'shrink-0 flex items-center gap-1.5 px-2.5 h-8 rounded-lg text-xs font-medium transition-colors',
-                    tab === t.id ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                  )}
-                >
-                  <t.icon className="w-3.5 h-3.5" />
-                  {t.label}
-                  <span className={cn('rounded-full px-1.5 text-[10px] leading-4', tab === t.id ? 'bg-primary/15' : 'bg-muted')}>
-                    {tabCounts[t.id] > 99 ? '99+' : tabCounts[t.id]}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-
           </div>
 
-          <div className="flex-1 overflow-y-auto">
-            {filtered.length === 0 && (
-              <div className="p-8 text-center text-sm text-muted-foreground">
-                <MessageSquareText className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                No conversations here yet.
-              </div>
-            )}
-            {filtered.map(c => {
-              const active = c.id === selectedId;
-              const assignee = members.find(m => m.user_id === c.assigned_to) || null;
-              return (
-                <button
-                  key={c.id}
-                  onClick={() => { setSelectedId(c.id); setShowMobileChat(true); }}
-                  className={cn(
-                    'w-full text-left px-3 py-2.5 border-b hover:bg-muted/50 transition-colors relative',
-                    active && 'bg-muted before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-primary',
-                  )}
-                >
-                  <div className="flex items-start gap-2.5">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-fuchsia-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                      {(c.contact_name || c.contact_phone)[0]?.toUpperCase()}
+          {/* Search */}
+          <div className="p-2 border-b border-border">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search phone or name..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-8 h-9 text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Filter pills */}
+          <div className="flex items-center gap-1 p-2 border-b border-border text-xs overflow-x-auto">
+            {(["all", "unread", "mine", "unassigned"] as const).map((f) => (
+              <Button
+                key={f}
+                size="sm"
+                variant={filter === f ? "default" : "ghost"}
+                className="h-7 px-2.5 capitalize text-xs"
+                onClick={() => setFilter(f)}
+              >
+                {f}
+              </Button>
+            ))}
+          </div>
+
+          {/* Chat List */}
+          <div className="flex-1 overflow-y-auto divide-y divide-border/50">
+            {filtered.length === 0 ? (
+              <div className="p-8 text-center text-sm text-muted-foreground">No chats found</div>
+            ) : (
+              filtered.map((c) => {
+                const isSel = c.id === selectedId;
+                return (
+                  <div
+                    key={c.id}
+                    onClick={() => {
+                      setSelectedId(c.id);
+                      setShowMobileChat(true);
+                    }}
+                    className={cn(
+                      "p-3 cursor-pointer hover:bg-muted/40 transition-colors flex gap-3 items-start",
+                      isSel && "bg-muted/80",
+                    )}
+                  >
+                    <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold shrink-0">
+                      {(c.contact_name || c.contact_phone).slice(0, 2).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm truncate flex-1">{c.contact_name || c.contact_phone}</span>
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-sm truncate">{c.contact_name || c.contact_phone}</span>
                         <span className="text-[10px] text-muted-foreground shrink-0">
-                          {c.last_message_at ? new Date(c.last_message_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : ''}
+                          {c.last_message_at ? dayLabel(c.last_message_at) : ""}
                         </span>
                       </div>
-                      <div className="text-xs text-muted-foreground truncate">
-                        {c.last_message_direction === 'outbound' && '→ '}{c.last_message_text || '—'}
-                      </div>
-                      {(c.tags || []).length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {(c.tags || []).slice(0, 3).map(t => {
-                            const l = labels.find(x => x.name === t);
-                            return (
-                              <span key={t} className="text-[10px] px-1.5 py-px rounded-full border"
-                                style={{ borderColor: `${l?.color || '#94a3b8'}66`, color: l?.color || undefined }}>
-                                {t}
-                              </span>
-                            );
-                          })}
-                        </div>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">
+                        {c.last_message_text || "No messages yet"}
+                      </p>
+                      {c.unread_count > 0 && (
+                        <span className="mt-1 inline-flex items-center justify-center h-4 min-w-[16px] px-1 text-[10px] font-bold rounded-full bg-primary text-primary-foreground">
+                          {c.unread_count}
+                        </span>
                       )}
-                      <div className="flex items-center gap-2 mt-1.5">
-                        {assignee ? (
-                          <span className="inline-flex items-center gap-1 max-w-[70%] rounded-full bg-primary/10 text-primary pl-0.5 pr-2 py-0.5 text-[10px] font-medium">
-                            <span className="w-4 h-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[8px] font-bold shrink-0">
-                              {displayName(assignee).slice(0, 2).toUpperCase()}
-                            </span>
-                            <span className="truncate">{displayName(assignee)}</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center rounded-full bg-muted text-muted-foreground px-2 py-0.5 text-[10px]">Unassigned</span>
-                        )}
-                        <span className="ml-auto flex items-center gap-1.5">
-                          {c.unread_count > 0 && (
-                            <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">{c.unread_count}</span>
-                          )}
-                          <span className="w-2 h-2 rounded-full bg-primary/60" title="WhatsApp" />
-                        </span>
-                      </div>
-
                     </div>
                   </div>
-                </button>
-              );
-            })}
+                );
+              })
+            )}
           </div>
-        </aside>
+        </div>
 
-        {/* ============ Chat ============ */}
-        <section className={cn('flex-1 min-w-0 flex flex-col', !showMobileChat && 'hidden md:flex')}>
-          {!selected ? (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm wa-doodle-bg">
-              <div className="text-center"><InboxIcon className="w-12 h-12 mx-auto mb-3 opacity-40" /><p>Select a conversation</p></div>
-            </div>
-          ) : (
+        {/* Right column: Messages view */}
+        <div className={cn("flex-1 flex flex-col min-w-0 bg-background", !showMobileChat && "hidden md:flex")}>
+          {selected ? (
             <>
-              <header className="h-14 shrink-0 px-3 border-b flex items-center gap-2 bg-card">
-                <Button variant="ghost" size="icon" className="md:hidden h-8 w-8" onClick={() => setShowMobileChat(false)}><ArrowLeft className="w-4 h-4" /></Button>
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-fuchsia-500 to-pink-500 flex items-center justify-center text-white text-sm font-bold shrink-0">
-                  {(selected.contact_name || selected.contact_phone)[0]?.toUpperCase()}
+              {/* Chat Header */}
+              <div className="h-14 border-b border-border px-4 flex items-center justify-between shrink-0 bg-card/30">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Button size="icon" variant="ghost" className="md:hidden" onClick={() => setShowMobileChat(false)}>
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                  <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold shrink-0">
+                    {(selected.contact_name || selected.contact_phone).slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm truncate">{selected.contact_name || selected.contact_phone}</p>
+                    <p className="text-[11px] text-muted-foreground truncate">+{selected.contact_phone}</p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <div className="font-semibold text-sm truncate leading-tight">{selected.contact_name || selected.contact_phone}</div>
-                  <div className="text-[11px] text-muted-foreground leading-tight">{selected.contact_phone}</div>
-                </div>
 
-                {/* 24h window ring — live countdown */}
-                <TooltipProvider delayDuration={100}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div
-                        className={cn(
-                          'ml-2 w-8 h-8 shrink-0 rounded-full border-2 flex items-center justify-center text-[10px] font-semibold cursor-default',
-                          windowOpen ? 'border-emerald-500 text-emerald-600' : 'border-muted-foreground/30 text-muted-foreground',
-                        )}
-                      >
-                        {ringText}
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="bg-foreground text-background border-0">
-                      {windowOpen ? (
-                        <div className="space-y-0.5 text-[12px] leading-snug">
-                          <div>24h window expires in {countdownLabel}</div>
-                          <div className="text-emerald-400">You can send any message type while active.</div>
-                        </div>
-                      ) : (
-                        <div className="space-y-0.5 text-[12px] leading-snug">
-                          <div>24h window is closed</div>
-                          <div className="text-amber-400">Send an approved template to reopen it.</div>
-                        </div>
-                      )}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-
-                <div className="ml-auto flex items-center gap-1.5">
-                  {canAssign ? (
-                    <Select value={selected.assigned_to || 'none'} onValueChange={(v) => assign(v === 'none' ? null : v)}>
-                      <SelectTrigger className="h-8 w-[150px] text-xs hidden sm:flex"><User className="w-3 h-3 mr-1" /><SelectValue placeholder="Assign" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Unassigned</SelectItem>
-                        {members.filter(m => m.hasProfile).map(m => <SelectItem key={m.user_id} value={m.user_id}>{displayName(m)}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                <div className="flex items-center gap-2">
+                  {is24hExpired ? (
+                    <Badge variant="destructive" className="text-[10px] uppercase">
+                      24h window closed (Template only)
+                    </Badge>
                   ) : (
-                    <Badge variant="outline" className="h-8 px-3 gap-1 hidden sm:flex">
-                      <User className="w-3 h-3" />{assignedMember ? displayName(assignedMember) : 'Unassigned'}
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] text-emerald-600 border-emerald-500/30 bg-emerald-500/5"
+                    >
+                      24h window active: {hoursRemaining}h {minsRemaining}m
                     </Badge>
                   )}
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button size="icon" variant="ghost" className="h-8 w-8" title="Call this contact">
-                        <PhoneCall className="w-4 h-4 text-emerald-500" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent side="bottom" align="end" className="w-60 p-1.5">
-                      <button
-                        type="button" disabled={calling} onClick={startVoiceCall}
-                        className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm hover:bg-muted disabled:opacity-60"
-                      >
-                        {calling ? <Loader2 className="w-4 h-4 animate-spin" /> : <PhoneCall className="w-4 h-4 text-emerald-500" />}
-                        In-app voice call
-                      </button>
-                      <a href={`https://wa.me/${selected.contact_phone.replace(/[^\d]/g, '')}`} target="_blank" rel="noreferrer"
-                        className="flex items-center gap-2 px-2 py-2 rounded-md text-sm hover:bg-muted">
-                        <PhoneCall className="w-4 h-4 text-emerald-500" /> WhatsApp call
-                      </a>
-                      <a href={`tel:+${selected.contact_phone.replace(/[^\d]/g, '')}`}
-                        className="flex items-center gap-2 px-2 py-2 rounded-md text-sm hover:bg-muted">
-                        <Phone className="w-4 h-4 text-muted-foreground" /> Phone call
-                      </a>
-                    </PopoverContent>
-
-                  </Popover>
-                  <Button size="sm" variant="outline" className="h-8 hidden sm:inline-flex" onClick={toggleStatus}>
-                    {selected.status === 'open' ? 'Resolve' : 'Reopen'}
-                  </Button>
-                  {canAssign && (
-                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setPendingDelete(selected)} title="Delete chat">
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  )}
-                  <Button
-                    size="icon" variant="ghost" className="h-8 w-8 hidden lg:inline-flex"
-                    onClick={() => setPanelOpen(o => !o)}
-                    title={panelOpen ? 'Hide contact panel' : 'Show contact panel'}
-                  >
-                    {panelOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+                  <Button size="sm" variant="outline" onClick={() => setTemplatePickerOpen(true)}>
+                    Send Template
                   </Button>
                 </div>
-              </header>
+              </div>
 
-              {selected.assigned_to && (
-                <div className="px-4 py-1.5 border-b bg-primary/5 text-[11px] text-muted-foreground flex items-center gap-2 shrink-0">
-                  <User className="w-3 h-3" />
-                  Assigned to <span className="font-medium text-foreground">{displayName(assignedMember)}</span>
-                </div>
-              )}
-
-              {selectMode && (
-                <div className="px-3 py-2 border-b bg-card flex items-center gap-2 shrink-0">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setSelectMode(false); setSelectedMsgIds([]); }}>
-                    <X className="w-4 h-4" />
-                  </Button>
-                  <span className="text-sm font-medium">{selectedMsgIds.length} selected</span>
-                  <Button
-                    size="sm" className="ml-auto h-8" disabled={!selectedMsgIds.length}
-                    onClick={() => setForwardOpen(true)}
-                  >
-                    <Forward className="w-4 h-4 mr-1.5" /> Forward
-                  </Button>
-                </div>
-              )}
-
-              <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-1.5 wa-doodle-bg">
-                {messageGroups.map((group, gi) => {
-                  const first = group[0];
-                  const last = group[group.length - 1];
-                  const prevGroup = messageGroups[gi - 1];
-                  const prev = prevGroup?.[prevGroup.length - 1];
-                  const showDay = !prev || new Date(prev.created_at).toDateString() !== new Date(first.created_at).toDateString();
-                  const outbound = first.direction === 'outbound';
-                  const ids = group.map(g => g.id);
-                  const groupSelected = ids.every(id => selectedMsgIds.includes(id));
-                  const toggleGroup = () => setSelectedMsgIds(p =>
-                    groupSelected ? p.filter(id => !ids.includes(id)) : [...p, ...ids.filter(id => !p.includes(id))]);
-
-                  const contactLabel = selected?.contact_name?.trim() || 'there';
-                  const stamp = (
-                    <div className={cn('flex items-center gap-1 mt-1 text-[10px] opacity-70', outbound && 'justify-end')}>
-                      <Clock className="w-2.5 h-2.5" />
-                      {new Date(last.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      <MessageTicks status={last.status} outbound={outbound} />
-                    </div>
-                  );
-
-                  const wrap = (children: React.ReactNode) => (
-                    <div key={first.id}>
-                      {showDay && (
-                        <div className="flex justify-center my-3">
-                          <span className="rounded-lg bg-background/90 border px-3 py-1 text-[11px] uppercase tracking-wide text-muted-foreground shadow-sm">
-                            {dayLabel(first.created_at)}
-                          </span>
-                        </div>
-                      )}
+              {/* Messages Scroll Area */}
+              <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 bg-muted/10">
+                {messages.length === 0 ? (
+                  <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                    No messages yet in this conversation.
+                  </div>
+                ) : (
+                  messages.map((m) => {
+                    const isOut = m.direction === "outbound";
+                    return (
                       <div
-                        className={cn('flex items-center gap-2 group', outbound ? 'justify-end' : 'justify-start')}
-                        onClick={() => { if (selectMode) toggleGroup(); }}
+                        key={m.id}
+                        className={cn(
+                          "flex flex-col max-w-[75%] space-y-1",
+                          isOut ? "ml-auto items-end" : "mr-auto items-start",
+                        )}
                       >
-                        {selectMode && (
-                          <span className={cn(
-                            'h-5 w-5 shrink-0 rounded-full border grid place-items-center order-first',
-                            groupSelected ? 'bg-primary border-primary text-primary-foreground' : 'bg-background',
-                          )}>
-                            {groupSelected && <CheckCircle2 className="w-4 h-4" />}
-                          </span>
-                        )}
-                        {!selectMode && (
-                          <Button
-                            size="icon" variant="ghost"
-                            className={cn('h-7 w-7 opacity-0 group-hover:opacity-100 shrink-0', outbound ? 'order-first' : 'order-last')}
-                            title="Select & forward"
-                            onClick={() => { setSelectMode(true); setSelectedMsgIds(ids); }}
-                          >
-                            <Forward className="w-3.5 h-3.5" />
-                          </Button>
-                        )}
-                        {children}
-                      </div>
-                    </div>
-                  );
-
-                  // ---- WhatsApp-style album (2+ consecutive photos/videos) ----
-                  if (group.length > 1) {
-                    const caption = group.map(g => g.body).find(b => b && b.trim());
-                    return wrap(
-                      <div className={cn(
-                        'max-w-[75%] rounded-2xl p-1.5 text-sm shadow-sm cursor-pointer',
-                        outbound ? 'bg-primary text-primary-foreground rounded-br-md' : 'bg-card border rounded-bl-md',
-                      )}>
-                        <div className={cn('grid gap-0.5 rounded-xl overflow-hidden', group.length === 2 ? 'grid-cols-2' : 'grid-cols-2')}>
-                          {group.slice(0, 4).map((g, idx) => (
-                            <div key={g.id} className={cn(
-                              'relative bg-black/10',
-                              group.length === 3 && idx === 0 && 'col-span-2',
-                            )}>
-                              {g.message_type === 'video'
-                                ? <SecureVideo src={g.media_url!} controls className="h-32 w-full object-cover" />
-                                : <SecureImg src={g.media_url!} alt="" loading="lazy" className="h-32 w-full object-cover" />}
-                              {idx === 3 && group.length > 4 && (
-                                <div className="absolute inset-0 bg-black/60 grid place-items-center text-white text-lg font-semibold">
-                                  +{group.length - 4}
-                                </div>
-                              )}
-                            </div>
-                          ))}
+                        <div
+                          className={cn(
+                            "rounded-2xl px-3.5 py-2 text-sm shadow-sm whitespace-pre-wrap break-words",
+                            isOut
+                              ? "bg-primary text-primary-foreground rounded-br-xs"
+                              : "bg-card border border-border/60 text-card-foreground rounded-bl-xs",
+                          )}
+                        >
+                          {m.body}
                         </div>
-                        {caption && <div className="whitespace-pre-wrap break-words px-1.5 pt-1.5">{caption}</div>}
-                        <div className="px-1.5 pb-0.5">{stamp}</div>
-                      </div>,
-                    );
-                  }
-
-                  // ---- Single message ----
-                  const m = first;
-                  const tpl = m.template_name ? templates.find(t => t.name === m.template_name) : null;
-                  const bodyText = tpl
-                    ? renderTemplateText(tpl.body, contactLabel)
-                    : (m.body && m.body !== m.template_name ? m.body : null);
-
-                  return wrap(
-                    <div className={cn(
-                      'max-w-[75%] rounded-2xl px-3 py-2 text-sm shadow-sm',
-                      selectMode && 'cursor-pointer',
-                      outbound ? 'bg-primary text-primary-foreground rounded-br-md' : 'bg-card border rounded-bl-md',
-                    )}>
-                      {m.template_name && <div className="text-[10px] opacity-70 uppercase mb-1">Template · {m.template_name}</div>}
-                      {tpl?.header_media_url && tpl.header_type === 'image' && (
-                        <SecureImg src={tpl.header_media_url} alt="" loading="lazy" className="rounded-lg mb-1 max-h-52 w-full object-cover" />
-                      )}
-                      {tpl?.header_media_url && tpl.header_type === 'video' && (
-                        <SecureVideo src={tpl.header_media_url} controls className="rounded-lg mb-1 max-h-52 w-full" />
-                      )}
-                      {tpl?.header_type === 'text' && tpl.header && (
-                        <div className="font-semibold mb-0.5">{renderTemplateText(tpl.header, contactLabel)}</div>
-                      )}
-                      {m.media_url && m.message_type === 'image' && (
-                        <SecureImg src={m.media_url} alt="Attachment" loading="lazy" className="rounded-lg mb-1 max-h-60 object-cover" />
-                      )}
-                      {m.media_url && m.message_type === 'sticker' && (
-                        <SecureImg src={m.media_url} alt="Sticker" loading="lazy" className="mb-1 h-28 w-28 object-contain" />
-                      )}
-                      {m.media_url && m.message_type === 'video' && (
-                        <SecureVideo src={m.media_url} controls className="rounded-lg mb-1 max-h-60 w-full" />
-                      )}
-                      {m.media_url && m.message_type === 'audio' && (
-                        <VoiceNote src={m.media_url} outbound={outbound} />
-                      )}
-                      {m.media_url && m.message_type === 'document' && (
-                        <a href={m.media_url} target="_blank" rel="noreferrer" className="flex items-center gap-2 underline mb-1">
-                          <FileText className="w-4 h-4" /> {m.body?.replace(/^\u{1F4C4}\s*/u, '') || 'Document'}
-                        </a>
-                      )}
-                      {m.message_type === 'location' && <div className="flex items-center gap-1 mb-1"><MapPin className="w-4 h-4" /> Location</div>}
-                      {m.message_type !== 'document' && bodyText && (
-                        <div className="whitespace-pre-wrap break-words">{bodyText}</div>
-                      )}
-                      {tpl?.footer && <div className="text-[11px] opacity-70 mt-1">{tpl.footer}</div>}
-                      {stamp}
-                      {m.error && <div className="text-[10px] text-red-500 mt-1">{m.error}</div>}
-                    </div>,
-                  );
-                })}
-              </div>
-
-
-              {!canCompose ? (
-                <div className="border-t p-4 bg-card shrink-0 flex justify-center">
-                  <Button className="px-8" onClick={() => setIntervened(p => ({ ...p, [selected.id]: true }))}>
-                    Intervene
-                  </Button>
-                </div>
-              ) : (
-              <div className="border-t p-3 space-y-2 bg-card shrink-0">
-                {!windowOpen && (
-                  <div className="text-[11px] text-amber-600 bg-amber-500/10 border border-amber-500/30 rounded-md px-2 py-1.5">
-                    24-hour reply window closed. Send an approved template to reopen the conversation.
-                  </div>
-                )}
-                {uploadInfo && (
-                  <div className="rounded-md border bg-muted/40 px-2.5 py-2 space-y-1.5">
-                    <div className="flex items-center gap-2 text-[11px]">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
-                      <span className="truncate flex-1">{uploadInfo.pct < 100 ? 'Uploading' : 'Sending'} {uploadInfo.name}</span>
-                      <span className="tabular-nums text-muted-foreground">{uploadInfo.pct}%</span>
-                    </div>
-                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                      <div className="h-full bg-primary transition-all duration-200" style={{ width: `${uploadInfo.pct}%` }} />
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex gap-2 items-center">
-                  <Button
-                    variant="ghost" size="icon" className="rounded-full shrink-0"
-                    onClick={() => setTemplatePickerOpen(true)} title="Send approved template"
-                  >
-                    <MessageSquareText className="w-4 h-4" />
-                  </Button>
-
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="ghost" size="icon" className="rounded-full shrink-0" disabled={!windowOpen || uploading} title="Attach">
-                        {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent side="top" align="start" className="w-56 p-1.5">
-                      <label className="flex items-center gap-2 px-2 py-2 rounded-md text-sm hover:bg-muted cursor-pointer">
-                        <Images className="w-4 h-4 text-muted-foreground" /> Photos & videos
-                        <input
-                          type="file" multiple accept="image/*,video/*" className="hidden"
-                          onChange={e => {
-                            const fs = Array.from(e.target.files || []);
-                            e.currentTarget.value = '';
-                            if (!fs.length) return;
-                            setAlbumFiles(fs);
-                            setAlbumOpen(true);
-                          }}
-                        />
-                      </label>
-                      {([
-                        { kind: 'document' as const, icon: FileText, label: 'Document', accept: '.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt' },
-                        { kind: 'audio' as const, icon: Mic, label: 'Audio file', accept: 'audio/*' },
-                      ]).map(({ kind, icon: Icon, label, accept }) => (
-                        <label key={kind} className="flex items-center gap-2 px-2 py-2 rounded-md text-sm hover:bg-muted cursor-pointer">
-                          <Icon className="w-4 h-4 text-muted-foreground" /> {label}
-                          <input type="file" className="hidden" accept={accept}
-                            onChange={e => { const f = e.target.files?.[0]; if (f) sendMedia(f, kind); e.currentTarget.value = ''; }} />
-                        </label>
-                      ))}
-
-                      <button type="button" onClick={() => setLocOpen(true)}
-                        className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm hover:bg-muted">
-                        <MapPin className="w-4 h-4 text-muted-foreground" /> Location
-                      </button>
-                    </PopoverContent>
-                  </Popover>
-
-                  <Button
-                    variant={recording ? 'destructive' : 'ghost'} size="icon" className="rounded-full shrink-0"
-                    disabled={!windowOpen || uploading} onClick={toggleRecording}
-                    title={recording ? 'Stop and send voice note' : 'Record voice note'}
-                  >
-                    {recording ? <Square className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                  </Button>
-
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="ghost" size="icon" className="rounded-full shrink-0" disabled={!windowOpen} title="Emoji">
-                        <Smile className="w-4 h-4" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent side="top" align="start" className="w-64 p-2">
-                      <div className="grid grid-cols-8 gap-1 max-h-52 overflow-y-auto">
-                        {EMOJIS.map(e => (
-                          <button key={e} type="button" className="text-xl leading-none p-1 rounded hover:bg-muted"
-                            onClick={() => setDraft(d => d + e)}>{e}</button>
-                        ))}
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground px-1">
+                          <span>
+                            {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                          {isOut && <MessageTicks status={m.status} />}
+                        </div>
                       </div>
-                    </PopoverContent>
-                  </Popover>
+                    );
+                  })
+                )}
+              </div>
 
-                  <QuickReplyManager items={quickReplies.items} save={quickReplies.save} disabled={!windowOpen} onPick={r => setDraft(r.text)} />
-                  <div className="relative flex-1 min-w-0">
-                  {slashQuery(draft) !== null && windowOpen && (
-                    <SlashMenu items={filterReplies(quickReplies.items, slashQuery(draft)!)} active={qrActive} onPick={r => { setDraft(r.text); setQrActive(0); }} />
-                  )}
+              {/* Compose Bar */}
+              <div className="p-3 border-t border-border bg-card/40 shrink-0">
+                <div className="flex items-center gap-2">
                   <Input
+                    placeholder={is24hExpired ? "24h window closed — click 'Send Template' above" : "Type a message..."}
                     value={draft}
-                    onChange={e => { setDraft(e.target.value); setQrActive(0); }}
-                    onKeyDown={e => {
-                      const q = slashQuery(draft);
-                      if (q !== null) {
-                        const list = filterReplies(quickReplies.items, q);
-                        if (e.key === 'ArrowDown') { e.preventDefault(); setQrActive(i => Math.min(i + 1, list.length - 1)); return; }
-                        if (e.key === 'ArrowUp') { e.preventDefault(); setQrActive(i => Math.max(i - 1, 0)); return; }
-                        if ((e.key === 'Enter' || e.key === 'Tab') && list[qrActive]) { e.preventDefault(); setDraft(list[qrActive].text); setQrActive(0); return; }
-                        if (e.key === 'Escape') { setDraft(''); return; }
+                    disabled={is24hExpired || sending}
+                    onChange={(e) => setDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
                       }
-                      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
                     }}
-                    placeholder={recording ? 'Recording… tap stop to send' : windowOpen ? 'Type a message or / for quick replies' : 'Free-form disabled outside 24h window'}
-                    disabled={!windowOpen || sending || recording}
-                    className="rounded-full"
+                    className="flex-1"
                   />
-                  </div>
-                  <Button onClick={send} disabled={!draft.trim() || sending || !windowOpen} size="icon" className="rounded-full shrink-0">
-                    <Send className="w-4 h-4" />
+                  <Button size="icon" disabled={is24hExpired || !draft.trim() || sending} onClick={handleSend}>
+                    {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   </Button>
                 </div>
               </div>
-              )}
             </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-6">
+              <MessageSquareText className="h-12 w-12 stroke-[1.25] text-muted-foreground/40 mb-3" />
+              <p className="font-medium text-sm">Select a conversation to read and reply</p>
+              <p className="text-xs text-muted-foreground/80 mt-1">Realtime updates are connected</p>
+            </div>
           )}
-        </section>
-
-        {/* ============ Contact panel ============ */}
-        {selected && panelOpen && (
-          <aside className="w-[300px] shrink-0 hidden lg:flex flex-col border-l bg-card">
-            <ContactPanel
-              key={selected.id}
-              conversation={selected}
-              assigneeName={assignedMember ? displayName(assignedMember) : null}
-              onClose={() => setPanelOpen(false)}
-              onSaveNotes={saveNotes}
-              onSaveTags={saveTags}
-              labels={labels}
-              onCreateLabel={createLabel}
-            />
-
-          </aside>
-        )}
+        </div>
       </div>
-
-      {/* Multi-photo album composer */}
-      <AlbumComposer
-        open={albumOpen}
-        files={albumFiles}
-        sending={albumSending}
-        progress={albumProgress}
-        onOpenChange={v => { setAlbumOpen(v); if (!v) setAlbumFiles([]); }}
-        onAdd={fs => setAlbumFiles(p => [...p, ...fs])}
-        onRemove={i => setAlbumFiles(p => p.filter((_, idx) => idx !== i))}
-        onSend={sendAlbum}
-      />
-
-      {/* Forward selected messages */}
-      <ForwardDialog
-        open={forwardOpen}
-        onOpenChange={setForwardOpen}
-        targets={convs.map(c => ({ id: c.id, contact_phone: c.contact_phone, contact_name: c.contact_name }))}
-        count={selectedMsgIds.length}
-        sending={forwarding}
-        onForward={forwardMessages}
-      />
-
-
-      {/* Send location */}
-      <Dialog open={locOpen} onOpenChange={setLocOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Send location</DialogTitle>
-            <DialogDescription>Share a pin on the map with this customer.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <FieldLabel className="text-xs">Latitude</FieldLabel>
-                <Input value={locForm.latitude} onChange={e => setLocForm(f => ({ ...f, latitude: e.target.value }))} placeholder="12.9716" />
-              </div>
-              <div>
-                <FieldLabel className="text-xs">Longitude</FieldLabel>
-                <Input value={locForm.longitude} onChange={e => setLocForm(f => ({ ...f, longitude: e.target.value }))} placeholder="77.5946" />
-              </div>
-            </div>
-            <div>
-              <FieldLabel className="text-xs">Place name (optional)</FieldLabel>
-              <Input value={locForm.name} onChange={e => setLocForm(f => ({ ...f, name: e.target.value }))} placeholder="Our store" />
-            </div>
-            <div>
-              <FieldLabel className="text-xs">Address (optional)</FieldLabel>
-              <Input value={locForm.address} onChange={e => setLocForm(f => ({ ...f, address: e.target.value }))} placeholder="MG Road, Bengaluru" />
-            </div>
-            <Button variant="outline" size="sm" onClick={useMyLocation}><MapPin className="w-4 h-4 mr-1" /> Use my current location</Button>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setLocOpen(false)}>Cancel</Button>
-            <Button onClick={sendLocation} disabled={sending}>Send location</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this chat?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Chat with <b>{pendingDelete?.contact_name || pendingDelete?.contact_phone}</b> will be hidden.
-              Message history is preserved and you can undo this action for a few seconds.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete chat</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <NewChatDialog
-        open={newChatOpen}
-        onOpenChange={setNewChatOpen}
-        workspaceId={wsId}
-        onStart={startChat}
-      />
 
       <TemplatePickerSheet
         open={templatePickerOpen}
-        onClose={() => setTemplatePickerOpen(false)}
+        onOpenChange={setTemplatePickerOpen}
         templates={templates}
-        contactName={selected?.contact_name?.trim() || 'there'}
-        onSend={sendTemplate}
-        sending={sending}
+        recipientName={selected?.contact_name || "Customer"}
+        recipientPhone={selected?.contact_phone || ""}
+        onSelectTemplate={handleTemplateSend}
       />
     </AppLayout>
   );
 };
-
-function NewChatDialog({
-  open, onOpenChange, workspaceId, onStart,
-}: {
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
-  workspaceId: string | null;
-  onStart: (phone: string, name?: string | null) => void;
-}) {
-  const [countryCode, setCountryCode] = useState('91|IN');
-  const [phone, setPhone] = useState('');
-  const [name, setName] = useState('');
-  const [q, setQ] = useState('');
-  const [contacts, setContacts] = useState<{ id: string; name: string | null; phone: string }[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!open || !workspaceId) return;
-    setPhone(''); setName(''); setQ('');
-    (async () => {
-      setLoading(true);
-      const { data } = await supabase.from('leads' as any)
-        .select('id, name, phone').eq('workspace_id', workspaceId)
-        .not('phone', 'is', null).order('updated_at', { ascending: false }).limit(200);
-      setContacts((data as any) || []);
-      setLoading(false);
-    })();
-  }, [open, workspaceId]);
-
-  const filtered = contacts.filter(c => {
-    if (!q) return true;
-    const s = q.toLowerCase();
-    return (c.name || '').toLowerCase().includes(s) || (c.phone || '').includes(s);
-  });
-
-  const submitNew = () => {
-    const clean = phone.replace(/[^\d]/g, '');
-    const cc = countryCode.split('|')[0].replace(/[^\d]/g, '');
-    if (!clean) return toast.error('Enter a phone number');
-    onStart(`${cc}${clean}`, name || null);
-  };
-
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-2rem)] max-w-md p-0 gap-0 max-h-[90vh] flex flex-col overflow-hidden">
-        <DialogHeader className="p-4 sm:p-5 pb-3 border-b shrink-0 text-left">
-          <DialogTitle className="text-base sm:text-lg">Start new chat</DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm">Pick a contact or enter a new WhatsApp number.</DialogDescription>
-        </DialogHeader>
-
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
-          <div className="space-y-2">
-            <div className="text-xs font-medium text-muted-foreground">New number</div>
-            <div className="flex gap-2">
-              <Select value={countryCode} onValueChange={setCountryCode}>
-                <SelectTrigger className="w-[110px] shrink-0">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="max-h-64">
-                  {COUNTRY_CODES.map(c => (
-                    <SelectItem key={c.code} value={c.dial + '|' + c.code}>
-                      <span className="mr-1">{c.flag}</span>+{c.dial}
-                      <span className="ml-2 text-xs text-muted-foreground">{c.name}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input
-                value={phone}
-                onChange={e => setPhone(e.target.value.replace(/[^\d]/g, ''))}
-                placeholder="Phone number"
-                className="flex-1 min-w-0"
-                inputMode="numeric"
-              />
-            </div>
-
-            <Input value={name} onChange={e => setName(e.target.value)} placeholder="Contact name (optional)" />
-            <Button onClick={submitNew} className="w-full" disabled={!phone.trim()}>Start chat</Button>
-          </div>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-            <div className="relative flex justify-center text-[11px] uppercase">
-              <span className="bg-background px-2 text-muted-foreground">Or choose contact</span>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Search contacts" className="pl-8 h-9" />
-            </div>
-            <div className="max-h-[40vh] sm:max-h-64 overflow-y-auto border rounded-md divide-y">
-              {loading && <div className="p-4 text-center text-xs text-muted-foreground">Loading…</div>}
-              {!loading && filtered.length === 0 && (
-                <div className="p-4 text-center text-xs text-muted-foreground">No contacts found</div>
-              )}
-              {filtered.map(c => (
-                <button
-                  key={c.id}
-                  onClick={() => onStart(c.phone, c.name)}
-                  className="w-full text-left p-2.5 hover:bg-muted/50 flex items-center gap-2"
-                >
-                  <div className="w-7 h-7 shrink-0 rounded-full bg-gradient-to-br from-fuchsia-500 to-pink-500 flex items-center justify-center text-white text-[11px] font-bold">
-                    {(c.name || c.phone)[0]?.toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{c.name || c.phone}</div>
-                    <div className="text-[11px] text-muted-foreground truncate">{c.phone}</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <DialogFooter className="p-3 sm:p-4 border-t shrink-0 flex-row justify-end">
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">Close</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function ContactPanel({
-  conversation, assigneeName, onClose, onSaveNotes, onSaveTags, labels, onCreateLabel,
-}: {
-  conversation: Conversation;
-  assigneeName: string | null;
-  onClose: () => void;
-  onSaveNotes: (v: string) => void | Promise<void>;
-  onSaveTags: (v: string[]) => void | Promise<void>;
-  labels: Label[];
-  onCreateLabel: (name: string) => void | Promise<void>;
-}) {
-
-  const [view, setView] = useState<'info' | 'notes'>('info');
-  const [notes, setNotes] = useState(conversation.notes || '');
-  const [tags, setTags] = useState<string[]>(conversation.tags || []);
-  const [tagDraft, setTagDraft] = useState('');
-  const notesDirty = useRef(false);
-
-  useEffect(() => {
-    setNotes(conversation.notes || '');
-    setTags(conversation.tags || []);
-    notesDirty.current = false;
-  }, [conversation.id]);
-
-  useEffect(() => {
-    if (!notesDirty.current) return;
-    const t = setTimeout(() => { onSaveNotes(notes); notesDirty.current = false; }, 700);
-    return () => clearTimeout(t);
-  }, [notes]);
-
-  const applyLabel = (name: string) => {
-    if (tags.includes(name)) return;
-    const next = [...tags, name];
-    setTags(next); onSaveTags(next);
-  };
-  const addTag = () => {
-    const v = tagDraft.trim();
-    if (!v || tags.includes(v)) { setTagDraft(''); return; }
-    const next = [...tags, v];
-    setTags(next); setTagDraft('');
-    onSaveTags(next);
-    onCreateLabel(v);
-  };
-  const removeTag = (t: string) => {
-    const next = tags.filter(x => x !== t);
-    setTags(next); onSaveTags(next);
-  };
-
-
-  return (
-    <div className="flex flex-col h-full">
-      <div className="h-14 shrink-0 border-b flex items-center gap-1 px-2">
-        {(['info', 'notes'] as const).map(v => (
-          <button
-            key={v}
-            onClick={() => setView(v)}
-            className={cn(
-              'flex-1 h-full text-xs font-medium border-b-2 transition-colors',
-              view === v ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
-            )}
-          >
-            {v === 'info' ? 'User Info' : 'Notes'}
-          </button>
-        ))}
-        <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={onClose} title="Collapse panel">
-          <PanelRightClose className="w-4 h-4" />
-        </Button>
-      </div>
-
-      {view === 'info' ? (
-        <div className="p-4 space-y-4 overflow-y-auto flex-1 text-sm">
-          <div>
-            <div className="text-[11px] text-muted-foreground mb-0.5">Name</div>
-            <div className="font-medium">{conversation.contact_name || '—'}</div>
-          </div>
-          <div>
-            <div className="text-[11px] text-muted-foreground mb-0.5">Phone</div>
-            <div className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-emerald-500" />{conversation.contact_phone}</div>
-          </div>
-          <div>
-            <div className="text-[11px] text-muted-foreground mb-0.5">Status</div>
-            <Badge variant={conversation.status === 'open' ? 'default' : 'secondary'} className="capitalize">{conversation.status}</Badge>
-          </div>
-          <div>
-            <div className="text-[11px] text-muted-foreground mb-0.5">Contact owner</div>
-            <div className="flex items-center gap-1.5"><User className="w-3.5 h-3.5 text-muted-foreground" />{assigneeName || '—'}</div>
-          </div>
-          <div>
-            <div className="text-[11px] text-muted-foreground mb-0.5">24h window</div>
-            <div>{conversation.window_expires_at && new Date(conversation.window_expires_at) > new Date()
-              ? `Active until ${new Date(conversation.window_expires_at).toLocaleString()}`
-              : 'Closed — template required'}</div>
-          </div>
-          <div className="pt-2 border-t">
-            <div className="text-xs font-medium mb-1.5 flex items-center gap-1.5"><Tag className="w-3 h-3" /> Tags</div>
-            <div className="flex flex-wrap gap-1.5">
-              {tags.length === 0 && <span className="text-[11px] text-muted-foreground">No tags yet</span>}
-              {tags.map(t => <Badge key={t} variant="secondary">{t}</Badge>)}
-            </div>
-          </div>
-          <ConversationRecords
-            workspaceId={(conversation as any).workspace_id}
-            conversationId={conversation.id}
-            contactPhone={conversation.contact_phone}
-            contactName={conversation.contact_name}
-          />
-        </div>
-      ) : (
-      <div className="p-3 space-y-4 overflow-y-auto flex-1">
-
-        <div>
-          <div className="text-xs font-medium mb-1.5 flex items-center gap-1.5">
-            <Tag className="w-3 h-3" /> Labels
-          </div>
-          <div className="flex flex-wrap gap-1.5 mb-2">
-            {tags.length === 0 && <span className="text-[11px] text-muted-foreground">No labels yet</span>}
-            {tags.map(t => (
-              <Badge key={t} variant="secondary" className="gap-1 pr-1"
-                style={labels.find(l => l.name === t) ? { backgroundColor: `${labels.find(l => l.name === t)!.color}22`, color: labels.find(l => l.name === t)!.color } : undefined}>
-                {t}
-                <button onClick={() => removeTag(t)} className="hover:text-destructive"><X className="w-3 h-3" /></button>
-              </Badge>
-            ))}
-          </div>
-          {labels.filter(l => !tags.includes(l.name)).length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {labels.filter(l => !tags.includes(l.name)).map(l => (
-                <button key={l.id} onClick={() => applyLabel(l.name)}
-                  className="text-[11px] px-2 py-0.5 rounded-full border hover:bg-muted transition-colors"
-                  style={{ borderColor: `${l.color}66`, color: l.color }}>
-                  + {l.name}
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="flex gap-1.5">
-            <Input
-              value={tagDraft}
-              onChange={e => setTagDraft(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
-              placeholder="New label (e.g. VIP, hot-lead)"
-              className="h-8 text-xs"
-            />
-            <Button size="sm" variant="outline" className="h-8" onClick={addTag}>Add</Button>
-          </div>
-          <p className="text-[10px] text-muted-foreground mt-1">New labels are saved to your workspace so you can reuse and filter by them.</p>
-        </div>
-
-        <div>
-          <div className="text-xs font-medium mb-1.5">Notes</div>
-          <Textarea
-            value={notes}
-            onChange={e => { setNotes(e.target.value); notesDirty.current = true; }}
-            placeholder="Write anything about this lead — preferences, follow-ups, quoted price…"
-            className="text-sm min-h-[220px] resize-none"
-          />
-          <div className="text-[10px] text-muted-foreground mt-1">Auto-saves as you type</div>
-        </div>
-      </div>
-      )}
-    </div>
-
-  );
-}
 
 export default Inbox;
