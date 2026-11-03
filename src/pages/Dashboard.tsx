@@ -248,9 +248,11 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!user) return;
+    let isMounted = true;
     (async () => {
       setLoading(true);
       const id = await resolveWorkspaceId(user.id, profile);
+      if (!isMounted) return;
       if (!id) {
         setLoading(false);
         return;
@@ -258,7 +260,10 @@ const Dashboard = () => {
       setWsId(id);
       await loadStats(id);
     })();
-  }, [user]);
+    return () => {
+      isMounted = false;
+    };
+  }, [user, profile]);
 
   // Realtime: auto-refresh the tiles when data changes
   const visible = usePageVisible();
@@ -399,17 +404,6 @@ const Dashboard = () => {
             )}
           </div>
         </section>
-
-        <SetupProgressCard
-          wsId={wsId}
-          checks={{
-            whatsapp: stats.waConnected,
-            contacts: stats.leadsTotal > 0,
-            template: stats.templatesApproved > 0,
-            campaign: stats.campaignsMonth > 0 || stats.messagesSent > 0,
-            automation: stats.automationsActive > 0 || stats.botsActive > 0,
-          }}
-        />
       </div>
     </AppLayout>
   );
