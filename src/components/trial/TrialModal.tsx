@@ -33,11 +33,9 @@ const TrialModal = () => {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    // Inside src/components/trial/TrialModal.tsx
-    if (!user || !profile) return null;
-    // Prevent TrialModal from opening and trapping focus while onboarding is active:
-    if (!(profile as any)?.onboarding_completed) return null;
-    if (!isTrialing && !isExpired) return null;
+    if (!user || !profile) return;
+    if (!(profile as any)?.onboarding_completed) return;
+    if (!isTrialing && !isExpired) return;
 
     const stamp = isExpired ? "expired" : endsAt?.toISOString().slice(0, 10) || "active";
     if (localStorage.getItem(dismissKey(user.id, stamp))) return;
