@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "react";
+const Onboarding = lazy(() => import("@/pages/Onboarding"));
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import InstallPrompt from "@/components/pwa/InstallPrompt";
@@ -46,11 +47,9 @@ const AutoReplies = lazy(() => import("./pages/AutoReplies"));
 const Chatbots = lazy(() => import("./pages/Chatbots"));
 const ChatbotDetail = lazy(() => import("./pages/ChatbotDetail"));
 
-
-
-
-
-const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 60_000, refetchOnWindowFocus: false, retry: 1 } } });
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 60_000, refetchOnWindowFocus: false, retry: 1 } },
+});
 
 const PageLoader = () => (
   <div className="min-h-screen bg-background flex items-center justify-center">
@@ -68,7 +67,14 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
   if (!user) return <Navigate to="/auth" replace />;
-  return (<><OnboardingGate /><TrialExpiredModal /><TrialModal />{children}</>);
+  return (
+    <>
+      <OnboardingGate />
+      <TrialExpiredModal />
+      <TrialModal />
+      {children}
+    </>
+  );
 };
 
 const App = () => (
@@ -82,65 +88,255 @@ const App = () => (
             <InstallPrompt />
             <BrowserRouter>
               <Suspense fallback={<PageLoader />}>
-              <Routes>
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/onboarding" element={<Navigate to="/" replace />} />
-                <Route path="/whatsapp/callback" element={<WhatsAppCallback />} />
-                <Route path="/pricing" element={<Pricing />} />
-                <Route path="/privacy" element={<Privacy />} />
-                <Route path="/terms" element={<Terms />} />
-                <Route path="/admin-login" element={<AdminLogin />} />
-                <Route path="/admin" element={<AdminDashboard />} />
+                <Routes>
+                  <Route path="/auth" element={<Auth />} />
+                  <Route
+                    path="/onboarding"
+                    element={
+                      <ProtectedRoute>
+                        <Onboarding />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route path="/whatsapp/callback" element={<WhatsAppCallback />} />
+                  <Route path="/pricing" element={<Pricing />} />
+                  <Route path="/privacy" element={<Privacy />} />
+                  <Route path="/terms" element={<Terms />} />
+                  <Route path="/admin-login" element={<AdminLogin />} />
+                  <Route path="/admin" element={<AdminDashboard />} />
 
-                <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
-                <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
-                <Route path="/services" element={<ProtectedRoute><Services /></ProtectedRoute>} />
-                <Route path="/bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
-                <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
-                <Route path="/campaigns/:id" element={<ProtectedRoute><CampaignDetail /></ProtectedRoute>} />
-                <Route path="/automation" element={<ProtectedRoute><Automations /></ProtectedRoute>} />
-                <Route path="/auto-replies" element={<ProtectedRoute><AutoReplies /></ProtectedRoute>} />
-                <Route path="/chatbots" element={<ProtectedRoute><Chatbots /></ProtectedRoute>} />
-                <Route path="/chatbots/:id" element={<ProtectedRoute><ChatbotDetail /></ProtectedRoute>} />
+                  <Route
+                    path="/"
+                    element={
+                      <ProtectedRoute>
+                        <Dashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/inbox"
+                    element={
+                      <ProtectedRoute>
+                        <Inbox />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/leads"
+                    element={
+                      <ProtectedRoute>
+                        <Leads />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/services"
+                    element={
+                      <ProtectedRoute>
+                        <Services />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/bookings"
+                    element={
+                      <ProtectedRoute>
+                        <Bookings />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/campaigns"
+                    element={
+                      <ProtectedRoute>
+                        <Campaigns />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/campaigns/:id"
+                    element={
+                      <ProtectedRoute>
+                        <CampaignDetail />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/automation"
+                    element={
+                      <ProtectedRoute>
+                        <Automations />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/auto-replies"
+                    element={
+                      <ProtectedRoute>
+                        <AutoReplies />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/chatbots"
+                    element={
+                      <ProtectedRoute>
+                        <Chatbots />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/chatbots/:id"
+                    element={
+                      <ProtectedRoute>
+                        <ChatbotDetail />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route path="/scraper" element={<ProtectedRoute><ComingSoonModule title="Lead Scraper" description="Google Maps / GMB lead scraper with location, keyword and 'website missing' filters — shipping in step 2h." /></ProtectedRoute>} />
-                <Route path="/templates" element={<ProtectedRoute><Templates /></ProtectedRoute>} />
-                <Route path="/flows" element={<ProtectedRoute><Flows /></ProtectedRoute>} />
-                <Route path="/settings/api" element={<ProtectedRoute><ApiSettings /></ProtectedRoute>} />
-                <Route path="/integrations" element={<ProtectedRoute><Integrations /></ProtectedRoute>} />
-                <Route path="/integrations/webhooks/:id" element={<ProtectedRoute><WebhookDetail /></ProtectedRoute>} />
+                  <Route
+                    path="/scraper"
+                    element={
+                      <ProtectedRoute>
+                        <ComingSoonModule
+                          title="Lead Scraper"
+                          description="Google Maps / GMB lead scraper with location, keyword and 'website missing' filters — shipping in step 2h."
+                        />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/templates"
+                    element={
+                      <ProtectedRoute>
+                        <Templates />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/flows"
+                    element={
+                      <ProtectedRoute>
+                        <Flows />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/settings/api"
+                    element={
+                      <ProtectedRoute>
+                        <ApiSettings />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/integrations"
+                    element={
+                      <ProtectedRoute>
+                        <Integrations />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/integrations/webhooks/:id"
+                    element={
+                      <ProtectedRoute>
+                        <WebhookDetail />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route path="/templates/new" element={<ProtectedRoute><TemplateEditor /></ProtectedRoute>} />
-                <Route path="/templates/:id" element={<ProtectedRoute><TemplateEditor /></ProtectedRoute>} />
+                  <Route
+                    path="/templates/new"
+                    element={
+                      <ProtectedRoute>
+                        <TemplateEditor />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/templates/:id"
+                    element={
+                      <ProtectedRoute>
+                        <TemplateEditor />
+                      </ProtectedRoute>
+                    }
+                  />
 
+                  <Route
+                    path="/analytics"
+                    element={
+                      <ProtectedRoute>
+                        <Analytics />
+                      </ProtectedRoute>
+                    }
+                  />
 
+                  <Route
+                    path="/accounting"
+                    element={
+                      <ProtectedRoute>
+                        <Accounting />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/whatsapp-settings"
+                    element={
+                      <ProtectedRoute>
+                        <WhatsAppSettings />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+                  <Route
+                    path="/profile"
+                    element={
+                      <ProtectedRoute>
+                        <Profile />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/shop-info"
+                    element={
+                      <ProtectedRoute>
+                        <ShopInfo />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/guide"
+                    element={
+                      <ProtectedRoute>
+                        <Guide />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/team"
+                    element={
+                      <ProtectedRoute>
+                        <TeamManagement />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route path="/roles" element={<Navigate to="/team" replace />} />
+                  <Route path="/audit" element={<Navigate to="/profile" replace />} />
 
-                <Route path="/accounting" element={<ProtectedRoute><Accounting /></ProtectedRoute>} />
-                <Route path="/whatsapp-settings" element={<ProtectedRoute><WhatsAppSettings /></ProtectedRoute>} />
+                  {/* Legacy redirects */}
+                  <Route path="/messages" element={<Navigate to="/inbox" replace />} />
 
-                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                <Route path="/shop-info" element={<ProtectedRoute><ShopInfo /></ProtectedRoute>} />
-                <Route path="/guide" element={<ProtectedRoute><Guide /></ProtectedRoute>} />
-                <Route path="/team" element={<ProtectedRoute><TeamManagement /></ProtectedRoute>} />
-                <Route path="/roles" element={<Navigate to="/team" replace />} />
-                <Route path="/audit" element={<Navigate to="/profile" replace />} />
+                  <Route path="/customers" element={<Navigate to="/leads" replace />} />
 
-                {/* Legacy redirects */}
-                <Route path="/messages" element={<Navigate to="/inbox" replace />} />
-                
-                <Route path="/customers" element={<Navigate to="/leads" replace />} />
-                
-                <Route path="/payments" element={<Navigate to="/accounting" replace />} />
-                <Route path="/sheets" element={<Navigate to="/leads" replace />} />
-                <Route path="/flow-editor" element={<Navigate to="/flows" replace />} />
-                <Route path="/razorpay" element={<Navigate to="/whatsapp-settings" replace />} />
-                <Route path="/billing" element={<Navigate to="/pricing" replace />} />
+                  <Route path="/payments" element={<Navigate to="/accounting" replace />} />
+                  <Route path="/sheets" element={<Navigate to="/leads" replace />} />
+                  <Route path="/flow-editor" element={<Navigate to="/flows" replace />} />
+                  <Route path="/razorpay" element={<Navigate to="/whatsapp-settings" replace />} />
+                  <Route path="/billing" element={<Navigate to="/pricing" replace />} />
 
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
               </Suspense>
             </BrowserRouter>
           </TooltipProvider>
