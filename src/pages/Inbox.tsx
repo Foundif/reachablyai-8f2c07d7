@@ -74,6 +74,7 @@ import VoiceNote from "@/components/inbox/VoiceNote";
 import MessageTicks from "@/components/inbox/MessageTicks";
 import AlbumComposer from "@/components/inbox/AlbumComposer";
 import ForwardDialog from "@/components/inbox/ForwardDialog";
+import { playAlert } from '@/lib/sound';
 import TemplatePickerSheet, { renderTemplateText, type TemplateOption } from "@/components/inbox/TemplatePickerSheet";
 import ConversationRecords from "@/components/inbox/ConversationRecords";
 import {
@@ -197,6 +198,15 @@ const Inbox = () => {
   const [selectedMsgIds, setSelectedMsgIds] = useState<string[]>([]);
   const [forwardOpen, setForwardOpen] = useState(false);
   const [forwarding, setForwarding] = useState(false);
+
+  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'wa_messages', filter: `workspace_id=eq.${wsId}` }, (payload: any) => {
+  if (payload.new.direction === 'inbound') {
+    playAlert();
+  }
+  if (payload.new.conversation_id === selectedRef.current) {
+    setMessages(prev => prev.some(m => m.id === payload.new.id) ? prev : [...prev, payload.new]);
+  }
+})
 
   // Wati Astra voice calling
   const [calling, setCalling] = useState(false);
