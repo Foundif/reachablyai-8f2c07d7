@@ -286,14 +286,7 @@ const Inbox = () => {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "wa_messages", filter: `workspace_id=eq.${wsId}` },
         (payload: any) => {
-          // Sound alert for every new inbound message
-          if (payload.new.direction === "inbound") {
-            try {
-              playAlert();
-            } catch {
-              /* ignore audio errors (e.g. autoplay blocked) */
-            }
-          }
+          // Sound is played once globally (useGlobalAlerts) — not here.
           if (payload.new.conversation_id === selectedRef.current) {
             setMessages((prev) => (prev.some((m) => m.id === payload.new.id) ? prev : [...prev, payload.new]));
           }
