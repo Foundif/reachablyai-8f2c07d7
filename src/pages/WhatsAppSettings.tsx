@@ -1,3 +1,4 @@
+import { friendlyWaError } from "@/lib/waErrors";
 import { useEffect, useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Card } from "@/components/ui/card";
@@ -786,7 +787,7 @@ const DebugPanel = ({ workspaceId, phoneNumberId }: { workspaceId: string; phone
                   <div className="mt-1">{e.summary}</div>
                   {e.error && (
                     <div className="mt-1 text-xs text-red-600 bg-red-500/10 rounded px-2 py-1">
-                      <b>Reason:</b> {e.error}
+                      <b>Reason:</b> {friendlyWaError(e.error)}
                     </div>
                   )}
                   <button
