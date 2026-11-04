@@ -46,8 +46,7 @@ import ShopifyRecipes from "@/components/integrations/ShopifyRecipes";
 import { LeadFieldMapping } from "@/components/integrations/LeadFieldMapping";
 import webhookIcon from "@/assets/webhook-icon.png";
 
-const razorpayLogo =
-  "https://brandfetch.com/razorpay.com?view=library&library=default&collection=logos&asset=idflmBZxmp&utm_source=https%253A%252F%252Fbrandfetch.com%252Frazorpay.com&utm_medium=copyAction&utm_campaign=brandPageReferral";
+const razorpayLogo = "https://cdn.brandfetch.io/idHc4m3b7C/w/400/h/400/theme/dark/icon.jpeg?c=1dxbfHSJFAPEGdCLU4o5B";
 
 const shiprocketLogo =
   "https://reachably.foundif.com/__l5e/assets-v1/2a02e7e5-5348-4642-9962-a267ff19bea3/shiprocket.png";
