@@ -120,6 +120,6 @@ export async function aiRepliesUsed(admin: any, workspaceId: string): Promise<nu
     .select("id", { count: "exact", head: true })
     .eq("workspace_id", workspaceId)
     .eq("rule_kind", "ai")
-    .gte("created_at", start.toISOString());
+    .gte("sent_at", start.toISOString());
   return count || 0;
 }

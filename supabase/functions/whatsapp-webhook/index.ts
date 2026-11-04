@@ -2,7 +2,30 @@ import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { extractFlowResponse, flowSummary, handleFlowSubmission } from '../_shared/flowIntake.ts';
 import { buildTemplatePayload } from '../_shared/templatePayload.ts';
-import { hasActiveSubscription } from '../_shared/plans.ts';
+import { hasActiveSubscription, aiReplyCreditsFor, aiRepliesUsed } from '../_shared/plans.ts';
+
+// Generates a short WhatsApp reply with Lovable AI (cheap, fast model to save credits).
+async function generateAiReply(admin: any, workspace_id: string, convId: string, instructions: string): Promise<string> {
+  const key = Deno.env.get('LOVABLE_API_KEY');
+  if (!key) return '';
+  const { data: hist } = await admin.from('wa_messages').select('direction, body')
+    .eq('conversation_id', convId).order('created_at', { ascending: false }).limit(8);
+  const messages = ((hist || []) as any[]).reverse().filter((m) => m.body)
+    .map((m) => ({ role: m.direction === 'inbound' ? 'user' : 'assistant', content: String(m.body).slice(0, 800) }));
+  const { data: ws } = await admin.from('workspaces').select('name').eq('id', workspace_id).maybeSingle();
+  const system = `You are the friendly WhatsApp assistant for ${ws?.name || 'this business'}. Reply in the customer's language, in under 60 words, plain text. If you don't know something, say a team member will reply shortly. Never invent prices or policies.\n\nBusiness info:\n${(instructions || '').slice(0, 3000)}`;
+  const resp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+    body: JSON.stringify({ model: 'google/gemini-3.1-flash-lite', messages: [{ role: 'system', content: system }, ...messages] }),
+  });
+  if (!resp.ok) {
+    await admin.from('wa_webhook_events').insert({ workspace_id, event_type: 'auto_reply', status: 'error', summary: 'AI reply failed', error: `AI ${resp.status}: ${(await resp.text()).slice(0, 300)}` });
+    return '';
+  }
+  const data = await resp.json();
+  return String(data?.choices?.[0]?.message?.content || '').trim();
+}
 
 // Sends an approved template (e.g. the booking form template carrying the Flow button)
 // as the reply to a keyword such as "hi" or "help".
@@ -453,6 +476,18 @@ Deno.serve(async (req) => {
                   if (!repliedThisTurn && settings.away_enabled && !withinHours) {
                     if (!(await alreadySentRecently(admin, workspace_id, from, 'away', 24))) {
                       await sendAutoReply(admin, creds, workspace_id, convId, from, settings.away_message, 'away', null);
+                    }
+                  }
+
+                  // 3) AI reply (Lovable AI), limited by monthly plan credits; skipped when an agent is handling the chat
+                  if (!repliedThisTurn && settings.ai_reply_enabled && bodyText) {
+                    const { data: conv } = await admin.from('wa_conversations').select('assigned_to').eq('id', convId).maybeSingle();
+                    const { data: wsRow } = await admin.from('workspaces').select('plan_id').eq('id', workspace_id).maybeSingle();
+                    const limit = aiReplyCreditsFor(wsRow?.plan_id);
+                    const used = await aiRepliesUsed(admin, workspace_id);
+                    if (!conv?.assigned_to && used < limit) {
+                      const reply = await generateAiReply(admin, workspace_id, convId, settings.ai_reply_instructions || '');
+                      if (reply) await sendAutoReply(admin, creds, workspace_id, convId, from, reply, 'ai', null);
                     }
                   }
                 }
