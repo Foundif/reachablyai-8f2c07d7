@@ -47,7 +47,7 @@ import { LeadFieldMapping } from "@/components/integrations/LeadFieldMapping";
 import webhookIcon from "@/assets/webhook-icon.png";
 
 const razorpayLogo =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath fill='%2302042B' d='M0 0h48v48H0z'/%3E%3Cpath fill='%230C2340' d='M22.5 9h8.2L19.8 39h-8.2z'/%3E%3Cpath fill='%233395FF' d='M26.4 9l-4.5 13.5h7.2L24.8 39l11.9-20.8h-7.8L32.2 9z'/%3E%3C/svg%3E";
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath fill='%230C2451' d='M0 0h48v48H0z'/%3E%3Cpath fill='%233395FF' d='M29.5 8H39L25.5 40h-9L29.5 8z'/%3E%3Cpath fill='%230C2451' d='M18.5 8H28L14.5 40H5.5L18.5 8z'/%3E%3C/svg%3E";
 
 const shiprocketLogo =
   "https://reachably.foundif.com/__l5e/assets-v1/2a02e7e5-5348-4642-9962-a267ff19bea3/shiprocket.png";
@@ -368,10 +368,17 @@ const Integrations = () => {
           const id = await resolveWorkspaceId(userId, { active_workspace_id: activeWorkspaceId });
           if (!id) throw new Error("No workspace is available. Please sign in again or finish workspace setup.");
           const [integrations, webhooks] = await Promise.all([
-            supabase.from("integrations" as any).select("*").eq("workspace_id", id).abortSignal(controller.signal),
-            supabase.from("webhook_endpoints" as any)
+            supabase
+              .from("integrations" as any)
+              .select("*")
+              .eq("workspace_id", id)
+              .abortSignal(controller.signal),
+            supabase
+              .from("webhook_endpoints" as any)
               .select("id,name,token,active,last_received_at,template_id")
-              .eq("workspace_id", id).order("created_at", { ascending: false }).abortSignal(controller.signal),
+              .eq("workspace_id", id)
+              .order("created_at", { ascending: false })
+              .abortSignal(controller.signal),
           ]);
           if (integrations.error) throw new Error(integrations.error.message);
           if (webhooks.error) throw new Error(webhooks.error.message);
@@ -401,7 +408,9 @@ const Integrations = () => {
   }, [userId, activeWorkspaceId]);
   useEffect(() => {
     void load();
-    return () => { ++loadRequest.current; };
+    return () => {
+      ++loadRequest.current;
+    };
   }, [load]);
 
   const connected = useMemo(() => new Map(rows.map((r) => [r.provider, r])), [rows]);
@@ -496,7 +505,10 @@ const Integrations = () => {
           <div role="alert" className="space-y-3 py-8">
             <p className="font-medium">Could not load integrations</p>
             <p className="text-sm text-muted-foreground">{loadError}</p>
-            <Button variant="outline" onClick={() => void load()}><RefreshCw className="w-4 h-4" />Try again</Button>
+            <Button variant="outline" onClick={() => void load()}>
+              <RefreshCw className="w-4 h-4" />
+              Try again
+            </Button>
           </div>
         ) : (
           <>
@@ -637,7 +649,11 @@ const Integrations = () => {
               <h2 className="text-lg font-semibold">Available Integrations</h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {PROVIDERS.map((p) => (
-                  <Card key={p.id} className={`p-4 space-y-3 ${p.comingSoon ? "opacity-60 cursor-not-allowed" : "hover-lift cursor-pointer"}`} onClick={() => !p.comingSoon && setDetail(p)}>
+                  <Card
+                    key={p.id}
+                    className={`p-4 space-y-3 ${p.comingSoon ? "opacity-60 cursor-not-allowed" : "hover-lift cursor-pointer"}`}
+                    onClick={() => !p.comingSoon && setDetail(p)}
+                  >
                     <div className="flex items-center gap-2">
                       <Logo provider={p} />
                       {p.comingSoon && <Badge variant="secondary">Coming soon</Badge>}
@@ -790,12 +806,12 @@ const Integrations = () => {
                       const integration = connected.get("meta_lead_ads");
                       if (!integration) return null;
                       return (
-                      <LeadFieldMapping
-                        key={integration.id}
-                        integrationId={integration.id}
-                        settings={integration.settings || {}}
-                        onSaved={load}
-                      />
+                        <LeadFieldMapping
+                          key={integration.id}
+                          integrationId={integration.id}
+                          settings={integration.settings || {}}
+                          onSaved={load}
+                        />
                       );
                     })()}
                     <div className="border-t pt-3 space-y-2">
@@ -817,7 +833,12 @@ const Integrations = () => {
                 {detail.id === "shopify" && (
                   <div className="pt-2 border-t space-y-3">
                     <ShopifyRecipes workspaceId={wsId} userId={user?.id} />
-                    <details className="text-sm"><summary className="cursor-pointer text-muted-foreground text-xs">Advanced: customer trust scoring</summary><ShopifyRiskMapping workspaceId={wsId} /></details>
+                    <details className="text-sm">
+                      <summary className="cursor-pointer text-muted-foreground text-xs">
+                        Advanced: customer trust scoring
+                      </summary>
+                      <ShopifyRiskMapping workspaceId={wsId} />
+                    </details>
                   </div>
                 )}
               </div>
