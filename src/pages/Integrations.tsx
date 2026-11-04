@@ -47,7 +47,7 @@ import { LeadFieldMapping } from "@/components/integrations/LeadFieldMapping";
 import webhookIcon from "@/assets/webhook-icon.png";
 
 const razorpayLogo =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath fill='%230C2451' d='M0 0h48v48H0z'/%3E%3Cpath fill='%233395FF' d='M29.5 8H39L25.5 40h-9L29.5 8z'/%3E%3Cpath fill='%230C2451' d='M18.5 8H28L14.5 40H5.5L18.5 8z'/%3E%3C/svg%3E";
+  "https://brandfetch.com/razorpay.com?view=library&library=default&collection=logos&asset=idflmBZxmp&utm_source=https%253A%252F%252Fbrandfetch.com%252Frazorpay.com&utm_medium=copyAction&utm_campaign=brandPageReferral";
 
 const shiprocketLogo =
   "https://reachably.foundif.com/__l5e/assets-v1/2a02e7e5-5348-4642-9962-a267ff19bea3/shiprocket.png";
