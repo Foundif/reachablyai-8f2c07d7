@@ -1,5 +1,6 @@
 import { ChangeEvent, ReactNode, useEffect, useRef, useState } from 'react';
 import { Building2, Camera, Loader2, Plus, RefreshCw, Save, Trash2 } from 'lucide-react';
+import { invokeErrorMessage } from '@/lib/waErrors';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -51,7 +52,7 @@ const WhatsAppBusinessProfile = ({ workspaceId, credentialId, connected, fallbac
     setLoading(true);
     const { data, error } = await supabase.functions.invoke('whatsapp-profile', { body: { action: 'get', workspace_id: workspaceId, credential_id: credentialId } });
     setLoading(false);
-    if (error || (data as any)?.error) return toast.error((data as any)?.error || error?.message || 'Could not load business profile');
+    if (error || (data as any)?.error) return toast.error(await invokeErrorMessage(error, data));
     const remote = (data as any)?.profile || {};
     setProfile({ ...EMPTY_PROFILE, ...remote, websites: remote.websites?.length ? remote.websites.slice(0, 2) : [''] });
   };
@@ -64,7 +65,7 @@ const WhatsAppBusinessProfile = ({ workspaceId, credentialId, connected, fallbac
       body: { action: 'update', workspace_id: workspaceId, credential_id: credentialId, profile },
     });
     setSaving(false);
-    if (error || (data as any)?.error) return toast.error((data as any)?.error || error?.message || 'Could not update business profile');
+    if (error || (data as any)?.error) return toast.error(await invokeErrorMessage(error, data));
     toast.success('WhatsApp business profile updated');
   };
 
@@ -80,7 +81,7 @@ const WhatsAppBusinessProfile = ({ workspaceId, credentialId, connected, fallbac
         body: { action: 'upload_picture', workspace_id: workspaceId, credential_id: credentialId, file_base64: reader.result, file_type: file.type },
       });
       setUploading(false);
-      if (error || (data as any)?.error) return toast.error((data as any)?.error || error?.message || 'Could not update profile picture');
+      if (error || (data as any)?.error) return toast.error(await invokeErrorMessage(error, data));
       const remote = (data as any)?.profile || {};
       setProfile((current) => ({ ...current, ...remote, websites: remote.websites || current.websites }));
       toast.success('WhatsApp display picture updated');

@@ -35,7 +35,7 @@ export function useGlobalAlerts() {
             { event: 'INSERT', schema: 'public', table: 'wa_messages', filter: `workspace_id=eq.${wsId}` },
             (payload: any) => {
               if (payload.new?.direction === 'inbound') {
-                playAlert();
+                playAlert(`msg-${payload.new.id}`);
                 toast('New WhatsApp message', {
                   description: `${payload.new.from_phone}: ${(payload.new.body || '').slice(0, 60)}`,
                 });
@@ -45,7 +45,7 @@ export function useGlobalAlerts() {
             { event: 'UPDATE', schema: 'public', table: 'wa_conversations', filter: `workspace_id=eq.${wsId}` },
             (payload: any) => {
               if (payload.new?.assigned_to === user.id && payload.old?.assigned_to !== user.id) {
-                playAlert();
+                playAlert(`assign-${payload.new.id}-${payload.new.assigned_to}`);
                 toast('Conversation assigned to you', {
                   description: payload.new.contact_name || payload.new.contact_phone,
                 });

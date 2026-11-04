@@ -2740,6 +2740,8 @@ export type Database = {
       }
       workspace_settings: {
         Row: {
+          ai_reply_enabled: boolean
+          ai_reply_instructions: string | null
           away_enabled: boolean
           away_message: string
           business_hours: Json
@@ -2753,6 +2755,8 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          ai_reply_enabled?: boolean
+          ai_reply_instructions?: string | null
           away_enabled?: boolean
           away_message?: string
           business_hours?: Json
@@ -2766,6 +2770,8 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          ai_reply_enabled?: boolean
+          ai_reply_instructions?: string | null
           away_enabled?: boolean
           away_message?: string
           business_hours?: Json

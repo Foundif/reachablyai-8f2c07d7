@@ -74,7 +74,7 @@ import VoiceNote from "@/components/inbox/VoiceNote";
 import MessageTicks from "@/components/inbox/MessageTicks";
 import AlbumComposer from "@/components/inbox/AlbumComposer";
 import ForwardDialog from "@/components/inbox/ForwardDialog";
-import { playAlert } from "@/lib/sound";
+import { friendlyWaError } from "@/lib/waErrors";
 import TemplatePickerSheet, { renderTemplateText, type TemplateOption } from "@/components/inbox/TemplatePickerSheet";
 import ConversationRecords from "@/components/inbox/ConversationRecords";
 import {
@@ -286,14 +286,7 @@ const Inbox = () => {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "wa_messages", filter: `workspace_id=eq.${wsId}` },
         (payload: any) => {
-          // Sound alert for every new inbound message
-          if (payload.new.direction === "inbound") {
-            try {
-              playAlert();
-            } catch {
-              /* ignore audio errors (e.g. autoplay blocked) */
-            }
-          }
+          // Sound is played once globally (useGlobalAlerts) — not here.
           if (payload.new.conversation_id === selectedRef.current) {
             setMessages((prev) => (prev.some((m) => m.id === payload.new.id) ? prev : [...prev, payload.new]));
           }
@@ -1370,7 +1363,7 @@ const Inbox = () => {
                       )}
                       {tpl?.footer && <div className="text-[11px] opacity-70 mt-1">{tpl.footer}</div>}
                       {stamp}
-                      {m.error && <div className="text-[10px] text-red-500 mt-1">{m.error}</div>}
+                      {m.error && <div className="text-[10px] text-destructive mt-1">{friendlyWaError(m.error)}</div>}
                     </div>,
                   );
                 })}
