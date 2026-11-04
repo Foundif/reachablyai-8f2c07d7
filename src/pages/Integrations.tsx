@@ -46,7 +46,8 @@ import ShopifyRecipes from "@/components/integrations/ShopifyRecipes";
 import { LeadFieldMapping } from "@/components/integrations/LeadFieldMapping";
 import webhookIcon from "@/assets/webhook-icon.png";
 
-const razorpayLogo = "https://cdn.brandfetch.io/idHc4m3b7C/w/400/h/400/theme/dark/icon.jpeg?c=1dxbfHSJFAPEGdCLU4o5B";
+const razorpayLogo =
+  "https://jpenkubzwugozbibtnqd.supabase.co/storage/v1/object/sign/salon-assets/logos/razorpay.com-163x163.png?token=eyJraWQiOiJiMzQwOGYxOC1hMjdhLTQ1MWItOTM5MC1kMjIyNDA4ZmM5OGEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJzYWxvbi1hc3NldHMvbG9nb3MvcmF6b3JwYXkuY29tLTE2M3gxNjMucG5nIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc5Mzc3MjY2NiwiZXhwIjoxNzkzNzc2MjY2fQ.HAe8FDYmgq0pc6klvOQr03HM0Qt0yaBXHwRfsabdEq8";
 
 const shiprocketLogo =
   "https://reachably.foundif.com/__l5e/assets-v1/2a02e7e5-5348-4642-9962-a267ff19bea3/shiprocket.png";
