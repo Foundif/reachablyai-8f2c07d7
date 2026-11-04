@@ -102,3 +102,24 @@ export async function checkMessageQuota(admin: any, workspaceId: string, needed 
   }
   return { ok: true, used, limit: limits.max_messages };
 }
+
+/** AI reply credits per plan per month (1 credit = 1 AI WhatsApp reply). */
+export const AI_REPLY_CREDITS: Record<string, number> = { trial: 100, plus: 100, scale: 500, supreme: 1000 };
+
+export function aiReplyCreditsFor(planId?: string | null): number {
+  return AI_REPLY_CREDITS[planId || "trial"] ?? 100;
+}
+
+/** AI replies already sent this calendar month (logged as rule_kind 'ai'). */
+export async function aiRepliesUsed(admin: any, workspaceId: string): Promise<number> {
+  const start = new Date();
+  start.setUTCDate(1);
+  start.setUTCHours(0, 0, 0, 0);
+  const { count } = await admin
+    .from("auto_reply_log")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId)
+    .eq("rule_kind", "ai")
+    .gte("created_at", start.toISOString());
+  return count || 0;
+}
