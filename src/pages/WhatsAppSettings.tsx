@@ -29,7 +29,6 @@ import {
 } from "lucide-react";
 import { META_APP_ID, META_CONFIG_ID } from "@/lib/metaConfig";
 import { loadFacebookSdk } from "@/lib/facebookSdk";
-import WhatsAppBusinessProfile from "@/components/settings/WhatsAppBusinessProfile";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
 import { limitsFor, planById } from "@/lib/plans";
@@ -598,24 +597,11 @@ const WhatsAppSettings = () => {
 
               {creds?.last_error && <p className="text-xs text-destructive">{creds.last_error}</p>}
             </Card>
-            {/* 3. WHATSAPP BUSINESS PROFILE */}
-            {wsId && (
-              <WhatsAppBusinessProfile
-                workspaceId={wsId}
-                credentialId={creds?.id}
-                connected={creds?.status === "connected" || Boolean(creds?.verified)}
-                fallbackName={creds?.verified_name || profile?.store_name || "Business"}
-                cachedProfile={{
-                  profile_picture_url: creds?.profile_picture_url || "",
-                  address: creds?.profile_address || "",
-                  description: creds?.profile_description || "",
-                  email: creds?.profile_email || "",
-                  vertical: creds?.profile_vertical || "OTHER",
-                  websites: creds?.profile_websites?.length ? creds.profile_websites : [""],
-                  about: creds?.profile_about || "",
-                }}
-              />
-            )}
+            {/* Business profile now lives on the Profile page */}
+            <Card className="p-4 flex items-center justify-between gap-3">
+              <p className="text-sm text-muted-foreground">WhatsApp business profile (photo, about, address) is edited on your Profile page.</p>
+              <Button size="sm" variant="outline" asChild><a href="/profile">Open Profile</a></Button>
+            </Card>
           </>
         )}
 

@@ -18,6 +18,7 @@ import {
 import { toast } from 'sonner';
 import ChangePasswordModal from '@/components/profile/ChangePasswordModal';
 import useWorkspacePlan from '@/hooks/useWorkspacePlan';
+import WhatsAppBusinessProfileSection from '@/components/settings/WhatsAppBusinessProfileSection';
 import { isNotificationMuted, setNotificationMuted, playNotificationSound, enableNotificationSound } from '@/hooks/useNotifications';
 
 type Row = { icon: any; label: string; sub?: string; right?: React.ReactNode; onClick?: () => void };
@@ -108,6 +109,7 @@ const Profile = () => {
         </div>
 
         {editOpen && <EditProfileCard onClose={() => setEditOpen(false)} />}
+        {!isStaff && <WhatsAppBusinessProfileSection />}
 
         {!isStaff && (
           <SectionCard
