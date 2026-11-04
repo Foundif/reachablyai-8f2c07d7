@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { SecureImg, SecureVideo } from "@/lib/secureMedia";
+import { useState, useEffect, useRef } from "react";
+import { SecureImg } from "@/lib/secureMedia";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Building2,
   Plane,
@@ -30,6 +31,9 @@ import {
   Volume2,
   VolumeX,
   Play,
+  Camera,
+  Upload,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import ChangePasswordModal from "@/components/profile/ChangePasswordModal";
@@ -70,7 +74,7 @@ const SectionCard = ({ title, rows }: { title: string; rows: Row[] }) => (
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, updateProfile, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { language, setLanguage } = useLanguage();
 
@@ -78,6 +82,36 @@ const Profile = () => {
   const [pushAlerts, setPushAlerts] = useState(true);
   const [muted, setMuted] = useState(isNotificationMuted());
   const [editOpen, setEditOpen] = useState(false);
+  const [waCreds, setWaCreds] = useState<{ profile_picture_url?: string; business_phone?: string } | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch linked WhatsApp credentials to use profile photo and phone as fallback
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    (async () => {
+      let id = (profile as any)?.active_workspace_id as string | undefined;
+      if (!id) {
+        const { data } = await supabase
+          .from("workspace_members" as any)
+          .select("workspace_id")
+          .eq("user_id", user.id)
+          .limit(1);
+        id = (data as any)?.[0]?.workspace_id;
+      }
+      if (!alive || !id) return;
+      const { data } = await supabase
+        .from("whatsapp_credentials" as any)
+        .select("profile_picture_url, business_phone")
+        .eq("workspace_id", id)
+        .maybeSingle();
+      if (alive && data) setWaCreds(data as any);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [user, profile]);
 
   const toggleMute = (m: boolean) => {
     setMuted(m);
@@ -91,6 +125,38 @@ const Profile = () => {
     toast.success("Playing test sound — if you hear nothing, click anywhere on the page first then try again.");
   };
 
+  const handleAvatarFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      toast.error("Please choose a JPG or PNG image");
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      toast.error("Image must be under 3 MB");
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `logos/${user.id}/avatar-${Date.now()}.${ext}`;
+      const { error: uploadErr } = await supabase.storage.from("salon-assets").upload(path, file, { upsert: true });
+      if (uploadErr) throw uploadErr;
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("salon-assets").getPublicUrl(path);
+      await updateProfile({ logo_url: publicUrl } as any);
+      toast.success("Profile logo updated successfully!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to upload logo");
+    } finally {
+      setUploadingAvatar(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const isStaff = !!(profile as any)?.is_staff;
   const wsPlan = useWorkspacePlan();
   const planLabel = wsPlan.planName;
@@ -102,7 +168,8 @@ const Profile = () => {
     ? profile?.full_name || user?.email?.split("@")[0] || "Team member"
     : profile?.store_name || "My Business";
   const initial = (storeName?.[0] || "B").toUpperCase();
-  const avatarSrc = (profile as any)?.logo_url || creds?.profile_picture_url;
+  const avatarSrc = (profile as any)?.logo_url || waCreds?.profile_picture_url;
+
   const handleSignOut = async () => {
     await signOut();
     navigate("/auth");
@@ -111,24 +178,55 @@ const Profile = () => {
   return (
     <AppLayout>
       <div className="max-w-2xl mx-auto px-4 py-6 sm:py-8 space-y-6">
-        {/* Hero */}
+        {/* Hero Section */}
         <div className="flex flex-col items-center text-center pt-2">
-          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-emerald-200 to-emerald-300 dark:from-emerald-800 dark:to-emerald-900 flex items-center justify-center text-3xl font-semibold text-emerald-900 dark:text-emerald-100 shadow-sm overflow-hidden relative group">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="hidden"
+            onChange={handleAvatarFile}
+          />
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            title="Click to change logo"
+            className="w-24 h-24 rounded-full bg-gradient-to-br from-emerald-200 to-emerald-300 dark:from-emerald-800 dark:to-emerald-900 flex items-center justify-center text-3xl font-semibold text-emerald-900 dark:text-emerald-100 shadow-sm overflow-hidden relative group cursor-pointer border-2 border-border/40 hover:border-primary transition-all"
+          >
             {avatarSrc ? (
               <SecureImg src={avatarSrc} alt={storeName} className="w-full h-full rounded-full object-cover" />
             ) : (
               initial
             )}
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-full">
+              {uploadingAvatar ? (
+                <Loader2 className="w-6 h-6 text-white animate-spin" />
+              ) : (
+                <Camera className="w-6 h-6 text-white" />
+              )}
+            </div>
           </div>
 
           <h1 className="mt-4 text-2xl font-bold text-foreground">{storeName}</h1>
           <p className="text-sm text-muted-foreground">{user?.email}</p>
-          <Button
-            onClick={() => setEditOpen((v) => !v)}
-            className="mt-4 rounded-full bg-foreground text-background hover:bg-foreground/90 px-6"
-          >
-            Edit profile
-          </Button>
+
+          <div className="flex items-center gap-2 mt-4">
+            <Button
+              onClick={() => setEditOpen((v) => !v)}
+              className="rounded-full bg-foreground text-background hover:bg-foreground/90 px-6"
+            >
+              {editOpen ? "Close editor" : "Edit profile"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingAvatar}
+              className="rounded-full text-xs gap-1.5"
+            >
+              {uploadingAvatar ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+              Upload logo
+            </Button>
+          </div>
         </div>
 
         {editOpen && <EditProfileCard onClose={() => setEditOpen(false)} />}
@@ -141,7 +239,7 @@ const Profile = () => {
               {
                 icon: Building2,
                 label: "Agency Details",
-                sub: (profile as any)?.phone || user?.email,
+                sub: (profile as any)?.phone || waCreds?.business_phone || user?.email,
                 onClick: () => navigate("/shop-info"),
               },
               {
@@ -333,6 +431,8 @@ const EditProfileCard = ({ onClose }: { onClose: () => void }) => {
   const [email, setEmail] = useState(user?.email || "");
   const [saving, setSaving] = useState(false);
   const [emailSaving, setEmailSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const save = async () => {
     setSaving(true);
@@ -354,11 +454,41 @@ const EditProfileCard = ({ onClose }: { onClose: () => void }) => {
     }
   };
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    if (file.size > 3 * 1024 * 1024) {
+      toast.error("Logo must be under 3 MB");
+      return;
+    }
+    setUploadingLogo(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `logos/${user.id}/logo-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("salon-assets").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("salon-assets").getPublicUrl(path);
+      await updateProfile({ logo_url: publicUrl } as any);
+      toast.success("Logo uploaded!");
+    } catch (err: any) {
+      toast.error(err.message || "Upload failed");
+    } finally {
+      setUploadingLogo(false);
+      if (logoInputRef.current) logoInputRef.current.value = "";
+    }
+  };
+
+  const removeLogo = async () => {
+    await updateProfile({ logo_url: null } as any);
+    toast.success("Logo removed");
+  };
+
   const changeEmail = async () => {
     const next = email.trim().toLowerCase();
     if (!next || next === (user?.email || "").toLowerCase()) return toast.error("Enter a new email");
     setEmailSaving(true);
-    const { supabase } = await import("@/integrations/supabase/client");
     const { error } = await supabase.auth.updateUser({ email: next });
     setEmailSaving(false);
     if (error) toast.error(error.message);
@@ -369,7 +499,55 @@ const EditProfileCard = ({ onClose }: { onClose: () => void }) => {
   };
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+    <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
+      {/* Logo upload row */}
+      <div className="flex items-center justify-between p-3 rounded-xl bg-muted/40 border border-border/50">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center overflow-hidden border border-border">
+            {(profile as any)?.logo_url ? (
+              <SecureImg src={(profile as any).logo_url} alt="Logo" className="w-full h-full object-cover" />
+            ) : (
+              <Building2 className="w-6 h-6 text-muted-foreground" />
+            )}
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-foreground">Brand Logo</p>
+            <p className="text-[11px] text-muted-foreground">Shown on receipts, forms, and client portals</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            ref={logoInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="hidden"
+            onChange={handleLogoUpload}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => logoInputRef.current?.click()}
+            disabled={uploadingLogo}
+            className="text-xs gap-1.5"
+          >
+            {uploadingLogo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+            {(profile as any)?.logo_url ? "Replace" : "Upload"}
+          </Button>
+          {(profile as any)?.logo_url && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={removeLogo}
+              className="text-xs text-red-500 hover:text-red-600"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </Button>
+          )}
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <Label className="text-xs">Full name</Label>
@@ -435,8 +613,7 @@ const EditProfileCard = ({ onClose }: { onClose: () => void }) => {
           </Button>
         </div>
         <p className="text-[11px] text-muted-foreground">
-          A confirmation link is sent to the new address. Your login email switches only after you click it. If your
-          provider requires it, also click the confirmation on the old address.
+          A confirmation link is sent to the new address. Your login email switches only after you click it.
         </p>
       </div>
     </div>
