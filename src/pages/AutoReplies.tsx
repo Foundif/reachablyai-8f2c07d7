@@ -11,7 +11,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { resolveWorkspaceId } from '@/lib/workspace';
 import { toast } from 'sonner';
-import { Bot, Clock, MessageCircle, Save } from 'lucide-react';
+import { Bot, Clock, MessageCircle, Save, Sparkles } from 'lucide-react';
+import AutomationTabs from '@/components/automation/AutomationTabs';
 
 type DayCfg = { enabled: boolean; start: string; end: string };
 type BH = Record<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun', DayCfg>;
@@ -47,6 +48,8 @@ const AutoReplies = () => {
   const [bh, setBh] = useState<BH>(DEFAULT_BH);
   const [welcomeEnabled, setWelcomeEnabled] = useState(false);
   const [welcomeMsg, setWelcomeMsg] = useState('Hi! 👋 Thanks for messaging us. How can we help?');
+  const [aiEnabled, setAiEnabled] = useState(false);
+  const [aiInfo, setAiInfo] = useState('');
   const [awayEnabled, setAwayEnabled] = useState(false);
   const [awayMsg, setAwayMsg] = useState("Thanks for reaching out! We're currently away. Our team will reply during business hours.");
 
@@ -65,6 +68,8 @@ const AutoReplies = () => {
         setWelcomeMsg(d.welcome_message || welcomeMsg);
         setAwayEnabled(!!d.away_enabled);
         setAwayMsg(d.away_message || awayMsg);
+        setAiEnabled(!!d.ai_reply_enabled);
+        setAiInfo(d.ai_reply_instructions || '');
       }
       setLoading(false);
     })();
@@ -78,6 +83,8 @@ const AutoReplies = () => {
       workspace_id: wsId, timezone: tz, business_hours: bh,
       welcome_enabled: welcomeEnabled, welcome_message: welcomeMsg,
       away_enabled: awayEnabled, away_message: awayMsg,
+      ai_reply_enabled: aiEnabled && aiInfo.trim().length >= 20,
+      ai_reply_instructions: aiInfo.trim() || null,
     };
     const { error } = await supabase.from('workspace_settings' as any).upsert(payload, { onConflict: 'workspace_id' });
     setSaving(false);
@@ -91,6 +98,7 @@ const AutoReplies = () => {
   return (
     <AppLayout>
       <div className="p-4 md:p-8 space-y-6 max-w-4xl mx-auto">
+        <AutomationTabs />
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
@@ -107,6 +115,31 @@ const AutoReplies = () => {
           <Card className="p-8 text-center text-muted-foreground">Loading…</Card>
         ) : (
           <>
+            <Card className="p-5 space-y-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5" />
+                  <div>
+                    <div className="font-semibold">AI replies</div>
+                    <div className="text-xs text-muted-foreground">AI answers customer questions using your business info below. Each AI reply uses 1 credit from your plan.</div>
+                  </div>
+                </div>
+                <Switch
+                  checked={aiEnabled}
+                  onCheckedChange={(v) => {
+                    if (v && aiInfo.trim().length < 20) return toast.error('Add your business info (at least 20 characters) before turning AI on.');
+                    setAiEnabled(v);
+                  }}
+                />
+              </div>
+              <Textarea
+                rows={6}
+                value={aiInfo}
+                onChange={e => setAiInfo(e.target.value)}
+                placeholder="Business name, services & prices, timings, location, payment options, what to say when unsure…"
+              />
+            </Card>
+
             <Card className="p-5 space-y-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-center gap-2">

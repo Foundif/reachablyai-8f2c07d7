@@ -34,19 +34,15 @@ export const MODULE_GROUPS: ModuleGroup[] = [
       { to: '/templates', icon: MessageSquareText, label: 'Templates', status: 'live' },
       { to: '/flows', icon: FormInput, label: 'WhatsApp Forms', status: 'live' },
       { to: '/campaigns', icon: Megaphone, label: 'Campaigns', status: 'live' },
-      { to: '/automation', icon: Workflow, label: 'Automation', status: 'live' },
-      { to: '/auto-replies', icon: Bot, label: 'Auto-replies', status: 'live' },
-      { to: '/chatbots', icon: Bot, label: 'AI Chatbots', status: 'live' },
+      { to: '/auto-replies', icon: Bot, label: 'Automations & AI', status: 'live' },
     ],
   },
-
-
-
   {
     label: 'Insights',
     items: [
       { to: '/analytics', icon: BarChart3, label: 'Analytics', status: 'live' },
       { to: '/accounting', icon: Wallet, label: 'Accounting', status: 'live' },
+      { to: '/meta-clients', icon: Workflow, label: 'Meta Ad Reports', status: 'live' },
     ],
   },
 
@@ -58,6 +54,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
       { to: '/settings/api', icon: KeyRound, label: 'API & Keys', status: 'live' },
       { to: '/team', icon: UserCog, label: 'Team', status: 'live' },
       { to: '/profile', icon: UserCircle, label: 'Profile', status: 'live' },
+      { to: '/guide', icon: ClipboardList, label: 'Guide', status: 'live' },
     ],
   },
 ];

@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { resolveWorkspaceId } from '@/lib/workspace';
 import { toast } from 'sonner';
 import { Bot, Plus, MessagesSquare } from 'lucide-react';
+import AutomationTabs from '@/components/automation/AutomationTabs';
 
 const Chatbots = () => {
   const { user, profile } = useAuth();
@@ -53,6 +54,7 @@ const Chatbots = () => {
   return (
     <AppLayout>
       <div className="p-4 md:p-6 space-y-4 max-w-6xl mx-auto">
+        <AutomationTabs />
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2"><Bot className="w-6 h-6" /> AI Chatbots</h1>
