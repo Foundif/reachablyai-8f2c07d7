@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
+import AutomationTabs from '@/components/automation/AutomationTabs';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -142,6 +143,7 @@ const Automations = () => {
   return (
     <AppLayout>
       <div className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto">
+        <AutomationTabs />
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
