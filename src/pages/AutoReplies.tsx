@@ -13,6 +13,7 @@ import { resolveWorkspaceId } from '@/lib/workspace';
 import { toast } from 'sonner';
 import { Bot, Clock, MessageCircle, Save, Sparkles } from 'lucide-react';
 import AutomationTabs from '@/components/automation/AutomationTabs';
+import { Link } from 'react-router-dom';
 
 type DayCfg = { enabled: boolean; start: string; end: string };
 type BH = Record<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun', DayCfg>;
@@ -92,6 +93,23 @@ const AutoReplies = () => {
     toast.success('Auto-replies saved');
   };
 
+  const [testMsg, setTestMsg] = useState('');
+  const [testing, setTesting] = useState(false);
+  const [testReply, setTestReply] = useState('');
+  const sendTest = async () => {
+    if (!wsId) return;
+    setTesting(true); setTestReply('');
+    const { data, error } = await supabase.functions.invoke('ai-reply-test', { body: { workspace_id: wsId, message: testMsg } });
+    setTesting(false);
+    if (error) {
+      let msg = error.message;
+      try { msg = JSON.parse(await (error as any).context.text()).error || msg; } catch { /* keep */ }
+      return toast.error(msg);
+    }
+    setTestReply((data as any)?.reply || '');
+    toast.success('Test reply added to your Inbox');
+  };
+
   const updateDay = (key: keyof BH, patch: Partial<DayCfg>) =>
     setBh(prev => ({ ...prev, [key]: { ...prev[key], ...patch } }));
 
@@ -138,6 +156,14 @@ const AutoReplies = () => {
                 onChange={e => setAiInfo(e.target.value)}
                 placeholder="Business name, services & prices, timings, location, payment options, what to say when unsure…"
               />
+              <div className="rounded-lg border bg-muted/40 p-3 space-y-2">
+                <Label className="text-xs">Test AI reply (shows in Inbox as "Test customer", not sent on WhatsApp, uses 1 credit)</Label>
+                <div className="flex gap-2">
+                  <Input value={testMsg} onChange={e => setTestMsg(e.target.value)} placeholder="e.g. Hospital visit price?" maxLength={500} />
+                  <Button variant="secondary" onClick={sendTest} disabled={testing || !testMsg.trim()}>{testing ? 'Sending…' : 'Send test'}</Button>
+                </div>
+                {testReply && <p className="text-sm whitespace-pre-wrap">🤖 {testReply} <Link to="/inbox" className="text-primary underline ml-1">Open Inbox</Link></p>}
+              </div>
             </Card>
 
             <Card className="p-5 space-y-4">
