@@ -34,3 +34,9 @@
 
 ## Pricing
 - [x] Show all built features on plan cards + full comparison table
+
+## Instagram DM automation (plan approved 2026-11-08, start next session)
+- [ ] Phase 1: Connect Instagram, DMs into Inbox, manual replies
+- [ ] Phase 2: Keyword DMs, welcome DM, ice breakers, persistent menu, AI on Instagram
+- [ ] Phase 3: Comment-to-DM, story reply/mention automations
+- [ ] Phase 4: Lead capture, 24h follow-up, analytics, guide, real-account test
