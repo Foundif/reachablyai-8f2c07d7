@@ -57,6 +57,13 @@
       "when": 1793760257375,
       "tag": "0007_ai_whatsapp_replies",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794218281926,
+      "tag": "0008_instagram_channel",
+      "breakpoints": true
     }
   ]
 }

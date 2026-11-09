@@ -1177,6 +1177,82 @@ export type Database = {
           },
         ]
       }
+      instagram_accounts: {
+        Row: {
+          created_at: string
+          ig_user_id: string
+          last_error: string | null
+          last_event_at: string | null
+          page_id: string
+          profile_picture_url: string | null
+          settings: Json
+          status: string
+          updated_at: string
+          username: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          ig_user_id: string
+          last_error?: string | null
+          last_event_at?: string | null
+          page_id: string
+          profile_picture_url?: string | null
+          settings?: Json
+          status?: string
+          updated_at?: string
+          username?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          ig_user_id?: string
+          last_error?: string | null
+          last_event_at?: string | null
+          page_id?: string
+          profile_picture_url?: string | null
+          settings?: Json
+          status?: string
+          updated_at?: string
+          username?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instagram_accounts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instagram_credentials: {
+        Row: {
+          page_token: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          page_token: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          page_token?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instagram_credentials_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "instagram_accounts"
+            referencedColumns: ["workspace_id"]
+          },
+        ]
+      }
       integrations: {
         Row: {
           created_at: string
@@ -2151,6 +2227,7 @@ export type Database = {
       wa_conversations: {
         Row: {
           assigned_to: string | null
+          channel: string
           contact_name: string | null
           contact_phone: string
           created_at: string
@@ -2170,6 +2247,7 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string | null
+          channel?: string
           contact_name?: string | null
           contact_phone: string
           created_at?: string
@@ -2189,6 +2267,7 @@ export type Database = {
         }
         Update: {
           assigned_to?: string | null
+          channel?: string
           contact_name?: string | null
           contact_phone?: string
           created_at?: string

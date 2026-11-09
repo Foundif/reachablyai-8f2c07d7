@@ -103,6 +103,7 @@ interface Conversation {
   window_expires_at: string | null;
   notes?: string | null;
   tags?: string[] | null;
+  channel?: string | null;
 }
 interface Message {
   id: string;
@@ -343,6 +344,7 @@ const Inbox = () => {
     if (filter === "mine" && c.assigned_to !== user?.id) return false;
     if (filter === "unassigned" && c.assigned_to) return false;
     if (filter === "unread" && !c.unread_count) return false;
+    if (channelFilter !== "all" && (c.channel || "whatsapp") !== channelFilter) return false;
     if (labelFilter && !(c.tags || []).includes(labelFilter)) return false;
     if (tab === "new" && !c.unread_count) return false;
     if (tab === "open" && c.status !== "open") return false;
@@ -371,11 +373,23 @@ const Inbox = () => {
     const {
       data: { session },
     } = await supabase.auth.getSession();
-    const { error } = await supabase.functions.invoke("whatsapp-send", {
-      body: { workspace_id: wsId, conversation_id: selected.id, to: selected.contact_phone, ...payload },
+    const isIg = selected.channel === "instagram";
+    if (isIg && !payload.body) {
+      setSending(false);
+      toast.error("Instagram chats support text replies only.");
+      return false;
+    }
+    const { data: igData, error } = await supabase.functions.invoke(isIg ? "instagram-manage" : "whatsapp-send", {
+      body: isIg
+        ? { action: "send", workspace_id: wsId, conversation_id: selected.id, body: payload.body }
+        : { workspace_id: wsId, conversation_id: selected.id, to: selected.contact_phone, ...payload },
       headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
     });
     setSending(false);
+    if (isIg && (igData as any)?.error && !error) {
+      toast.error((igData as any).error);
+      return false;
+    }
     if (error) {
       toast.error(error.message);
       return false;
@@ -928,6 +942,11 @@ const Inbox = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-sm truncate flex-1">{c.contact_name || c.contact_phone}</span>
+                        {c.channel === "instagram" && (
+                          <span className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-accent text-accent-foreground shrink-0">
+                            IG
+                          </span>
+                        )}
                         <span className="text-[10px] text-muted-foreground shrink-0">
                           {c.last_message_at
                             ? new Date(c.last_message_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })

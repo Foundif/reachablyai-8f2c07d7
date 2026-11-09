@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.meta-ads-digest]
 verify_jwt = false
+
+[functions.instagram-webhook]
+verify_jwt = false
