@@ -160,6 +160,7 @@ const Inbox = () => {
   const [qrActive, setQrActive] = useState(0);
   const [sending, setSending] = useState(false);
   const [filter, setFilter] = useState<"all" | "mine" | "unassigned" | "unread">("all");
+  const [channelFilter] = useState<"all" | "whatsapp" | "instagram">("all");
   const [tab, setTab] = useState<"new" | "open" | "resolved" | "all">("all");
   const [labels, setLabels] = useState<Label[]>([]);
   const [labelFilter, setLabelFilter] = useState<string | null>(null);
