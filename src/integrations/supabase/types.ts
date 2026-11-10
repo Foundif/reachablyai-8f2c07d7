@@ -1253,6 +1253,47 @@ export type Database = {
           },
         ]
       }
+      instagram_events: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error: string | null
+          event_key: string
+          event_type: string
+          id: string
+          status: string
+          workspace_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          event_key: string
+          event_type: string
+          id?: string
+          status?: string
+          workspace_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          event_key?: string
+          event_type?: string
+          id?: string
+          status?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instagram_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integrations: {
         Row: {
           created_at: string

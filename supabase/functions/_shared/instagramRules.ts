@@ -2,7 +2,7 @@
 
 export interface IgKeyword { keyword: string; reply: string }
 export interface IgButton { question?: string; title?: string; reply: string }
-export interface IgCommentRule { keyword: string; dm: string; public_reply?: string }
+export interface IgCommentRule { keyword: string; dm: string; public_reply?: string; media_id?: string }
 export interface IgSettings {
   welcome_enabled?: boolean;
   welcome_message?: string;
@@ -36,8 +36,8 @@ export function findKeywordReply(text: string, s: IgSettings): string | null {
   return null;
 }
 
-export function findCommentRule(text: string, s: IgSettings): IgCommentRule | null {
-  for (const r of s.comment_rules || []) if (r.dm?.trim() && matchesKeyword(text, r.keyword)) return r;
+export function findCommentRule(text: string, s: IgSettings, mediaId?: string): IgCommentRule | null {
+  for (const r of s.comment_rules || []) if ((!r.media_id || r.media_id === mediaId) && r.dm?.trim() && matchesKeyword(text, r.keyword)) return r;
   return null;
 }
 
@@ -52,5 +52,21 @@ export function postbackReply(payload: string, s: IgSettings): string | null {
 /** Instagram only allows free-form messages within 24h of the customer's last message. */
 export function windowOpen(lastInboundAt: string | null | undefined, now = Date.now()): boolean {
   if (!lastInboundAt) return false;
-  return now - new Date(lastInboundAt).getTime() < IG_WINDOW_MS;
+  const age = now - new Date(lastInboundAt).getTime();
+  return Number.isFinite(age) && age >= 0 && age < IG_WINDOW_MS;
+}
+
+export function privateReplyAllowed(timestamp: number, now = Date.now()): boolean {
+  const age = now - timestamp;
+  return Number.isFinite(age) && age >= 0 && age < 7 * IG_WINDOW_MS;
+}
+
+export async function verifySignature(raw: string, signature: string | null, secret?: string): Promise<boolean> {
+  if (!secret || !signature || !/^sha256=[a-f0-9]{64}$/.test(signature)) return false;
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(raw));
+  const expected = 'sha256=' + [...new Uint8Array(mac)].map(b => b.toString(16).padStart(2, '0')).join('');
+  let mismatch = 0;
+  for (let i = 0; i < expected.length; i++) mismatch |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
+  return mismatch === 0;
 }

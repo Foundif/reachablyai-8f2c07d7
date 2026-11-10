@@ -35,7 +35,10 @@
 ## Pricing
 - [x] Show all built features on plan cards + full comparison table
 
-## Instagram DM automation (plan approved 2026-11-08, start next session)
+## Instagram DM automation (resumed 2026-11-10)
+- [ ] Finish connection/settings screens, channel navigation and reporting
+- [ ] Harden webhook signatures, duplicate events, role checks and reply-window enforcement
+- [ ] Run automated and authenticated browser checks; real Meta account test requires a connected account
 - [ ] Phase 1: Connect Instagram, DMs into Inbox, manual replies
 - [ ] Phase 2: Keyword DMs, welcome DM, ice breakers, persistent menu, AI on Instagram
 - [ ] Phase 3: Comment-to-DM, story reply/mention automations

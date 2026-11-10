@@ -64,6 +64,13 @@
       "when": 1794218281926,
       "tag": "0008_instagram_channel",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794291600443,
+      "tag": "0009_instagram_event_dedup_and_channel_isolation",
+      "breakpoints": true
     }
   ]
 }
