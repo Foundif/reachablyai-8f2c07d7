@@ -9,8 +9,9 @@ const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE
 
 async function getConversation(acct: any, token: string, igsid: string) {
   const ws = acct.workspace_id;
-  const { data: existing } = await admin.from('wa_conversations').select('id, lead_id, contact_name, created_at, last_message_at')
+  const { data: existing, error: existingError } = await admin.from('wa_conversations').select('id, lead_id, contact_name, created_at, last_message_at')
     .eq('workspace_id', ws).eq('channel', 'instagram').eq('contact_phone', igsid).maybeSingle();
+  if(existingError) throw existingError;
   if (existing) return { conv: existing, isNew: false };
   const { data: reserved, error: reserveError } = await admin.from('wa_conversations').upsert({ workspace_id: ws, channel: 'instagram', contact_phone: igsid, status: 'open', tags: ['instagram'] }, { onConflict: 'workspace_id,channel,contact_phone', ignoreDuplicates: true }).select('id,lead_id,contact_name,created_at,last_message_at').maybeSingle();
   if (reserveError) throw reserveError;
@@ -23,7 +24,8 @@ async function getConversation(acct: any, token: string, igsid: string) {
     workspace_id: ws, name: name || 'Instagram user', source: 'instagram', status: 'new', tags: ['instagram'],
     notes: `Instagram${p.username ? ` @${p.username}` : ''} (id ${igsid})`,
   }).select('id').single();
-  if (!le) leadId = lead.id;
+  if(le || !lead) throw le || new Error('Instagram contact could not be created.');
+  leadId = lead.id;
   const { data: conv, error } = await admin.from('wa_conversations').update({ contact_name: name, lead_id: leadId }).eq('id',reserved.id).select('id,lead_id,contact_name,created_at,last_message_at').single();
   if(error) throw error;
   return { conv, isNew: true };
@@ -51,7 +53,7 @@ async function reply(acct: any, token: string, convId: string, igsid: string, te
 async function aiReply(acct: any, convId: string): Promise<string> {
   const ws = acct.workspace_id;
   const { data: settings } = await admin.from('workspace_settings').select('ai_reply_enabled, ai_reply_instructions').eq('workspace_id', ws).maybeSingle();
-  if (!settings?.ai_reply_enabled || !settings.ai_reply_instructions?.trim()) return '';
+  if (!settings?.ai_reply_enabled || !settings.ai_reply_instructions?.trim() || String(acct.last_error || '').startsWith('AI_PAUSED:')) return '';
   const { data: w } = await admin.from('workspaces').select('name, plan_id').eq('id', ws).maybeSingle();
   if ((await aiRepliesUsed(admin, ws)) >= aiReplyCreditsFor(w?.plan_id)) return '';
   const key = Deno.env.get('LOVABLE_API_KEY'); if (!key) return '';
@@ -63,9 +65,11 @@ async function aiReply(acct: any, convId: string): Promise<string> {
     signal: AbortSignal.timeout(15000),
     body: JSON.stringify({ model: 'google/gemini-3.1-flash-lite', messages: [{ role: 'system', content: system }, ...messages] }),
   });
-  if (!resp.ok) { const failure = await resp.json().catch(() => ({})); throw new Error(failure.message || `AI replies paused (${resp.status}); check AI settings before retrying.`); }
+  if (!resp.ok) { const failure = await resp.json().catch(() => ({})); const message = failure.message || `AI request failed (${resp.status})`; if([402,403,404].includes(resp.status)) await admin.from('instagram_accounts').update({last_error:`AI_PAUSED: ${message}`,status:'needs_attention'}).eq('workspace_id',ws); throw new Error(message); }
   const d = await resp.json();
-  return String(d?.choices?.[0]?.message?.content || '').trim();
+  const answer = String(d?.choices?.[0]?.message?.content || '').trim();
+  if(!answer || d?.choices?.[0]?.message?.refusal) { await admin.from('instagram_accounts').update({last_error:'AI_PAUSED: AI returned no answer; review AI settings before enabling again.',status:'needs_attention'}).eq('workspace_id',ws); return ''; }
+  return answer.slice(0,1000);
 }
 
 async function handleMessaging(acct: any, token: string, ev: any) {
@@ -90,10 +94,10 @@ async function handleMessaging(acct: any, token: string, ev: any) {
   const receivedAt = Number(ev.timestamp) || Date.now();
   const now = new Date(receivedAt);
   await logMsg(acct, conv.id, 'inbound', igsid, text, { wa_message_id: msg.mid || ev.postback?.mid || null, created_at: now.toISOString(), media_url: msg.attachments?.[0]?.payload?.url || null, message_type: ['image','video','audio'].includes(msg.attachments?.[0]?.type) ? msg.attachments[0].type : 'text' });
-  const { data: c2 } = await admin.from('wa_conversations').select('unread_count').eq('id', conv.id).single();
+  const { data: c2 } = await admin.from('wa_conversations').select('unread_count,window_expires_at').eq('id', conv.id).single();
   await admin.from('wa_conversations').update({
     last_message_at: now.toISOString(), last_message_text: text, last_message_direction: 'inbound',
-    unread_count: (c2?.unread_count || 0) + 1, window_expires_at: new Date(now.getTime() + 86400000).toISOString(), status: 'open',
+    unread_count: (c2?.unread_count || 0) + 1, window_expires_at: new Date(Math.max(now.getTime()+86400000,new Date(c2?.window_expires_at || 0).getTime())).toISOString(), status: 'open',
   }).eq('id', conv.id);
 
   await admin.from('instagram_events').update({status:'received',completed_at:new Date().toISOString()}).eq('id',claim.id);
@@ -125,7 +129,7 @@ async function handleComment(acct: any, token: string, v: any) {
   const {data: claim,error: claimError} = await admin.from('instagram_events').insert({workspace_id:acct.workspace_id,event_key:`comment:${v.id}`,event_type:'comment'}).select('id').single();
   if(claimError?.code==='23505') return;
   if(claimError || !claim) throw claimError || new Error('Comment claim failed.');
-  if(v.timestamp && !privateReplyAllowed(Number(v.timestamp)*1000)) return;
+  if(v.timestamp && !privateReplyAllowed(Number(v.timestamp)*1000)) { await admin.from('instagram_events').update({status:'skipped',error:'Comment is older than seven days.'}).eq('id',claim.id); return; }
   // Private reply opens a DM thread with the commenter.
   const r = await igSendText(acct.page_id, token, { comment_id: v.id }, rule.dm);
   await admin.from('instagram_events').update({status:r.ok?'sent':'failed',error:r.error,completed_at:new Date().toISOString()}).eq('id',claim.id);
@@ -164,8 +168,9 @@ Deno.serve(async (req) => {
       const { data: cred } = await admin.from('instagram_credentials').select('page_token').eq('workspace_id', acct.workspace_id).maybeSingle();
       if (!cred) continue;
       await admin.from('instagram_accounts').update({ last_event_at: new Date().toISOString() }).eq('workspace_id', acct.workspace_id);
-      for (const ev of entry.messaging || []) await handleMessaging(acct, cred.page_token, ev);
-      for (const ch of entry.changes || []) if (ch.field === 'comments' || ch.field === 'live_comments') await handleComment(acct, cred.page_token, ch.value);
+      const process = async (work: () => Promise<void>) => { try { await work(); } catch(e) { const message=(e as Error).message.slice(0,500); const {data:latest}=await admin.from('instagram_accounts').select('last_error').eq('workspace_id',acct.workspace_id).maybeSingle(); await admin.from('instagram_accounts').update({last_error:String(latest?.last_error || '').startsWith('AI_PAUSED:')?latest.last_error:message,status:'needs_attention'}).eq('workspace_id',acct.workspace_id); await admin.from('wa_webhook_events').insert({workspace_id:acct.workspace_id,event_type:'ig_error',status:'error',error:message}); } };
+      for (const ev of entry.messaging || []) await process(() => handleMessaging(acct, cred.page_token, ev));
+      for (const ch of entry.changes || []) if (ch.field === 'comments' || ch.field === 'live_comments') await process(() => handleComment(acct, cred.page_token, ch.value));
     } catch (e) {
       const {data: account} = await admin.from('instagram_accounts').select('workspace_id').eq('ig_user_id',String(entry.id)).maybeSingle();
       if(account) { await admin.from('instagram_accounts').update({last_error:(e as Error).message.slice(0,500),status:'needs_attention'}).eq('workspace_id',account.workspace_id); await admin.from('wa_webhook_events').insert({ workspace_id:account.workspace_id,event_type: 'ig_error', status: 'error', error: (e as Error).message.slice(0, 500) }); }

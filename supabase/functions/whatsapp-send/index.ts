@@ -43,13 +43,17 @@ Deno.serve(async (req) => {
     // Get or create conversation
     let convId = conversation_id;
     if (!convId) {
-      const { data: existing } = await admin.from('wa_conversations').select('id').eq('workspace_id', workspace_id).eq('contact_phone', to).maybeSingle();
+      const { data: existing } = await admin.from('wa_conversations').select('id').eq('workspace_id', workspace_id).eq('channel','whatsapp').eq('contact_phone', to).maybeSingle();
       if (existing) convId = existing.id;
       else {
         const { data: created } = await admin.from('wa_conversations').insert({ workspace_id, contact_phone: to }).select('id').single();
-        convId = created!.id;
+        if (!created) return json({error:'Conversation could not be created'},500);
+        convId = created.id;
       }
     }
+
+    const {data: targetConversation} = await admin.from('wa_conversations').select('id').eq('id',convId).eq('workspace_id',workspace_id).eq('channel','whatsapp').eq('contact_phone',to).maybeSingle();
+    if (!targetConversation) return json({error:'WhatsApp conversation does not match this workspace and recipient'},400);
 
     // Resolve the contact's display name for template variable mapping
     let contactName = '';

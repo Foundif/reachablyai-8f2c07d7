@@ -1406,7 +1406,7 @@ const Inbox = () => {
                 <div className="border-t p-3 space-y-2 bg-card shrink-0">
                   {!windowOpen && (
                     <div className="text-[11px] text-amber-600 bg-amber-500/10 border border-amber-500/30 rounded-md px-2 py-1.5">
-                      24-hour reply window closed. Send an approved template to reopen the conversation.
+                      {isInstagram ? "24-hour reply window closed. Wait for the customer to message again." : "24-hour reply window closed. Send an approved template to reopen the conversation."}
                     </div>
                   )}
                   {uploadInfo && (

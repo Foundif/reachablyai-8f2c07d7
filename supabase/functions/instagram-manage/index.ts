@@ -16,13 +16,13 @@ const settingsSchema = z.object({
  story_mention_enabled: z.boolean().optional(), story_mention_message: z.string().max(1000).optional(), ai_enabled: z.boolean().optional(),
 }).strict();
 const requestSchema = z.object({ action: z.enum(['connect','disconnect','save_settings','send','followup','posts','health','status']), workspace_id: z.string().uuid(), page_id: z.string().regex(/^\d+$/).optional(), page_token: z.string().min(20).max(8192).optional(), settings: settingsSchema.optional(), conversation_id: z.string().uuid().optional(), body: text.optional(), conversation_ids: z.array(z.string().uuid()).min(1).max(50).optional() });
-async function syncProfile(pageId: string, token: string, s: IgSettings) {
+async function syncProfile(pageId: string, token: string, s: IgSettings, previous: IgSettings) {
  const errors: string[] = [];
  const sync = async (field: string, value: unknown[], present: boolean) => {
   try { await graphRequest(`${pageId}/messenger_profile?platform=instagram`, token, present ? 'POST' : 'DELETE', present ? { platform: 'instagram', [field]: value } : { platform: 'instagram', fields: [field] }); } catch (e) { errors.push(`${field}: ${(e as Error).message}`); }
  };
- await sync('ice_breakers', [{locale: 'default', call_to_actions: (s.ice_breakers || []).map((b,i) => ({ question: b.question, payload: `IB_${i}` }))}], !!s.ice_breakers?.length);
- await sync('persistent_menu', [{locale: 'default', composer_input_disabled: false, call_to_actions: (s.menu || []).map((b,i) => ({ type: 'postback', title: b.title, payload: `MENU_${i}` }))}], !!s.menu?.length);
+ if(JSON.stringify(s.ice_breakers || []) !== JSON.stringify(previous.ice_breakers || [])) await sync('ice_breakers', [{locale: 'default', call_to_actions: (s.ice_breakers || []).map((b,i) => ({ question: b.question, payload: `IB_${i}` }))}], !!s.ice_breakers?.length);
+ if(JSON.stringify(s.menu || []) !== JSON.stringify(previous.menu || [])) await sync('persistent_menu', [{locale: 'default', composer_input_disabled: false, call_to_actions: (s.menu || []).map((b,i) => ({ type: 'postback', title: b.title, payload: `MENU_${i}` }))}], !!s.menu?.length);
  return errors;
 }
 Deno.serve(async req => {
@@ -79,7 +79,7 @@ Deno.serve(async req => {
    const s = {...acct.settings,...b.settings} as IgSettings;
    for(const [enabled,message] of [[s.welcome_enabled,s.welcome_message],[s.story_reply_enabled,s.story_reply_message],[s.story_mention_enabled,s.story_mention_message]]) if(enabled && !String(message || '').trim()) return json({error:'Enabled replies need a message.'},400);
    if(s.ai_enabled) { const {data: ai} = await admin.from('workspace_settings').select('ai_reply_enabled,ai_reply_instructions').eq('workspace_id',ws).maybeSingle(); if(!ai?.ai_reply_enabled || (ai.ai_reply_instructions?.trim().length || 0)<20) return json({error:'Configure and enable business AI in Auto-replies first.'},400); }
-   const errors = await syncProfile(acct.page_id,cred.page_token,s);
+   const errors = await syncProfile(acct.page_id,cred.page_token,s,acct.settings || {});
    const {data,error} = await admin.from('instagram_accounts').update({settings:s,last_error:errors.join('; ') || null,status:errors.length?'needs_attention':'connected',updated_at:new Date().toISOString()}).eq('workspace_id',ws).select('workspace_id');
    if(error || !data?.length) throw error || new Error('Save was not confirmed.');
    return json({ok:true,profile_errors:errors});
