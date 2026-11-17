@@ -46,8 +46,8 @@ import ShopifyRecipes from "@/components/integrations/ShopifyRecipes";
 import { LeadFieldMapping } from "@/components/integrations/LeadFieldMapping";
 import webhookIcon from "@/assets/webhook-icon.png";
 
-const razorpayLogo =
-  "https://jpenkubzwugozbibtnqd.supabase.co/storage/v1/object/sign/salon-assets/logos/razorpay.com-163x163.png?token=eyJraWQiOiJiMzQwOGYxOC1hMjdhLTQ1MWItOTM5MC1kMjIyNDA4ZmM5OGEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJzYWxvbi1hc3NldHMvbG9nb3MvcmF6b3JwYXkuY29tLTE2M3gxNjMucG5nIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc5Mzc3MjY2NiwiZXhwIjoxNzkzNzc2MjY2fQ.HAe8FDYmgq0pc6klvOQr03HM0Qt0yaBXHwRfsabdEq8";
+// Replace the old signed URL that expired:
+const razorpayLogo = "https://cdn.simpleicons.org/razorpay/02042B";
 
 const shiprocketLogo =
   "https://reachably.foundif.com/__l5e/assets-v1/2a02e7e5-5348-4642-9962-a267ff19bea3/shiprocket.png";
@@ -284,16 +284,28 @@ interface WebhookRow {
 
 const FN_BASE = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/generic-webhook`;
 const LEADGEN_URL = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/meta-leadgen-webhook`;
-
-const Logo = ({ provider, className = "w-10 h-10" }: { provider: Provider; className?: string }) => (
-  <div className={`${className} rounded-xl bg-muted/60 grid place-items-center overflow-hidden shrink-0`}>
-    {provider.logo ? (
-      <img src={provider.logo} alt={`${provider.name} logo`} className="w-3/5 h-3/5 object-contain" loading="lazy" />
-    ) : provider.icon ? (
-      <provider.icon className="w-3/5 h-3/5 text-emerald-600" aria-label={`${provider.name} logo`} />
-    ) : null}
-  </div>
-);
+const Logo = ({ provider, className = "w-10 h-10" }: { provider: Provider; className?: string }) => {
+  const [failed, setFailed] = useState(false);
+  return (
+    <div
+      className={`${className} rounded-xl bg-muted/60 grid place-items-center overflow-hidden shrink-0 border border-border/40`}
+    >
+      {provider.logo && !failed ? (
+        <img
+          src={provider.logo}
+          alt={`${provider.name} logo`}
+          className="w-3/5 h-3/5 object-contain"
+          loading="lazy"
+          onError={() => setFailed(true)}
+        />
+      ) : provider.icon ? (
+        <provider.icon className="w-3/5 h-3/5 text-emerald-600" aria-label={`${provider.name} logo`} />
+      ) : (
+        <Plug className="w-3/5 h-3/5 text-muted-foreground" />
+      )}
+    </div>
+  );
+};
 
 const Integrations = () => {
   const { user, profile } = useAuth();
@@ -497,7 +509,15 @@ const Integrations = () => {
           </p>
         </div>
 
-        <div className="flex items-center justify-between gap-4 border-b pb-4"><div><h2 className="font-semibold">Instagram</h2><p className="text-sm text-muted-foreground">Channel connection & DM automations</p></div><Button variant="outline" onClick={() => navigate("/instagram")}>Open Instagram</Button></div>
+        <div className="flex items-center justify-between gap-4 border-b pb-4">
+          <div>
+            <h2 className="font-semibold">Instagram</h2>
+            <p className="text-sm text-muted-foreground">Channel connection & DM automations</p>
+          </div>
+          <Button variant="outline" onClick={() => navigate("/instagram")}>
+            Open Instagram
+          </Button>
+        </div>
 
         {loading ? (
           <div className="p-10 text-center text-muted-foreground">
@@ -599,43 +619,54 @@ const Integrations = () => {
                           <Plug className="w-3.5 h-3.5 shrink-0" />
                           <span className="truncate">{row.display_name || p.name}</span>
                         </div>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" className="flex-1" onClick={() => openConnect(p)}>
+                        {/* Aligned Configure + Delete Action Buttons */}
+                        <div className="flex gap-2 items-center">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 h-9 font-medium border-border"
+                            onClick={() => openConnect(p)}
+                          >
                             Configure
                           </Button>
                           <Button
                             size="sm"
-                            variant="ghost"
+                            variant="outline"
+                            className="h-9 w-9 p-0 shrink-0 border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 hover:bg-destructive/10"
                             onClick={() => setPendingRemove(p)}
                             aria-label={`Disconnect ${p.name}`}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
+
+                        {/* Google Sheets Actions in a Balanced 2-Column Grid */}
                         {p.id === "google_sheets" && (
-                          <div className="flex flex-col gap-2 sm:flex-row">
+                          <div className="grid grid-cols-2 gap-2 pt-0.5">
                             <Button
                               size="sm"
-                              variant="secondary"
-                              className="flex-1"
+                              variant="outline"
+                              className="h-8 text-xs font-normal border-border hover:bg-muted"
                               disabled={sheetBusy !== null}
                               onClick={() => callSheetSync("test")}
                             >
                               {sheetBusy === "test" ? (
-                                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
                               ) : (
-                                <RefreshCw className="w-4 h-4 mr-2" />
+                                <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
                               )}
                               Send test row
                             </Button>
                             <Button
                               size="sm"
-                              variant="secondary"
-                              className="flex-1"
+                              variant="outline"
+                              className="h-8 text-xs font-normal border-border hover:bg-muted"
                               disabled={sheetBusy !== null}
                               onClick={() => callSheetSync("sync_all")}
                             >
-                              {sheetBusy === "backfill" ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                              {sheetBusy === "backfill" ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                              ) : null}
                               Sync existing
                             </Button>
                           </div>
