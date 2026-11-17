@@ -619,20 +619,20 @@ const Integrations = () => {
                           <Plug className="w-3.5 h-3.5 shrink-0" />
                           <span className="truncate">{row.display_name || p.name}</span>
                         </div>
-                        {/* Aligned Configure + Delete Action Buttons */}
+                        {/* Aligned Action Buttons with proper contrast */}
                         <div className="flex gap-2 items-center">
                           <Button
                             size="sm"
                             variant="outline"
-                            className="flex-1 h-9 font-medium border-border"
+                            className="flex-1 h-9 font-semibold"
                             onClick={() => openConnect(p)}
                           >
                             Configure
                           </Button>
                           <Button
                             size="sm"
-                            variant="outline"
-                            className="h-9 w-9 p-0 shrink-0 border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 hover:bg-destructive/10"
+                            variant="ghost"
+                            className="h-9 w-9 p-0 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                             onClick={() => setPendingRemove(p)}
                             aria-label={`Disconnect ${p.name}`}
                           >
@@ -640,13 +640,13 @@ const Integrations = () => {
                           </Button>
                         </div>
 
-                        {/* Google Sheets Actions in a Balanced 2-Column Grid */}
+                        {/* Google Sheets Actions: 2-column grid with solid dark styling */}
                         {p.id === "google_sheets" && (
                           <div className="grid grid-cols-2 gap-2 pt-0.5">
                             <Button
                               size="sm"
-                              variant="outline"
-                              className="h-8 text-xs font-normal border-border hover:bg-muted"
+                              variant="secondary"
+                              className="h-8 text-xs font-semibold shadow-sm"
                               disabled={sheetBusy !== null}
                               onClick={() => callSheetSync("test")}
                             >
@@ -659,8 +659,8 @@ const Integrations = () => {
                             </Button>
                             <Button
                               size="sm"
-                              variant="outline"
-                              className="h-8 text-xs font-normal border-border hover:bg-muted"
+                              variant="secondary"
+                              className="h-8 text-xs font-semibold shadow-sm"
                               disabled={sheetBusy !== null}
                               onClick={() => callSheetSync("sync_all")}
                             >
