@@ -334,7 +334,7 @@ Deno.serve(async (req) => {
 
 
             const { data: existing } = await admin.from('wa_conversations')
-              .select('id, unread_count, lead_id').eq('workspace_id', workspace_id).eq('contact_phone', from).maybeSingle();
+              .select('id, unread_count, lead_id').eq('workspace_id', workspace_id).eq('channel','whatsapp').eq('contact_phone', from).maybeSingle();
 
             let convId: string;
             if (existing) {
@@ -359,7 +359,8 @@ Deno.serve(async (req) => {
                 window_expires_at: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
               }).select('id').single();
               if (cErr) throw cErr;
-              convId = created!.id;
+              if (!created) throw new Error("Conversation could not be created.");
+              convId = created.id;
             }
 
             const { data: dup } = await admin.from('wa_messages').select('id').eq('wa_message_id', m.id).maybeSingle();

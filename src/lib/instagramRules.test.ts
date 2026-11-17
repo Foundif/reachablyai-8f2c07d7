@@ -1,0 +1,12 @@
+import { describe,it,expect } from 'vitest';
+import { findKeywordReply,findCommentRule,postbackReply,windowOpen,privateReplyAllowed,verifySignature,IG_WINDOW_MS } from '../../supabase/functions/_shared/instagramRules';
+import { webcrypto } from 'node:crypto';
+describe('Instagram automation rules',()=>{
+ it('matches keyword phrases without matching partial words',()=>{expect(findKeywordReply('PRICE please',{keywords:[{keyword:'price',reply:'Our prices'}]})).toBe('Our prices');expect(findKeywordReply('priceless',{keywords:[{keyword:'price',reply:'Our prices'}]})).toBeNull();});
+ it('restricts comment automation to its selected post or reel',()=>{const s={comment_rules:[{keyword:'offer',dm:'Details',media_id:'123'}]};expect(findCommentRule('offer',s,'123')?.dm).toBe('Details');expect(findCommentRule('offer',s,'456')).toBeNull();});
+ it('routes starter questions and fixed menu payloads',()=>{const s={ice_breakers:[{question:'Price?',reply:'Pricing'}],menu:[{title:'Help',reply:'Support'}]};expect(postbackReply('IB_0',s)).toBe('Pricing');expect(postbackReply('MENU_0',s)).toBe('Support');expect(postbackReply('MENU_4',s)).toBeNull();});
+ it('allows followups only strictly inside 24 hours',()=>{const now=Date.UTC(2026,10,10);expect(windowOpen(new Date(now-IG_WINDOW_MS+1).toISOString(),now)).toBe(true);expect(windowOpen(new Date(now-IG_WINDOW_MS).toISOString(),now)).toBe(false);expect(windowOpen(new Date(now+1).toISOString(),now)).toBe(false);expect(windowOpen(null,now)).toBe(false);});
+ it('limits comment private replies to seven days',()=>{const now=Date.UTC(2026,10,10);expect(privateReplyAllowed(now-7*IG_WINDOW_MS+1,now)).toBe(true);expect(privateReplyAllowed(now-7*IG_WINDOW_MS,now)).toBe(false);});
+ it('rejects unsigned requests even when the app secret is missing',async()=>{expect(await verifySignature('{}',null)).toBe(false);expect(await verifySignature('{}','sha256='+'0'.repeat(64),'test-secret')).toBe(false);});
+ it('accepts only an authentic signature',async()=>{Object.defineProperty(globalThis,'crypto',{value:webcrypto,configurable:true});const raw='{"object":"instagram"}';const key=await crypto.subtle.importKey('raw',new TextEncoder().encode('test-secret'),{name:'HMAC',hash:'SHA-256'},false,['sign']);const bytes=await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(raw));const sig='sha256='+[...new Uint8Array(bytes)].map(b=>b.toString(16).padStart(2,'0')).join('');expect(await verifySignature(raw,sig,'test-secret')).toBe(true);expect(await verifySignature(raw+' ',sig,'test-secret')).toBe(false);});
+});

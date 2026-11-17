@@ -25,6 +25,7 @@ import {
 import { resolveWorkspaceId } from "@/lib/workspace";
 import SetupProgressCard from "@/components/home/SetupProgressCard";
 import TodayActivityCard from "@/components/home/TodayActivityCard";
+import InstagramMetrics from "@/components/instagram/InstagramMetrics";
 import OverviewGrid from "@/components/home/OverviewGrid";
 
 const QuickCard = ({ icon: Icon, title, desc, cta, to, navigate, tint }: any) => (
@@ -368,6 +369,7 @@ const Dashboard = () => {
         />
 
         <OverviewGrid wsId={wsId} />
+        <InstagramMetrics wsId={wsId} />
 
         <section className="space-y-4">
           <h2 className="text-xl font-semibold">Recent campaigns</h2>

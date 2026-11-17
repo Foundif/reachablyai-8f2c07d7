@@ -79,6 +79,7 @@ const Guide = () => {
           </div>
         </div>
 
+        <section className="border-b pb-6 space-y-2"><h2 className="text-lg font-semibold">Instagram</h2><Button asChild variant="outline"><Link to="/instagram">Connection, automations & live setup guide <ArrowRight className="w-4 h-4 ml-2" /></Link></Button></section>
         {/* Prereqs */}
         <Card className="glass-card p-5 md:p-6 border-l-4 border-l-foreground/40">
           <div className="flex items-center gap-2 mb-3">

@@ -160,7 +160,7 @@ const Inbox = () => {
   const [qrActive, setQrActive] = useState(0);
   const [sending, setSending] = useState(false);
   const [filter, setFilter] = useState<"all" | "mine" | "unassigned" | "unread">("all");
-  const [channelFilter] = useState<"all" | "whatsapp" | "instagram">("all");
+  const [channelFilter, setChannelFilter] = useState<"all" | "whatsapp" | "instagram">(() => searchParams.get("channel") === "instagram" ? "instagram" : "all");
   const [tab, setTab] = useState<"new" | "open" | "resolved" | "all">("all");
   const [labels, setLabels] = useState<Label[]>([]);
   const [labelFilter, setLabelFilter] = useState<string | null>(null);
@@ -366,7 +366,8 @@ const Inbox = () => {
         ? `${minutesLeft} minute${minutesLeft === 1 ? "" : "s"} ${secondsLeft} second${secondsLeft === 1 ? "" : "s"}`
         : `${secondsLeft} second${secondsLeft === 1 ? "" : "s"}`;
   const ringText = windowOpen ? (hoursLeft > 0 ? String(hoursLeft) : `${minutesLeft}m`) : "—";
-  const canCompose = !!selected && !!intervened[selected.id];
+  const isInstagram = selected?.channel === "instagram";
+  const canCompose = !!selected && (!!intervened[selected.id] || isInstagram);
 
   const invokeSend = async (payload: Record<string, unknown>) => {
     if (!selected || !wsId) return false;
@@ -375,7 +376,7 @@ const Inbox = () => {
       data: { session },
     } = await supabase.auth.getSession();
     const isIg = selected.channel === "instagram";
-    if (isIg && !payload.body) {
+    if (isIg && (typeof payload.body !== "string" || !payload.body || Object.keys(payload).some(k => k !== "body"))) {
       setSending(false);
       toast.error("Instagram chats support text replies only.");
       return false;
@@ -392,7 +393,9 @@ const Inbox = () => {
       return false;
     }
     if (error) {
-      toast.error(error.message);
+      const context = (error as any).context;
+      const details = context ? await context.json().catch(() => null) : null;
+      toast.error(details?.error || error.message);
       return false;
     }
     return true;
@@ -848,6 +851,10 @@ const Inbox = () => {
               </Button>
             </div>
 
+            <Select value={channelFilter} onValueChange={(v: "all" | "whatsapp" | "instagram") => {setChannelFilter(v);setSelectedId(null);}}>
+              <SelectTrigger aria-label="Channel" className="h-8"><SelectValue /></SelectTrigger>
+              <SelectContent><SelectItem value="all">All channels</SelectItem><SelectItem value="whatsapp">WhatsApp</SelectItem><SelectItem value="instagram">Instagram</SelectItem></SelectContent>
+            </Select>
             {labels.length > 0 && (
               <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 -mx-0.5 px-0.5">
                 <button
@@ -1031,7 +1038,7 @@ const Inbox = () => {
                   <div className="font-semibold text-sm truncate leading-tight">
                     {selected.contact_name || selected.contact_phone}
                   </div>
-                  <div className="text-[11px] text-muted-foreground leading-tight">{selected.contact_phone}</div>
+                  <div className="text-[11px] text-muted-foreground leading-tight">{isInstagram ? "Instagram" : selected.contact_phone}</div>
                 </div>
 
                 {/* 24h window ring — live countdown */}
@@ -1053,12 +1060,12 @@ const Inbox = () => {
                       {windowOpen ? (
                         <div className="space-y-0.5 text-[12px] leading-snug">
                           <div>24h window expires in {countdownLabel}</div>
-                          <div className="text-emerald-400">You can send any message type while active.</div>
+                          <div className="text-emerald-400">{isInstagram ? "You can reply with text while active." : "You can send any message type while active."}</div>
                         </div>
                       ) : (
                         <div className="space-y-0.5 text-[12px] leading-snug">
                           <div>24h window is closed</div>
-                          <div className="text-amber-400">Send an approved template to reopen it.</div>
+                          <div className="text-amber-400">{isInstagram ? "Wait for the customer to message again." : "Send an approved template to reopen it."}</div>
                         </div>
                       )}
                     </TooltipContent>
@@ -1094,7 +1101,7 @@ const Inbox = () => {
                   )}
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button size="icon" variant="ghost" className="h-8 w-8" title="Call this contact">
+                      <Button size="icon" variant="ghost" className="h-8 w-8" title="Call this contact" disabled={isInstagram}>
                         <PhoneCall className="w-4 h-4 text-emerald-500" />
                       </Button>
                     </PopoverTrigger>
@@ -1240,7 +1247,7 @@ const Inbox = () => {
                             {groupSelected && <CheckCircle2 className="w-4 h-4" />}
                           </span>
                         )}
-                        {!selectMode && (
+                        {!selectMode && !isInstagram && (
                           <Button
                             size="icon"
                             variant="ghost"
@@ -1427,6 +1434,7 @@ const Inbox = () => {
                       className="rounded-full shrink-0"
                       onClick={() => setTemplatePickerOpen(true)}
                       title="Send approved template"
+                      disabled={isInstagram}
                     >
                       <MessageSquareText className="w-4 h-4" />
                     </Button>
@@ -1437,7 +1445,7 @@ const Inbox = () => {
                           variant="ghost"
                           size="icon"
                           className="rounded-full shrink-0"
-                          disabled={!windowOpen || uploading}
+                          disabled={isInstagram || !windowOpen || uploading}
                           title="Attach"
                         >
                           {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
@@ -1501,7 +1509,7 @@ const Inbox = () => {
                       variant={recording ? "destructive" : "ghost"}
                       size="icon"
                       className="rounded-full shrink-0"
-                      disabled={!windowOpen || uploading}
+                      disabled={isInstagram || !windowOpen || uploading}
                       onClick={toggleRecording}
                       title={recording ? "Stop and send voice note" : "Record voice note"}
                     >
@@ -1651,7 +1659,7 @@ const Inbox = () => {
       <ForwardDialog
         open={forwardOpen}
         onOpenChange={setForwardOpen}
-        targets={convs.map((c) => ({ id: c.id, contact_phone: c.contact_phone, contact_name: c.contact_name }))}
+        targets={convs.filter(c => c.channel !== "instagram").map((c) => ({ id: c.id, contact_phone: c.contact_phone, contact_name: c.contact_name }))}
         count={selectedMsgIds.length}
         sending={forwarding}
         onForward={forwardMessages}

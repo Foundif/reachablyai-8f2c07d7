@@ -18,6 +18,7 @@ const Inbox = lazy(() => import("./pages/Inbox"));
 const Analytics = lazy(() => import("./pages/Analytics"));
 const Profile = lazy(() => import("./pages/Profile"));
 const MetaClients = lazy(() => import("./pages/MetaClients"));
+const Instagram = lazy(() => import("./pages/Instagram"));
 const Guide = lazy(() => import("./pages/Guide"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -296,6 +297,7 @@ const App = () => (
                       </ProtectedRoute>
                     }
                   />
+                  <Route path="/instagram" element={<ProtectedRoute><Instagram /></ProtectedRoute>} />
                   <Route path="/shop-info" element={<Navigate to="/profile" replace />} />
                   <Route
                     path="/meta-clients"

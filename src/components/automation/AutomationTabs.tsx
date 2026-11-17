@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 const TABS = [
   { to: '/auto-replies', label: 'Auto-replies & AI' },
   { to: '/automation', label: 'Keyword workflows' },
+  { to: '/instagram', label: 'Instagram' },
   { to: '/chatbots', label: 'Web chatbots' },
 ];
 

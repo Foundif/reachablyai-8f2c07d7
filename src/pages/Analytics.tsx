@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import InstagramMetrics from '@/components/instagram/InstagramMetrics';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,6 +12,7 @@ const COLORS = ['#d946ef', '#ec4899', '#f97316', '#10b981', '#3b82f6', '#8b5cf6'
 
 const Analytics = () => {
   const { user, profile } = useAuth();
+  const [wsId, setWsId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [totals, setTotals] = useState({ leads: 0, sent: 0, delivered: 0, read: 0, replied: 0, failed: 0 });
   const [leadsDaily, setLeadsDaily] = useState<any[]>([]);
@@ -24,6 +26,7 @@ const Analytics = () => {
       setLoading(true);
       const wsId = await resolveWorkspaceId(user.id, profile);
       if (!wsId) { setLoading(false); return; }
+      setWsId(wsId);
 
       const since = new Date(Date.now() - 30 * 86400000);
       const [{ data: leads }, { data: campaigns }] = await Promise.all([
@@ -106,6 +109,7 @@ const Analytics = () => {
           <p className="text-muted-foreground text-sm">Lead growth, campaign delivery and message engagement.</p>
         </div>
 
+        <InstagramMetrics wsId={wsId} />
         {loading ? <Card className="p-12 text-center text-muted-foreground">Loading analytics…</Card> : (
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

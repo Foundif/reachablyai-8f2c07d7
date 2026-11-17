@@ -1,5 +1,5 @@
 import {
-  Inbox, Contact, MessageSquareText,
+  Inbox, Contact, MessageSquareText, Instagram,
   UserCog, Settings, UserCircle,
   LayoutDashboard, BarChart3, Wallet, Megaphone, Workflow, Bot, Plug, ClipboardList, FormInput, KeyRound,
 } from 'lucide-react';
@@ -50,6 +50,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
     label: 'Settings',
     items: [
       { to: '/whatsapp-settings', icon: Settings, label: 'WhatsApp API', status: 'live' },
+      { to: '/instagram', icon: Instagram, label: 'Instagram', status: 'live' },
       { to: '/integrations', icon: Plug, label: 'Integrations', status: 'live' },
       { to: '/settings/api', icon: KeyRound, label: 'API & Keys', status: 'live' },
       { to: '/team', icon: UserCog, label: 'Team', status: 'live' },
