@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,7 +54,10 @@ import {
   Forward,
   Images,
   CheckSquare,
+  Instagram,
+  MessageCircle,
 } from "lucide-react";
+
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Label as FieldLabel } from "@/components/ui/label";
@@ -160,7 +164,9 @@ const Inbox = () => {
   const [qrActive, setQrActive] = useState(0);
   const [sending, setSending] = useState(false);
   const [filter, setFilter] = useState<"all" | "mine" | "unassigned" | "unread">("all");
-  const [channelFilter, setChannelFilter] = useState<"all" | "whatsapp" | "instagram">(() => searchParams.get("channel") === "instagram" ? "instagram" : "all");
+  const [channelFilter, setChannelFilter] = useState<"all" | "whatsapp" | "instagram">(() =>
+    searchParams.get("channel") === "instagram" ? "instagram" : "all",
+  );
   const [tab, setTab] = useState<"new" | "open" | "resolved" | "all">("all");
   const [labels, setLabels] = useState<Label[]>([]);
   const [labelFilter, setLabelFilter] = useState<string | null>(null);
@@ -376,7 +382,7 @@ const Inbox = () => {
       data: { session },
     } = await supabase.auth.getSession();
     const isIg = selected.channel === "instagram";
-    if (isIg && (typeof payload.body !== "string" || !payload.body || Object.keys(payload).some(k => k !== "body"))) {
+    if (isIg && (typeof payload.body !== "string" || !payload.body || Object.keys(payload).some((k) => k !== "body"))) {
       setSending(false);
       toast.error("Instagram chats support text replies only.");
       return false;
@@ -851,10 +857,57 @@ const Inbox = () => {
               </Button>
             </div>
 
-            <Select value={channelFilter} onValueChange={(v: "all" | "whatsapp" | "instagram") => {setChannelFilter(v);setSelectedId(null);}}>
-              <SelectTrigger aria-label="Channel" className="h-8"><SelectValue /></SelectTrigger>
-              <SelectContent><SelectItem value="all">All channels</SelectItem><SelectItem value="whatsapp">WhatsApp</SelectItem><SelectItem value="instagram">Instagram</SelectItem></SelectContent>
-            </Select>
+            {/* WATI-style compact channel pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+              <button
+                type="button"
+                onClick={() => {
+                  setChannelFilter("all");
+                  setSelectedId(null);
+                }}
+                className={cn(
+                  "px-2.5 py-1 rounded-full text-xs font-medium transition-all shrink-0",
+                  channelFilter === "all"
+                    ? "bg-foreground text-background shadow-xs font-semibold"
+                    : "bg-muted/70 text-muted-foreground hover:text-foreground hover:bg-muted",
+                )}
+              >
+                All channels
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setChannelFilter("whatsapp");
+                  setSelectedId(null);
+                }}
+                className={cn(
+                  "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all shrink-0",
+                  channelFilter === "whatsapp"
+                    ? "bg-emerald-600 text-white shadow-xs font-semibold"
+                    : "bg-muted/70 text-muted-foreground hover:text-foreground hover:bg-muted",
+                )}
+              >
+                <MessageCircle className="w-3 h-3" />
+                WhatsApp
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setChannelFilter("instagram");
+                  setSelectedId(null);
+                }}
+                className={cn(
+                  "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all shrink-0",
+                  channelFilter === "instagram"
+                    ? "bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 text-white shadow-xs font-semibold"
+                    : "bg-muted/70 text-muted-foreground hover:text-foreground hover:bg-muted",
+                )}
+              >
+                <Instagram className="w-3 h-3" />
+                Instagram
+              </button>
+            </div>
+
             {labels.length > 0 && (
               <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 -mx-0.5 px-0.5">
                 <button
@@ -944,23 +997,38 @@ const Inbox = () => {
                   )}
                 >
                   <div className="flex items-start gap-2.5">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-fuchsia-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                      {(c.contact_name || c.contact_phone)[0]?.toUpperCase()}
+                    {/* WATI Avatar with bottom-corner channel badge */}
+                    <div className="relative shrink-0">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-fuchsia-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold shadow-xs">
+                        {(c.contact_name || c.contact_phone)[0]?.toUpperCase()}
+                      </div>
+                      <span
+                        className={cn(
+                          "absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-background flex items-center justify-center shadow-xs",
+                          c.channel === "instagram"
+                            ? "bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] text-white"
+                            : "bg-emerald-500 text-white",
+                        )}
+                        title={c.channel === "instagram" ? "Instagram DM" : "WhatsApp"}
+                      >
+                        {c.channel === "instagram" ? (
+                          <Instagram className="w-2.5 h-2.5" />
+                        ) : (
+                          <MessageCircle className="w-2.5 h-2.5" />
+                        )}
+                      </span>
                     </div>
+
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-sm truncate flex-1">{c.contact_name || c.contact_phone}</span>
-                        {c.channel === "instagram" && (
-                          <span className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-accent text-accent-foreground shrink-0">
-                            IG
-                          </span>
-                        )}
                         <span className="text-[10px] text-muted-foreground shrink-0">
                           {c.last_message_at
                             ? new Date(c.last_message_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
                             : ""}
                         </span>
                       </div>
+
                       <div className="text-xs text-muted-foreground truncate">
                         {c.last_message_direction === "outbound" && "→ "}
                         {c.last_message_text || "—"}
@@ -1038,7 +1106,9 @@ const Inbox = () => {
                   <div className="font-semibold text-sm truncate leading-tight">
                     {selected.contact_name || selected.contact_phone}
                   </div>
-                  <div className="text-[11px] text-muted-foreground leading-tight">{isInstagram ? "Instagram" : selected.contact_phone}</div>
+                  <div className="text-[11px] text-muted-foreground leading-tight">
+                    {isInstagram ? "Instagram" : selected.contact_phone}
+                  </div>
                 </div>
 
                 {/* 24h window ring — live countdown */}
@@ -1060,12 +1130,20 @@ const Inbox = () => {
                       {windowOpen ? (
                         <div className="space-y-0.5 text-[12px] leading-snug">
                           <div>24h window expires in {countdownLabel}</div>
-                          <div className="text-emerald-400">{isInstagram ? "You can reply with text while active." : "You can send any message type while active."}</div>
+                          <div className="text-emerald-400">
+                            {isInstagram
+                              ? "You can reply with text while active."
+                              : "You can send any message type while active."}
+                          </div>
                         </div>
                       ) : (
                         <div className="space-y-0.5 text-[12px] leading-snug">
                           <div>24h window is closed</div>
-                          <div className="text-amber-400">{isInstagram ? "Wait for the customer to message again." : "Send an approved template to reopen it."}</div>
+                          <div className="text-amber-400">
+                            {isInstagram
+                              ? "Wait for the customer to message again."
+                              : "Send an approved template to reopen it."}
+                          </div>
                         </div>
                       )}
                     </TooltipContent>
@@ -1101,7 +1179,13 @@ const Inbox = () => {
                   )}
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button size="icon" variant="ghost" className="h-8 w-8" title="Call this contact" disabled={isInstagram}>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        title="Call this contact"
+                        disabled={isInstagram}
+                      >
                         <PhoneCall className="w-4 h-4 text-emerald-500" />
                       </Button>
                     </PopoverTrigger>
@@ -1406,7 +1490,9 @@ const Inbox = () => {
                 <div className="border-t p-3 space-y-2 bg-card shrink-0">
                   {!windowOpen && (
                     <div className="text-[11px] text-amber-600 bg-amber-500/10 border border-amber-500/30 rounded-md px-2 py-1.5">
-                      {isInstagram ? "24-hour reply window closed. Wait for the customer to message again." : "24-hour reply window closed. Send an approved template to reopen the conversation."}
+                      {isInstagram
+                        ? "24-hour reply window closed. Wait for the customer to message again."
+                        : "24-hour reply window closed. Send an approved template to reopen the conversation."}
                     </div>
                   )}
                   {uploadInfo && (
@@ -1659,7 +1745,9 @@ const Inbox = () => {
       <ForwardDialog
         open={forwardOpen}
         onOpenChange={setForwardOpen}
-        targets={convs.filter(c => c.channel !== "instagram").map((c) => ({ id: c.id, contact_phone: c.contact_phone, contact_name: c.contact_name }))}
+        targets={convs
+          .filter((c) => c.channel !== "instagram")
+          .map((c) => ({ id: c.id, contact_phone: c.contact_phone, contact_name: c.contact_name }))}
         count={selectedMsgIds.length}
         sending={forwarding}
         onForward={forwardMessages}
