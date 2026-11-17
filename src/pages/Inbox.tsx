@@ -1103,11 +1103,20 @@ const Inbox = () => {
                   {(selected.contact_name || selected.contact_phone)[0]?.toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <div className="font-semibold text-sm truncate leading-tight">
-                    {selected.contact_name || selected.contact_phone}
+                  <div className="font-semibold text-sm truncate leading-tight flex items-center gap-1.5">
+                    <span>{selected.contact_name || selected.contact_phone}</span>
+                    {isInstagram ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-pink-600 bg-pink-500/10 border border-pink-500/20 px-1.5 py-0.5 rounded-full shrink-0">
+                        <Instagram className="w-2.5 h-2.5" /> Instagram
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full shrink-0">
+                        <MessageCircle className="w-2.5 h-2.5" /> WhatsApp
+                      </span>
+                    )}
                   </div>
                   <div className="text-[11px] text-muted-foreground leading-tight">
-                    {isInstagram ? "Instagram" : selected.contact_phone}
+                    {isInstagram ? `@${selected.contact_phone || selected.contact_name}` : selected.contact_phone}
                   </div>
                 </div>
 
