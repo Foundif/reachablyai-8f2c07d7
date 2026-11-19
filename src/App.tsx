@@ -7,7 +7,7 @@ import TrialExpiredModal from "@/components/trial/TrialExpiredModal";
 import TrialModal from "@/components/trial/TrialModal";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { LanguageProvider } from "@/hooks/useLanguage";
@@ -22,7 +22,6 @@ const Instagram = lazy(() => import("./pages/Instagram"));
 const Guide = lazy(() => import("./pages/Guide"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 const Auth = lazy(() => import("./pages/Auth"));
-import OnboardingGate from "@/components/onboarding/OnboardingGate";
 const AdminLogin = lazy(() => import("./pages/AdminLogin"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -65,14 +64,19 @@ const PageLoader = () => (
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, profile } = useAuth();
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
+  const location = useLocation();
+
+  if (loading) return <PageLoader />;
+
   if (!user) return <Navigate to="/auth" replace />;
+
+  // Redirect users who haven't finished onboarding.
+  // The pathname check prevents an infinite redirect loop, since
+  // /onboarding is itself wrapped in ProtectedRoute.
+  if (profile && !profile.onboarding_completed && location.pathname !== "/onboarding") {
+    return <Navigate to="/onboarding" replace />;
+  }
+
   return (
     <>
       <TrialExpiredModal />
