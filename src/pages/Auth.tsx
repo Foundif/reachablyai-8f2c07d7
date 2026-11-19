@@ -56,7 +56,7 @@ const Auth = () => {
           if (e2) throw e2;
         }
         toast.success("Welcome to Reachably! Let’s set up your workspace.");
-        navigate("/"); // ⬅️ CHANGE THIS LINE
+        navigate("/onboarding"); // ⬅️ CHANGE THIS LINE
       }
     } catch (error: any) {
       toast.error(error.message || "Authentication failed");
