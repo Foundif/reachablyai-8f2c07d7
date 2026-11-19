@@ -85,6 +85,7 @@ const Profile = () => {
   const [waCreds, setWaCreds] = useState<{ profile_picture_url?: string; business_phone?: string } | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarFailed, setAvatarFailed] = useState(false);
 
   // Fetch linked WhatsApp credentials to use profile photo and phone as fallback
   useEffect(() => {
@@ -192,11 +193,17 @@ const Profile = () => {
             title="Click to change logo"
             className="w-24 h-24 rounded-full bg-gradient-to-br from-emerald-200 to-emerald-300 dark:from-emerald-800 dark:to-emerald-900 flex items-center justify-center text-3xl font-semibold text-emerald-900 dark:text-emerald-100 shadow-sm overflow-hidden relative group cursor-pointer border-2 border-border/40 hover:border-primary transition-all"
           >
-            {avatarSrc ? (
-              <SecureImg src={avatarSrc} alt={storeName} className="w-full h-full rounded-full object-cover" />
+            {avatarSrc && !avatarFailed ? (
+              <SecureImg
+                src={avatarSrc}
+                alt={storeName}
+                className="w-full h-full rounded-full object-cover"
+                onError={() => setAvatarFailed(true)}
+              />
             ) : (
               initial
             )}
+
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-full">
               {uploadingAvatar ? (
                 <Loader2 className="w-6 h-6 text-white animate-spin" />
