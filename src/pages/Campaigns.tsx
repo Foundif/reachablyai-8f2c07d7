@@ -11,6 +11,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -34,7 +41,10 @@ import {
   MoreVertical,
   Calendar,
   MessageSquare,
+  Repeat,
+  Download,
 } from "lucide-react";
+
 import { resolveWorkspaceId } from "@/lib/workspace";
 import ConfirmDialog from "@/components/ConfirmDialog";
 
@@ -77,6 +87,121 @@ const CircularGauge = ({
   );
 };
 
+// ---------- Turbodev-Style Preset WhatsApp Templates (Image 116) ----------
+const TURBODEV_TEMPLATES = [
+  {
+    id: "order_processed_ithink",
+    name: "order_processed_ithink",
+    category: "Utility",
+    language: "en",
+    status: "APPROVED",
+    created_at_label: "11 days ago",
+    body_text:
+      "Hi {{1}},\n\n📦 {{2}} in your order ({{3}}) has been packed and is ready for courier pickup from our dispatch hub.\n\nThe estimated delivery date will be automatically updated in your tracking link.",
+  },
+  {
+    id: "diwali_campaign",
+    name: "diwali_campaign",
+    category: "Marketing",
+    language: "en",
+    status: "APPROVED",
+    created_at_label: "14 days ago",
+    header_media_url: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=800&auto=format&fit=crop&q=80",
+    body_text:
+      "💥 KAPA Diwali Mega Sale is LIVE! Buy more, save up to ₹250 OFF on all official kits and custom prints. Tap below to shop before stock runs out!",
+  },
+  {
+    id: "not_available",
+    name: "not_available",
+    category: "Utility",
+    language: "en_gb",
+    status: "APPROVED",
+    created_at_label: "14 days ago",
+    body_text:
+      "Hi {{1}},\n\n⚠️ We're sorry, but {{2}} in your order ({{3}}) is unavailable. We've checked with all our warehouses, but the item is CURRENTLY UNAVAILABLE.\n\nWe apologize for the inconvenience and will initiate a full refund immediately.",
+  },
+  {
+    id: "print_order_processed_shi",
+    name: "print_order_processed_shi...",
+    category: "Utility",
+    language: "en",
+    status: "APPROVED",
+    created_at_label: "14 days ago",
+    body_text:
+      "Hi {{1}},\n\n📦 Your order for {{2}} ({{3}}) has been processed, and the shipping label has been created.\n\n👕 The item will now be sent for printing. Once printing is complete it will return to our hub.",
+  },
+  {
+    id: "argentina_farewell",
+    name: "argentina_farewell_",
+    category: "Marketing",
+    language: "en",
+    status: "APPROVED",
+    created_at_label: "a month ago",
+    header_media_url: "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&auto=format&fit=crop&q=80",
+    body_text:
+      "The GOAT. The memories. The legendary #10 jersey is back in limited quantities. Claim yours today with free express delivery!",
+  },
+  {
+    id: "abandoned_cart",
+    name: "abandoned_cart",
+    category: "Marketing",
+    language: "en",
+    status: "APPROVED",
+    created_at_label: "2 months ago",
+    body_text:
+      "Hi {{1}},\n\n👋 We noticed you were checking out {{2}} on KAPA but didn't complete your purchase.\n\nIf you had any questions or faced an issue while placing your order, you can let us know.",
+  },
+  {
+    id: "still_under_procurement",
+    name: "still_under_procurement",
+    category: "Utility",
+    language: "en",
+    status: "APPROVED",
+    created_at_label: "2 months ago",
+    body_text:
+      "Hi {{1}},\n\n📦 A quick update regarding the item {{2}} in your order ({{3}}).\n\n⏳ The item is still under procurement, and we are currently working to source it for dispatch as soon as possible.",
+  },
+  {
+    id: "review",
+    name: "review",
+    category: "Marketing",
+    language: "en",
+    status: "APPROVED",
+    created_at_label: "3 months ago",
+    body_text:
+      "Hi {{1}},\n\n😍 Hope you're loving your {{2}} !\n\n⭐ If you've got a minute, it would really help us if you could leave a review on our website.",
+  },
+];
+
+// Helper: Highlight variables as Turbodev Green Pills
+function renderTemplateWithPills(text: string) {
+  if (!text) return null;
+  // Replace standard {{1}}, {{2}}, {{3}} with Turbodev sample values
+  const sampleValues: Record<string, string> = {
+    "1": "Vishal Raaj",
+    "2": "Real Madrid Home Kit 26/27 (FV)",
+    "3": "# 42094",
+  };
+
+  const parts = text.split(/(\{\{[0-9a-zA-Z_]+\}\}|\[[^\]]+\])/g);
+  return parts.map((part, index) => {
+    const match = part.match(/\{\{([0-9a-zA-Z_]+)\}\}/);
+    if (match) {
+      const varKey = match[1];
+      const displayVal = sampleValues[varKey] || `Var ${varKey}`;
+      return (
+        <span
+          key={index}
+          className="inline-block bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-medium px-1.5 py-0.5 rounded text-[11px] mx-0.5 border border-emerald-200/50 dark:border-emerald-800/40"
+        >
+          {displayVal}
+        </span>
+      );
+    }
+    return part;
+  });
+}
+
 export default function Campaigns() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
@@ -113,6 +238,52 @@ export default function Campaigns() {
       setLoading(false);
       return;
     }
+
+    const allTemplates = useMemo(() => {
+      return templates.length > 0 ? templates : TURBODEV_TEMPLATES;
+    }, [templates]);
+
+    const filteredTemplates = useMemo(() => {
+      if (!templateSearch.trim()) return allTemplates;
+      return allTemplates.filter((t) => t.name.toLowerCase().includes(templateSearch.toLowerCase()));
+    }, [allTemplates, templateSearch]);
+
+    // Download CSV Broadcast Report
+    const handleDownloadReport = (broadcast: any) => {
+      const rows = [
+        ["Broadcast Name", broadcast.name],
+        ["Status", broadcast.status],
+        ["Date", new Date(broadcast.created_at).toLocaleString()],
+        ["Recipients", broadcast.total_count || 0],
+        ["Sent", broadcast.sent_count || 0],
+        ["Delivered", broadcast.delivered_count || 0],
+        ["Read", broadcast.read_count || 0],
+        ["Reacted", broadcast.reacted_count || 0],
+        ["Replied", broadcast.replied_count || 0],
+        ["Failed", broadcast.failed_count || 0],
+      ];
+
+      const csvContent =
+        "data:text/csv;charset=utf-8," + rows.map((e) => e.map((val) => `"${val}"`).join(",")).join("\n");
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `broadcast_report_${broadcast.name.replace(/\s+/g, "_")}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success(`Downloaded report for "${broadcast.name}"`);
+    };
+
+    // Repeat Broadcast in 1-Click
+    const handleRepeatBroadcast = (broadcast: any) => {
+      setBroadcastName(`${broadcast.name}_repeat`);
+      // Pre-select matching template or first available
+      const matched = templates.find((t) => t.id === broadcast.template_id) || TURBODEV_TEMPLATES[0];
+      setSelectedTemplate(matched);
+      setWizardStep(2); // Jump directly to audience selection
+      toast.info(`Repeating broadcast: ${broadcast.name}`);
+    };
 
     const [{ data: camps }, { data: tmpls }, { data: lds }, { data: wa }] = await Promise.all([
       supabase
@@ -759,7 +930,7 @@ export default function Campaigns() {
                 {/* + New Broadcast Primary Button */}
                 <Button
                   onClick={() => setWizardStep(1)}
-                  className="bg-purple-600 hover:bg-purple-700 text-white gap-2 font-medium"
+                  className="bg-slate-900 hover:bg-black text-white dark:bg-white dark:text-black dark:hover:bg-slate-200 gap-2 font-medium shadow-sm transition-colors"
                 >
                   <Plus className="w-4 h-4" /> New Broadcast
                 </Button>
