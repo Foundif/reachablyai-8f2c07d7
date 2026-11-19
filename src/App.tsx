@@ -47,6 +47,11 @@ const Automations = lazy(() => import("./pages/Automations"));
 const AutoReplies = lazy(() => import("./pages/AutoReplies"));
 const Chatbots = lazy(() => import("./pages/Chatbots"));
 const ChatbotDetail = lazy(() => import("./pages/ChatbotDetail"));
+const Channels = lazy(() => import("./pages/settings/Channels"));
+const Ctwa = lazy(() => import("./pages/settings/Ctwa"));
+const Tags = lazy(() => import("./pages/settings/Tags"));
+const CannedResponses = lazy(() => import("./pages/settings/CannedResponses"));
+const ContactFields = lazy(() => import("./pages/settings/ContactFields"));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, refetchOnWindowFocus: false, retry: 1 } },
@@ -297,8 +302,57 @@ const App = () => (
                       </ProtectedRoute>
                     }
                   />
-                  <Route path="/instagram" element={<ProtectedRoute><Instagram /></ProtectedRoute>} />
+                  <Route
+                    path="/instagram"
+                    element={
+                      <ProtectedRoute>
+                        <Instagram />
+                      </ProtectedRoute>
+                    }
+                  />
                   <Route path="/shop-info" element={<Navigate to="/profile" replace />} />
+                  <Route path="/settings" element={<Navigate to="/settings/channels" replace />} />
+                  <Route
+                    path="/settings/channels"
+                    element={
+                      <ProtectedRoute>
+                        <Channels />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/settings/ctwa"
+                    element={
+                      <ProtectedRoute>
+                        <Ctwa />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/settings/tags"
+                    element={
+                      <ProtectedRoute>
+                        <Tags />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/settings/canned-responses"
+                    element={
+                      <ProtectedRoute>
+                        <CannedResponses />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/settings/contact-fields"
+                    element={
+                      <ProtectedRoute>
+                        <ContactFields />
+                      </ProtectedRoute>
+                    }
+                  />
+
                   <Route
                     path="/meta-clients"
                     element={
