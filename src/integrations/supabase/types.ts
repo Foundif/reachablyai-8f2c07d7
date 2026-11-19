@@ -1006,6 +1006,57 @@ export type Database = {
           },
         ]
       }
+      ctwa_referrals: {
+        Row: {
+          body: string | null
+          conversation_phone: string
+          created_at: string
+          ctwa_clid: string | null
+          headline: string | null
+          id: string
+          lead_id: string | null
+          media_url: string | null
+          message_id: string | null
+          source: string
+          source_id: string | null
+          source_type: string | null
+          source_url: string | null
+          workspace_id: string
+        }
+        Insert: {
+          body?: string | null
+          conversation_phone: string
+          created_at?: string
+          ctwa_clid?: string | null
+          headline?: string | null
+          id?: string
+          lead_id?: string | null
+          media_url?: string | null
+          message_id?: string | null
+          source: string
+          source_id?: string | null
+          source_type?: string | null
+          source_url?: string | null
+          workspace_id: string
+        }
+        Update: {
+          body?: string | null
+          conversation_phone?: string
+          created_at?: string
+          ctwa_clid?: string | null
+          headline?: string | null
+          id?: string
+          lead_id?: string | null
+          media_url?: string | null
+          message_id?: string | null
+          source?: string
+          source_id?: string | null
+          source_type?: string | null
+          source_url?: string | null
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       feedback_messages: {
         Row: {
           author_id: string | null

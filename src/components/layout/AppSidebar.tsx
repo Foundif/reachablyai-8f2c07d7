@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { LifeBuoy } from "lucide-react";
-import { MODULE_GROUPS } from "@/lib/modules";
+import { LifeBuoy, Settings as SettingsIcon } from "lucide-react";
+import { MODULE_GROUPS, MAIN_NAV, SETTINGS_SECTIONS, isSettingsPath } from "@/lib/modules";
 import { useAuth } from "@/hooks/useAuth";
 import { BrandMark } from "@/components/Brand";
 import { useInboxUnreadCount } from "@/hooks/useInboxUnreadCount";
@@ -86,20 +86,25 @@ const AppSidebar = () => {
         </div>
 
         <nav className="flex-1 px-3 py-2 overflow-y-auto overflow-x-hidden custom-scrollbar">
-          {MODULE_GROUPS.map((group, gi) => {
-            const items = group.items.filter((i) => canAccess(i.to));
-            if (items.length === 0) return null;
+          {(() => {
+            const settingsTarget = SETTINGS_SECTIONS.flatMap((g) => g.items).find((i) => canAccess(i.access || i.to));
+            const items = [
+              ...MAIN_NAV.filter((i) => canAccess(i.to)),
+              ...(settingsTarget ? [{ to: settingsTarget.to, icon: SettingsIcon, label: "Settings", status: "live" as const, isSettings: true }] : []),
+            ];
             return (
-              <div key={group.label}>
-                {gi > 0 && <div className="h-px mx-2 my-3 bg-border" />}
-                <div className="space-y-0.5">
-                  {items.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
-                    const badge = item.to === "/inbox" ? inboxUnread : 0;
-                    return (
+              <div className="space-y-0.5">
+                {items.map((item: any, idx) => {
+                  const Icon = item.icon;
+                  const isActive = item.isSettings
+                    ? isSettingsPath(pathname)
+                    : item.to === "/" ? pathname === "/" : pathname.startsWith(item.to) && !isSettingsPath(pathname);
+                  const badge = item.to === "/inbox" ? inboxUnread : 0;
+                  const divider = idx === 4 || item.isSettings || item.to === "/integrations";
+                  return (
+                    <div key={item.label}>
+                      {divider && <div className="h-px mx-2 my-2 bg-border" />}
                       <NavLink
-                        key={item.to}
                         to={item.to}
                         title={!open ? item.label : undefined}
                         className={cn(
@@ -109,13 +114,9 @@ const AppSidebar = () => {
                             : "text-foreground/80 hover:bg-muted hover:text-foreground",
                         )}
                       >
-                        {isActive && (
-                          <span className="absolute -left-3 top-2 bottom-2 w-[3px] rounded-r-full bg-primary" />
-                        )}
+                        {isActive && <span className="absolute -left-3 top-2 bottom-2 w-[3px] rounded-r-full bg-primary" />}
                         <Icon className="w-[18px] h-[18px] shrink-0" />
-                        <span className={cn("truncate transition-opacity", open ? "opacity-100" : "opacity-0")}>
-                          {item.label}
-                        </span>
+                        <span className={cn("truncate transition-opacity", open ? "opacity-100" : "opacity-0")}>{item.label}</span>
                         {badge > 0 && (
                           <span
                             className={cn(
@@ -126,16 +127,13 @@ const AppSidebar = () => {
                             {badge > 99 ? "99+" : badge}
                           </span>
                         )}
-                        {open && item.status === "soon" && (
-                          <span className="ml-auto text-[10px] text-primary">Soon</span>
-                        )}
                       </NavLink>
-                    );
-                  })}
-                </div>
+                    </div>
+                  );
+                })}
               </div>
             );
-          })}
+          })()}
         </nav>
 
         <div className="px-3 pb-3 space-y-1 border-t pt-3">

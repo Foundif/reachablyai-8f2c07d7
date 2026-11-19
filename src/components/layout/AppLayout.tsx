@@ -7,6 +7,9 @@ import TrialBanner from "./TrialBanner";
 import { useGlobalAlerts } from "@/hooks/useGlobalAlerts";
 import FeedbackWidget from "@/components/feedback/FeedbackWidget";
 import SubscriptionGate from "./SubscriptionGate";
+import SettingsNav from "./SettingsNav";
+import { useLocation } from "react-router-dom";
+import { isSettingsPath } from "@/lib/modules";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -16,6 +19,8 @@ interface AppLayoutProps {
 
 const AppLayout = ({ children, fullBleed = false }: AppLayoutProps) => {
   useGlobalAlerts();
+  const { pathname } = useLocation();
+  const inSettings = isSettingsPath(pathname);
   return (
     <div className="relative min-h-screen w-full flex flex-col bg-[#022c22]">
       {/* 1. Flat top announcement banner */}
@@ -24,9 +29,11 @@ const AppLayout = ({ children, fullBleed = false }: AppLayoutProps) => {
       {/* 2. Workspace container curved downward with rounded top corners */}
       <div className="relative flex flex-1 w-full min-h-0 bg-background rounded-t-2xl sm:rounded-t-3xl shadow-2xl border-t border-border/40">
         <AppSidebar />
+        {inSettings && <div className="hidden lg:block"><SettingsNav /></div>}
 
         <main className="relative flex-1 min-w-0 min-h-screen pb-28 md:pb-0 overflow-x-clip flex flex-col">
           <MobileHeader />
+          {inSettings && <div className="lg:hidden"><SettingsNav /></div>}
           <div
             className={fullBleed ? "relative flex-1 w-full min-h-0" : "relative max-w-[1600px] mx-auto flex-1 w-full"}
           >

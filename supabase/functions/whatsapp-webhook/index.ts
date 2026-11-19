@@ -1,4 +1,5 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
+import { classifyReferral } from '../_shared/ctwa.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { extractFlowResponse, flowSummary, handleFlowSubmission } from '../_shared/flowIntake.ts';
 import { buildTemplatePayload } from '../_shared/templatePayload.ts';
@@ -331,6 +332,23 @@ Deno.serve(async (req) => {
                 leadId = newLead?.id || null;
               }
             } catch (_) { /* non-fatal */ }
+
+            // Click-to-WhatsApp: record which ad/post brought this customer in
+            if (m.referral) {
+              try {
+                const src = classifyReferral(m.referral);
+                await admin.from('ctwa_referrals').upsert({
+                  workspace_id, lead_id: leadId, conversation_phone: from, source: src,
+                  source_type: m.referral.source_type || null, source_id: m.referral.source_id || null,
+                  source_url: m.referral.source_url || null, headline: m.referral.headline || null,
+                  body: m.referral.body || null, media_url: m.referral.image_url || m.referral.video_url || null,
+                  ctwa_clid: m.referral.ctwa_clid || null, message_id: m.id,
+                }, { onConflict: 'workspace_id,message_id', ignoreDuplicates: true });
+                if (leadId && isNewContact) {
+                  await admin.from('leads').update({ tags: ['whatsapp', `ad:${src}`] }).eq('id', leadId);
+                }
+              } catch (_) { /* non-fatal */ }
+            }
 
 
             const { data: existing } = await admin.from('wa_conversations')

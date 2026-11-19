@@ -532,3 +532,5 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+.no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{scrollbar-width:none}
