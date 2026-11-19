@@ -802,40 +802,116 @@ const CampaignsList = () => {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Mode</TableHead>
+                <TableRow className="bg-muted/40">
+                  <TableHead className="w-[280px]">Broadcast</TableHead>
+                  <TableHead>Channel</TableHead>
+                  <TableHead>Audience</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Sent</TableHead>
-                  <TableHead>Skipped</TableHead>
-                  <TableHead>Failed</TableHead>
-                  <TableHead></TableHead>
+                  <TableHead className="min-w-[240px]">Delivery & Read Performance</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map((c) => (
-                  <TableRow key={c.id} className="cursor-pointer" onClick={() => navigate(`/campaigns/${c.id}`)}>
-                    <TableCell className="font-medium">{c.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{c.mode === "freeform" ? "Free-form" : "Template"}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={STATUS_STYLES[c.status]}>
-                        {c.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{c.total_count}</TableCell>
-                    <TableCell>{c.sent_count}</TableCell>
-                    <TableCell>{c.skipped_count || 0}</TableCell>
-                    <TableCell>{c.failed_count}</TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <Button size="sm" variant="ghost" onClick={() => setPendingDelete(c)}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {items.map((c) => {
+                  const total = c.total_count || 1;
+                  const deliveredPct = Math.round(((c.delivered_count || c.sent_count || 0) / total) * 100);
+                  const readPct = Math.round(((c.read_count || 0) / total) * 100);
+                  const repliedPct = Math.round(((c.replied_count || 0) / total) * 100);
+
+                  return (
+                    <TableRow
+                      key={c.id}
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => navigate(`/campaigns/${c.id}`)}
+                    >
+                      <TableCell>
+                        <div className="font-semibold text-foreground flex items-center gap-2">{c.name}</div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {new Date(c.created_at).toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                          {" · "}
+                          <span className="capitalize">{c.mode === "freeform" ? "Free-form" : "Meta Template"}</span>
+                        </p>
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="flex items-center gap-1.5 text-xs font-medium">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                          <span>WhatsApp</span>
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
+                        <span className="font-semibold text-sm">{c.total_count}</span>
+                        <span className="text-xs text-muted-foreground block">recipients</span>
+                      </TableCell>
+
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={`capitalize text-xs font-medium ${STATUS_STYLES[c.status] || ""}`}
+                        >
+                          {c.status}
+                        </Badge>
+                      </TableCell>
+
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground font-medium">
+                            <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                              {deliveredPct}% Deliv.
+                            </span>
+                            <span className="text-blue-600 dark:text-blue-400 font-semibold">{readPct}% Read</span>
+                            <span className="text-purple-600 dark:text-purple-400 font-semibold">
+                              {repliedPct}% Reply
+                            </span>
+                            {c.failed_count > 0 && (
+                              <span className="text-red-600 dark:text-red-400 font-semibold">
+                                {c.failed_count} failed
+                              </span>
+                            )}
+                          </div>
+                          <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden flex">
+                            <div
+                              style={{ width: `${Math.min(deliveredPct, 100)}%` }}
+                              className="bg-emerald-500 h-full"
+                            />
+                            <div
+                              style={{ width: `${Math.min(readPct, 100)}%` }}
+                              className="bg-blue-500 h-full opacity-80"
+                            />
+                          </div>
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 text-xs font-medium"
+                            onClick={() => navigate(`/campaigns/${c.id}`)}
+                          >
+                            Analytics
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-muted-foreground hover:text-red-600"
+                            onClick={() => setPendingDelete(c)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
