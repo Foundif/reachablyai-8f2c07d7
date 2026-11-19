@@ -6,7 +6,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {Popover, PopoverContent, PopoverTrigger } from @/components/ui/popover;
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
 import {
   Contact,
   Inbox,
@@ -351,7 +352,7 @@ const Dashboard = () => {
                 automation: stats.automationsActive > 0 || stats.botsActive > 0,
               }}
             />
-                       <Popover>
+            <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -374,7 +375,6 @@ const Dashboard = () => {
                 </a>
               </PopoverContent>
             </Popover>
-
           </div>
         </div>
 

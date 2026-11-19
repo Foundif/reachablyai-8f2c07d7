@@ -15,7 +15,6 @@ import { resolveWorkspaceId } from "@/lib/workspace";
 import {
   MessageSquare,
   Instagram,
-  Smartphone,
   ShieldCheck,
   CheckCircle2,
   ExternalLink,
@@ -32,6 +31,9 @@ import {
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 
+const SAFE_WA_COLUMNS =
+  "id,workspace_id,phone_number_id,waba_id,business_phone,label,is_primary,verified,verified_at,status,connection_type,connected_at,last_error,verified_name,quality_rating,messaging_limit,profile_picture_url,profile_address,profile_description,profile_email,profile_vertical,profile_websites,profile_about,profile_synced_at";
+
 export default function Channels() {
   const { user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -41,7 +43,6 @@ export default function Channels() {
   const [selectedChannel, setSelectedChannel] = useState<"all" | "whatsapp">("all");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  // Business profile form fields
   const [profileForm, setProfileForm] = useState({
     address: "",
     description: "",
@@ -51,7 +52,6 @@ export default function Channels() {
     about: "24/7 Travel Assistance and Booking Support across Tamil Nadu.",
   });
 
-  // CSAT toggle
   const [csatEnabled, setCsatEnabled] = useState(true);
 
   const loadData = async () => {
@@ -64,7 +64,7 @@ export default function Channels() {
     }
 
     const [{ data: wa }, { data: ig }, { data: wsSettings }] = await Promise.all([
-      supabase.from("whatsapp_credentials").select("*").eq("workspace_id", wsId).maybeSingle(),
+      supabase.from("whatsapp_credentials").select(SAFE_WA_COLUMNS).eq("workspace_id", wsId).maybeSingle(),
       supabase.from("instagram_credentials").select("*").eq("workspace_id", wsId).maybeSingle(),
       supabase.from("workspace_settings").select("*").eq("workspace_id", wsId).maybeSingle(),
     ]);
@@ -107,22 +107,21 @@ export default function Channels() {
     }
   };
 
-  const isWaConnected = Boolean(waCred && waCred.status === "connected" && waCred.business_phone);
+  const isWaConnected = Boolean(waCred && (waCred.verified || waCred.status === "connected" || waCred.phone_number_id));
   const isIgConnected = Boolean(igCred && igCred.status === "connected");
-  const waChannelId = waCred?.phone_number_id ? `${waCred.phone_number_id.slice(0, 8)}...` : "6a6c9e6cbf11a7c4";
-  const wabaId = waCred?.waba_id || "2718262235179199";
+  const waChannelId = waCred?.phone_number_id ? `${waCred.phone_number_id.slice(0, 8)}...` : "6a6c9e6cbf...";
+  const wabaId = waCred?.waba_id || "2041824193398342";
 
   return (
     <AppLayout>
       <div className="p-4 md:p-8 space-y-6 max-w-6xl mx-auto">
         {selectedChannel === "all" ? (
           <>
-            {/* Header */}
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Channels</h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Manage your messaging channels and discover new ones to help you acquire more customers.
+                  Manage your official messaging channels and connect new ones to reach more customers.
                 </p>
               </div>
               <Button variant="outline" size="sm" onClick={loadData} disabled={loading} className="gap-2">
@@ -130,45 +129,9 @@ export default function Channels() {
               </Button>
             </div>
 
-            {/* Turbodev 3-Card Grid */}
+            {/* Channels Grid (SMS Completely Removed) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              {/* Card 1: SMS / Secondary (Amber Gradient) */}
-              <div className="p-5 rounded-2xl border bg-gradient-to-br from-amber-100/80 via-amber-50/50 to-orange-100/30 dark:from-amber-950/40 dark:via-amber-900/10 dark:to-orange-950/20 border-amber-200/70 dark:border-amber-800/40 flex flex-col justify-between min-h-[170px] shadow-sm relative group hover:shadow-md transition-all">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-700 dark:text-amber-300 flex items-center justify-center">
-                      <Smartphone className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-foreground text-base">REACHABLY SMS</h3>
-                      <p className="text-xs text-muted-foreground">Transactional SMS</p>
-                    </div>
-                  </div>
-                  <span className="text-[11px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400">
-                    LIVE
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between mt-6 pt-3 border-t border-amber-200/50 dark:border-amber-800/30">
-                  <button
-                    onClick={() => copyText("6af4133d38a40b82b3d2d752", "sms_id")}
-                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground font-mono bg-background/60 px-2 py-1 rounded-md"
-                  >
-                    <span>6af4133d38a40...</span>
-                    {copiedKey === "sms_id" ? (
-                      <Check className="w-3 h-3 text-emerald-600" />
-                    ) : (
-                      <Copy className="w-3 h-3" />
-                    )}
-                  </button>
-
-                  <div className="w-8 h-8 rounded-full bg-slate-900 text-white dark:bg-white dark:text-slate-900 flex items-center justify-center opacity-80 group-hover:opacity-100 transition-opacity">
-                    <ArrowUpRight className="w-4 h-4" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 2: WhatsApp (Mint/Emerald Gradient) */}
+              {/* Card 1: WhatsApp (Mint/Emerald Gradient) */}
               <div
                 onClick={() => setSelectedChannel("whatsapp")}
                 className="p-5 rounded-2xl border bg-gradient-to-br from-emerald-100/90 via-emerald-50/50 to-teal-100/40 dark:from-emerald-950/40 dark:via-emerald-900/15 dark:to-teal-950/20 border-emerald-200/80 dark:border-emerald-800/40 flex flex-col justify-between min-h-[170px] shadow-sm relative group cursor-pointer hover:shadow-md transition-all"
@@ -179,14 +142,16 @@ export default function Channels() {
                       <MessageSquare className="w-5 h-5 fill-emerald-500/20" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-foreground text-base">{waCred?.label || "TN45 Travel Aid"}</h3>
+                      <h3 className="font-bold text-foreground text-base">
+                        {waCred?.verified_name || waCred?.label || "TN45 Travel Aid"}
+                      </h3>
                       <p className="text-xs text-muted-foreground">
-                        WhatsApp · {waCred?.business_phone ? `+${waCred.business_phone}` : "+91 93632 00237"}
+                        WhatsApp · {waCred?.business_phone ? `${waCred.business_phone}` : "+91 96554 51299"}
                       </p>
                     </div>
                   </div>
-                  <span className="text-[11px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400">
-                    {isWaConnected ? "LIVE" : "CONNECTED"}
+                  <span className="text-[11px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                    {isWaConnected ? "LIVE" : "UNVERIFIED"}
                   </span>
                 </div>
 
@@ -194,7 +159,7 @@ export default function Channels() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      copyText(waCred?.phone_number_id || "6a6c9e6cbf11a7c4fcb3ce5b", "wa_id");
+                      copyText(waCred?.phone_number_id || "", "wa_id");
                     }}
                     className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground font-mono bg-background/60 px-2 py-1 rounded-md"
                   >
@@ -212,6 +177,42 @@ export default function Channels() {
                 </div>
               </div>
 
+              {/* Card 2: Instagram DM (Purple Gradient) */}
+              <Link
+                to="/instagram"
+                className="p-5 rounded-2xl border bg-gradient-to-br from-purple-100/80 via-purple-50/50 to-pink-100/30 dark:from-purple-950/40 dark:via-purple-900/15 dark:to-pink-950/20 border-purple-200/80 dark:border-purple-800/40 flex flex-col justify-between min-h-[170px] shadow-sm relative group hover:shadow-md transition-all"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-purple-500/15 text-purple-700 dark:text-purple-300 flex items-center justify-center">
+                      <Instagram className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-foreground text-base">Instagram DM</h3>
+                      <p className="text-xs text-muted-foreground">
+                        {isIgConnected
+                          ? igCred?.username
+                            ? `@${igCred.username}`
+                            : "Connected"
+                          : "Comments, Stories & DMs"}
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    className={`text-[11px] font-bold tracking-wider px-2 py-0.5 rounded-full ${isIgConnected ? "bg-emerald-500/15 text-emerald-600" : "bg-muted text-muted-foreground"}`}
+                  >
+                    {isIgConnected ? "LIVE" : "CONFIGURE"}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between mt-6 pt-3 border-t border-purple-200/50 dark:border-purple-800/30">
+                  <span className="text-xs text-muted-foreground font-medium">Meta Graph API</span>
+                  <div className="w-8 h-8 rounded-full bg-slate-900 text-white dark:bg-white dark:text-slate-900 flex items-center justify-center opacity-80 group-hover:opacity-100 transition-opacity">
+                    <ArrowUpRight className="w-4 h-4" />
+                  </div>
+                </div>
+              </Link>
+
               {/* Card 3: Add Another Channel (Deep Indigo) */}
               <Link
                 to="/instagram"
@@ -222,7 +223,7 @@ export default function Channels() {
                     <LayoutGrid className="w-5 h-5" />
                   </div>
                   <h3 className="font-bold text-base text-white">Add another channel</h3>
-                  <p className="text-xs text-indigo-200/70 mt-0.5">Connect Instagram, Web Chat or Messenger</p>
+                  <p className="text-xs text-indigo-200/70 mt-0.5">Connect Web Chat, Messenger or Telegram</p>
                 </div>
 
                 <div className="flex items-center justify-between mt-6 pt-3 border-t border-white/10">
@@ -235,7 +236,7 @@ export default function Channels() {
             </div>
           </>
         ) : (
-          /* WhatsApp Detail View (Turbodev Image 101) */
+          /* WhatsApp Detail View */
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <button
@@ -256,7 +257,6 @@ export default function Channels() {
               </p>
             </div>
 
-            {/* Informational Blue Banner */}
             <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-800 dark:text-blue-300 text-xs flex items-start gap-2.5">
               <Info className="w-4 h-4 shrink-0 mt-0.5 text-blue-600" />
               <span>
@@ -265,17 +265,17 @@ export default function Channels() {
               </span>
             </div>
 
-            {/* Meta Channel Health 3-Column Card */}
             <Card className="p-5 grid grid-cols-1 md:grid-cols-3 gap-6 divide-y md:divide-y-0 md:divide-x">
-              {/* Col 1: Identity */}
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center">
                     <MessageSquare className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-base">{waCred?.label || "TN45 Travel Aid"}</h3>
-                    <p className="text-xs text-muted-foreground">+{waCred?.business_phone || "919363200237"}</p>
+                    <h3 className="font-bold text-base">
+                      {waCred?.verified_name || waCred?.label || "TN45 Travel Aid"}
+                    </h3>
+                    <p className="text-xs text-muted-foreground">{waCred?.business_phone || "+91 96554 51299"}</p>
                   </div>
                 </div>
 
@@ -297,23 +297,26 @@ export default function Channels() {
                 </div>
 
                 <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30 text-[10px] uppercase font-bold">
-                  {waCred?.messaging_limit || "Tier 1 (10K / day)"}
+                  {waCred?.messaging_limit === "DECLINED"
+                    ? "Tier 1 (10K / day)"
+                    : waCred?.messaging_limit || "Tier 1 (10K / day)"}
                 </Badge>
               </div>
 
-              {/* Col 2: Meta Details */}
               <div className="md:pl-6 pt-4 md:pt-0 space-y-3 text-xs">
                 <p className="font-semibold text-foreground text-sm">Meta Details</p>
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Quality Rating</span>
                   <span className="font-bold text-emerald-600 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" /> Green (High)
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />{" "}
+                    {waCred?.quality_rating === "GREEN" ? "Green (High)" : waCred?.quality_rating || "Green (High)"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Business Verification</span>
                   <span className="font-bold text-emerald-600 flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Verified
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />{" "}
+                    {waCred?.verified ? "Verified" : "Connected"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -322,7 +325,6 @@ export default function Channels() {
                 </div>
               </div>
 
-              {/* Col 3: Channel Settings */}
               <div className="md:pl-6 pt-4 md:pt-0 flex flex-col justify-between">
                 <div>
                   <p className="font-semibold text-foreground text-sm">Channel Settings</p>
@@ -340,7 +342,6 @@ export default function Channels() {
               </div>
             </Card>
 
-            {/* Profile, CSAT & Blue Tick Tabs */}
             <Tabs defaultValue="profile" className="space-y-4">
               <TabsList className="bg-muted/60 p-1">
                 <TabsTrigger value="profile">Business profile</TabsTrigger>
@@ -348,7 +349,6 @@ export default function Channels() {
                 <TabsTrigger value="bluetick">Apply blue tick</TabsTrigger>
               </TabsList>
 
-              {/* Tab 1: Business Profile */}
               <TabsContent value="profile">
                 <Card className="p-6 space-y-5">
                   <div className="space-y-4 max-w-2xl">
@@ -439,7 +439,6 @@ export default function Channels() {
                 </Card>
               </TabsContent>
 
-              {/* Tab 2: CSAT */}
               <TabsContent value="csat">
                 <Card className="p-6 space-y-4 max-w-2xl">
                   <div className="flex items-center justify-between">
@@ -461,7 +460,6 @@ export default function Channels() {
                 </Card>
               </TabsContent>
 
-              {/* Tab 3: Blue Tick Guide */}
               <TabsContent value="bluetick">
                 <Card className="p-6 space-y-5 max-w-2xl">
                   <div>
@@ -495,15 +493,15 @@ export default function Channels() {
                     </div>
                   </div>
 
-                  <a
-                    href="https://business.facebook.com/settings/whatsapp-business-accounts"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Button size="sm" className="gap-2">
-                      Open Meta Business Manager <ExternalLink className="w-4 h-4" />
-                    </Button>
-                  </a>
+                  <Button variant="outline" size="sm" asChild className="gap-2">
+                    <a
+                      href="https://business.facebook.com/wa/manage/phone-numbers/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Open Meta WhatsApp Manager <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </Button>
                 </Card>
               </TabsContent>
             </Tabs>
